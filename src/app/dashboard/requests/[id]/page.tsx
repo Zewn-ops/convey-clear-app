@@ -9,6 +9,8 @@ import {
   SERVICE_TYPE_LABELS,
   REQUEST_STATUS_LABELS,
   DOCUMENT_TYPE_LABELS,
+  type ServiceType,
+  type RequestStatus,
 } from "@/types";
 import { ArrowLeft, MapPin, FileText } from "lucide-react";
 
@@ -55,7 +57,7 @@ export default async function RequestDetailPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[#1B2E6B]">
-              {SERVICE_TYPE_LABELS[request.service_type]}
+              {SERVICE_TYPE_LABELS[request.service_type as ServiceType]}
             </h1>
             <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
               <MapPin className="h-4 w-4 shrink-0" />
@@ -63,8 +65,8 @@ export default async function RequestDetailPage({
             </div>
           </div>
           <Badge
-            label={REQUEST_STATUS_LABELS[request.status]}
-            variant={statusVariantMap[request.status]}
+            label={REQUEST_STATUS_LABELS[request.status as RequestStatus]}
+            variant={statusVariantMap[request.status as RequestStatus]}
           />
         </div>
       </div>
@@ -75,7 +77,7 @@ export default async function RequestDetailPage({
           <div className="flex justify-between">
             <dt className="text-gray-500">Service</dt>
             <dd className="font-medium text-gray-900">
-              {SERVICE_TYPE_LABELS[request.service_type]}
+              {SERVICE_TYPE_LABELS[request.service_type as ServiceType]}
             </dd>
           </div>
           <div className="flex justify-between">
