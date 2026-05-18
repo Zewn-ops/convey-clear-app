@@ -10,7 +10,7 @@ import {
   CheckCircle,
   Lock,
   AlertCircle,
-  ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { TokenData } from "./page";
@@ -63,6 +63,35 @@ interface OnboardFormProps {
   submitUrl: string;
 }
 
+function LogoWhite({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 120 40"
+      fill="none"
+      className={className}
+      aria-label="ConveyClear"
+    >
+      <g fill="white">
+        <rect x="0" y="16" width="8" height="24" rx="1" />
+        <rect x="4" y="0" width="2" height="40" rx="1" />
+        <rect x="10" y="16" width="8" height="24" rx="1" />
+        <rect x="0" y="14" width="18" height="3" rx="1" />
+      </g>
+      <text
+        x="24"
+        y="28"
+        fontFamily="system-ui, sans-serif"
+        fontSize="14"
+        fontWeight="700"
+        fill="white"
+      >
+        ConveyClear
+      </text>
+    </svg>
+  );
+}
+
 function DocSlot({
   docType,
   allowNotAvailable,
@@ -92,15 +121,15 @@ function DocSlot({
     [onChange]
   );
 
-  const isComplete = state.file !== null || (state.notAvailable && state.reason.trim().length > 0);
+  const isComplete =
+    state.file !== null ||
+    (state.notAvailable && state.reason.trim().length > 0);
 
   return (
     <div
       className={cn(
         "rounded-xl border bg-white transition-all",
-        isComplete
-          ? "border-green-200 shadow-sm"
-          : "border-gray-200 shadow-sm"
+        isComplete ? "border-green-200 shadow-sm" : "border-gray-200 shadow-sm"
       )}
     >
       <div className="p-4">
@@ -124,7 +153,9 @@ function DocSlot({
           {allowNotAvailable && !state.file && (
             <button
               type="button"
-              onClick={() => onChange({ notAvailable: !state.notAvailable, file: null })}
+              onClick={() =>
+                onChange({ notAvailable: !state.notAvailable, file: null })
+              }
               className={cn(
                 "shrink-0 text-xs px-2.5 py-1 rounded-full border transition-colors",
                 state.notAvailable
@@ -140,12 +171,12 @@ function DocSlot({
         {state.notAvailable ? (
           <div className="ml-6 space-y-2">
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              Please explain why this document is not available.
+              Please briefly explain why this document is not currently available.
             </p>
             <textarea
               value={state.reason}
               onChange={(e) => onChange({ reason: e.target.value })}
-              placeholder="e.g. Tax clearance expired, renewal in progress"
+              placeholder="e.g. Tax clearance expired — renewal submitted to SARS"
               rows={2}
               className={cn(
                 "w-full rounded-lg border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 resize-none",
@@ -167,7 +198,7 @@ function DocSlot({
               "ml-6 relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors cursor-pointer py-5 px-4 text-center",
               state.file
                 ? "border-green-300 bg-green-50"
-                : "border-gray-200 hover:border-[#1B2E6B] hover:bg-navy-50"
+                : "border-gray-200 hover:border-[#E8521A] hover:bg-orange-50"
             )}
           >
             <input
@@ -210,7 +241,7 @@ function DocSlot({
                   <p className="text-xs font-medium text-gray-600">
                     Click or drag file here
                   </p>
-                  <p className="text-xs text-gray-400">PDF, JPG, PNG up to 10 MB</p>
+                  <p className="text-xs text-gray-400">PDF, JPG, PNG — max 10 MB</p>
                 </div>
               </>
             )}
@@ -226,7 +257,8 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
     data.service_config.required_documents[data.entity_type] ?? []
   ).filter((d) => d !== "popia_consent");
 
-  const allowNotAvailable = data.service_config.documents_allow_not_available ?? false;
+  const allowNotAvailable =
+    data.service_config.documents_allow_not_available ?? false;
 
   const [popiaAgreed, setPopiaAgreed] = useState(false);
   const [docStates, setDocStates] = useState<FormState>(() =>
@@ -294,7 +326,10 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
 
       setSubmitted(true);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Submission failed. Please try again.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Submission failed. Please try again.";
       setSubmitError(msg);
       toast.error(msg);
     } finally {
@@ -310,8 +345,8 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
   if (submitted) {
     return (
       <main className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-[#1B2E6B] px-6 py-4">
-          <span className="text-white font-semibold text-lg tracking-tight">ConveyClear</span>
+        <header className="bg-[#1B2E6B] px-6 py-4 flex items-center">
+          <LogoWhite className="h-8 w-auto" />
         </header>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md text-center">
@@ -322,24 +357,44 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
               Documents Received
             </h1>
             <p className="text-gray-500 text-sm leading-relaxed mb-6">
-              Thank you, <strong>{data.client_name}</strong>. We&apos;ve received your
-              FICA documents for your{" "}
-              <strong>{data.service_name}</strong> application.
+              Thank you, <strong>{data.client_name}</strong>. Your FICA documents
+              for your <strong>{data.service_name}</strong> application have been
+              securely received. Our team will be in touch shortly.
             </p>
-            <div className="bg-navy-50 rounded-xl p-4 text-left space-y-1.5">
-              <p className="text-sm font-medium text-[#1B2E6B]">What happens next</p>
-              <p className="text-xs text-gray-600">1. Our team verifies your documents (typically within 1 business day)</p>
-              <p className="text-xs text-gray-600">2. You&apos;ll receive a confirmation email once approved</p>
-              <p className="text-xs text-gray-600">3. We proceed with your {data.service_name} application</p>
+            <div className="bg-gray-100 rounded-xl p-4 text-left space-y-2">
+              <p className="text-sm font-semibold text-[#1B2E6B]">What happens next</p>
+              <p className="text-xs text-gray-600">
+                1. Our team reviews and verifies your documents (typically within 1 business day).
+              </p>
+              <p className="text-xs text-gray-600">
+                2. You will receive a confirmation email once your documents are approved.
+              </p>
+              <p className="text-xs text-gray-600">
+                3. We proceed with your {data.service_name} application and keep you informed at every step.
+              </p>
             </div>
             <p className="mt-6 text-xs text-gray-400">
-              Questions?{" "}
-              <a href="mailto:info@conveyclear.co.za" className="text-[#1B2E6B] underline">
+              Questions? Contact us at{" "}
+              <a
+                href="mailto:info@conveyclear.co.za"
+                className="text-[#1B2E6B] underline"
+              >
                 info@conveyclear.co.za
+              </a>{" "}
+              or call{" "}
+              <a href="tel:+27768104790" className="text-[#1B2E6B] underline">
+                +27 76 810 4790
               </a>
+              .
             </p>
           </div>
         </div>
+        <footer className="py-4 text-center border-t border-gray-100">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
+            <span>POPIA Compliant · South Africa</span>
+          </div>
+        </footer>
       </main>
     );
   }
@@ -347,28 +402,31 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-[#1B2E6B] px-6 py-4 sticky top-0 z-10">
-        <span className="text-white font-semibold text-lg tracking-tight">ConveyClear</span>
+      <header className="bg-[#1B2E6B] px-6 py-4 sticky top-0 z-10 flex items-center">
+        <LogoWhite className="h-8 w-auto" />
       </header>
 
       <div className="flex-1 w-full max-w-xl mx-auto px-4 py-8 space-y-5">
         {/* Welcome card */}
         <div className="rounded-xl bg-[#1B2E6B] text-white p-6">
-          <p className="text-navy-200 text-xs font-medium uppercase tracking-wider mb-1">
+          <p className="text-blue-200 text-xs font-medium uppercase tracking-wider mb-1">
             {data.service_name}
           </p>
-          <h1 className="text-xl font-semibold mb-1">Hi {data.client_name},</h1>
-          <p className="text-navy-200 text-sm leading-relaxed">
-            Please upload your FICA documents below to proceed with your application.
-            {data.matter_title && (
-              <> This is for <strong className="text-white">{data.matter_title}</strong>.</>
-            )}
+          <h1 className="text-xl font-semibold mb-2">Welcome, {data.client_name}</h1>
+          <p className="text-blue-100 text-sm leading-relaxed">
+            To proceed with your application
+            {data.matter_title ? (
+              <> for <strong className="text-white">{data.matter_title}</strong></>
+            ) : null}
+            , please upload your required FICA documents below. Your information
+            is handled with strict confidentiality in accordance with POPIA.
           </p>
           {daysLeft <= 3 && daysLeft > 0 && (
             <div className="mt-3 flex items-center gap-2 bg-amber-400/20 border border-amber-400/30 rounded-lg px-3 py-2">
               <AlertCircle className="h-4 w-4 text-amber-300 shrink-0" />
               <p className="text-xs text-amber-200">
                 This link expires in {daysLeft} day{daysLeft !== 1 ? "s" : ""}.
+                Please submit as soon as possible.
               </p>
             </div>
           )}
@@ -386,9 +444,13 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#1B2E6B] rounded-full transition-all duration-500"
+              className="h-full bg-[#E8521A] rounded-full transition-all duration-500"
               style={{
-                width: `${requiredDocs.length > 0 ? (completedCount / requiredDocs.length) * 100 : 0}%`,
+                width: `${
+                  requiredDocs.length > 0
+                    ? (completedCount / requiredDocs.length) * 100
+                    : 0
+                }%`,
               }}
             />
           </div>
@@ -413,7 +475,11 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
                 )}
               >
                 {popiaAgreed && (
-                  <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+                  <svg
+                    className="h-3 w-3 text-white"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                  >
                     <path
                       d="M2 6l3 3 5-5"
                       stroke="currentColor"
@@ -428,9 +494,10 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
             <div>
               <p className="text-sm font-medium text-gray-900">POPIA Consent</p>
               <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                I consent to ConveyClear processing my personal information in
-                accordance with the Protection of Personal Information Act (POPIA)
-                for the purpose of this application.
+                I consent to ConveyClear collecting and processing my personal
+                information in accordance with the Protection of Personal
+                Information Act (POPIA) solely for the purpose of this
+                application.
               </p>
             </div>
           </label>
@@ -452,7 +519,7 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
           ))}
         </div>
 
-        {/* Submit */}
+        {/* Submit error */}
         {submitError && (
           <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4">
             <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
@@ -461,13 +528,14 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
         )}
 
         <Button
+          variant="secondary"
           size="lg"
           className="w-full"
           disabled={!allComplete}
           loading={submitting}
           onClick={handleSubmit}
         >
-          {submitting ? "Submitting..." : "Submit Documents"}
+          {submitting ? "Submitting…" : "Submit Documents"}
         </Button>
 
         {!allComplete && (
@@ -476,16 +544,35 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
               ? "Please accept the POPIA consent above to continue."
               : `${requiredDocs.length - completedCount} document${
                   requiredDocs.length - completedCount !== 1 ? "s" : ""
-                } still needed.`}
+                } still required.`}
           </p>
         )}
 
-        {/* Security footer */}
-        <div className="flex items-center justify-center gap-2 pb-8">
-          <Lock className="h-3 w-3 text-gray-400" />
-          <p className="text-xs text-gray-400">
-            Secure submission — your documents are encrypted in transit
+        {/* Security + contact footer */}
+        <div className="space-y-3 pb-8">
+          <div className="flex items-center justify-center gap-2">
+            <Lock className="h-3 w-3 text-gray-400" />
+            <p className="text-xs text-gray-400">
+              Encrypted in transit · Documents accessible to authorised staff only
+            </p>
+          </div>
+          <p className="text-center text-xs text-gray-400">
+            Need help?{" "}
+            <a
+              href="mailto:info@conveyclear.co.za"
+              className="text-[#1B2E6B] underline"
+            >
+              info@conveyclear.co.za
+            </a>{" "}
+            · {" "}
+            <a href="tel:+27768104790" className="text-[#1B2E6B] underline">
+              +27 76 810 4790
+            </a>
           </p>
+          <div className="flex items-center justify-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
+            <p className="text-xs text-gray-400">POPIA Compliant · South Africa</p>
+          </div>
         </div>
       </div>
     </main>

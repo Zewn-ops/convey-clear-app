@@ -71,13 +71,40 @@ export default async function OnboardPage({
   );
 }
 
+function LogoWhite({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 120 40"
+      fill="none"
+      className={className}
+      aria-label="ConveyClear"
+    >
+      <g fill="white">
+        <rect x="0" y="16" width="8" height="24" rx="1" />
+        <rect x="4" y="0" width="2" height="40" rx="1" />
+        <rect x="10" y="16" width="8" height="24" rx="1" />
+        <rect x="0" y="14" width="18" height="3" rx="1" />
+      </g>
+      <text
+        x="24"
+        y="28"
+        fontFamily="system-ui, sans-serif"
+        fontSize="14"
+        fontWeight="700"
+        fill="white"
+      >
+        ConveyClear
+      </text>
+    </svg>
+  );
+}
+
 function ErrorPage({ message }: { message: string }) {
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-[#1B2E6B] px-6 py-4">
-        <span className="text-white font-semibold text-lg tracking-tight">
-          ConveyClear
-        </span>
+      <header className="bg-[#1B2E6B] px-6 py-4 flex items-center">
+        <LogoWhite className="h-8 w-auto" />
       </header>
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
