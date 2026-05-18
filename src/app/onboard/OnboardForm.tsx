@@ -63,34 +63,6 @@ interface OnboardFormProps {
   submitUrl: string;
 }
 
-function LogoWhite({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 120 40"
-      fill="none"
-      className={className}
-      aria-label="ConveyClear"
-    >
-      <g fill="white">
-        <rect x="0" y="16" width="8" height="24" rx="1" />
-        <rect x="4" y="0" width="2" height="40" rx="1" />
-        <rect x="10" y="16" width="8" height="24" rx="1" />
-        <rect x="0" y="14" width="18" height="3" rx="1" />
-      </g>
-      <text
-        x="24"
-        y="28"
-        fontFamily="system-ui, sans-serif"
-        fontSize="14"
-        fontWeight="700"
-        fill="white"
-      >
-        ConveyClear
-      </text>
-    </svg>
-  );
-}
 
 function DocSlot({
   docType,
@@ -345,8 +317,8 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
   if (submitted) {
     return (
       <main className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-[#1B2E6B] px-6 py-4 flex items-center">
-          <LogoWhite className="h-8 w-auto" />
+        <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center">
+          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
         </header>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md text-center">
@@ -402,8 +374,8 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-[#1B2E6B] px-6 py-4 sticky top-0 z-10 flex items-center">
-        <LogoWhite className="h-8 w-auto" />
+      <header className="bg-white border-b border-gray-100 shadow-sm px-6 py-3 sticky top-0 z-10 flex items-center">
+        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
       </header>
 
       <div className="flex-1 w-full max-w-xl mx-auto px-4 py-8 space-y-5">
