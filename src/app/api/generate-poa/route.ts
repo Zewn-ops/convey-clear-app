@@ -14,198 +14,186 @@ interface ClientData {
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  if (!token) {
-    return new NextResponse("Missing token", { status: 400 });
-  }
+  if (!token) return new NextResponse("Missing token", { status: 400 });
 
-  // Fetch client data from n8n webhook
   let client: ClientData;
   try {
-    const res = await fetch(`${N8N_BASE}/webhook/client-data?token=${encodeURIComponent(token)}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`n8n status ${res.status}`);
+    const res = await fetch(
+      `${N8N_BASE}/webhook/client-data?token=${encodeURIComponent(token)}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) throw new Error(`n8n ${res.status}`);
     const rows: ClientData[] = await res.json();
     client = rows[0];
-    if (!client?.link_id) {
-      return new NextResponse("Invalid or expired token", { status: 404 });
-    }
+    if (!client?.link_id) return new NextResponse("Invalid or expired token", { status: 404 });
   } catch {
     return new NextResponse("Failed to fetch client data", { status: 502 });
   }
 
-  const fullName = client.full_name ?? "";
-  const idNumber = client.id_number ?? "";
-  const isBusiness = client.entity_type === "business" || client.entity_type === "trust";
-  const company = client.business_name ?? "";
-  const regNo = client.registration_no ?? "";
+  const fullName     = client.full_name     ?? "";
+  const idNumber     = client.id_number     ?? "";
+  const isBusiness   = client.entity_type === "business" || client.entity_type === "trust";
+  const company      = client.business_name ?? "";
+  const regNo        = client.registration_no ?? "";
 
-  // Build PDF
-  const pdfDoc = await PDFDocument.create();
-  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pdfDoc  = await PDFDocument.create();
+  const bold    = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const italic  = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-  const W = 595.28; // A4 width pts
-  const H = 841.89; // A4 height pts
-  const margin = 56;
-  const lineW = W - margin * 2;
+  const W = 595.28;
+  const H = 841.89;
+  const ML = 56;
+  const MR = 56;
+  const maxW = W - ML - MR;
+
   const page = pdfDoc.addPage([W, H]);
+  let y = H - 56;
 
-  let y = H - margin;
+  // ── helpers ───────────────────────────────────────────────────────────
 
-  function drawText(text: string, font: typeof bold, size: number, indent = 0, gap = 4) {
-    const x = margin + indent;
-    const maxW = lineW - indent;
+  function wrapText(text: string, font: typeof bold, size: number, width: number): string[] {
     const words = text.split(" ");
+    const lines: string[] = [];
     let line = "";
     for (const word of words) {
       const test = line ? line + " " + word : word;
-      if (font.widthOfTextAtSize(test, size) > maxW && line) {
-        page.drawText(line, { x, y, size, font, color: rgb(0, 0, 0) });
-        y -= size + gap;
+      if (font.widthOfTextAtSize(test, size) > width && line) {
+        lines.push(line);
         line = word;
       } else {
         line = test;
       }
     }
-    if (line) {
-      page.drawText(line, { x, y, size, font, color: rgb(0, 0, 0) });
-      y -= size + gap;
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function drawWrapped(
+    text: string,
+    font: typeof bold,
+    size: number,
+    x = ML,
+    color = rgb(0, 0, 0),
+    lineGap = 4
+  ) {
+    const width = W - x - MR;
+    for (const line of wrapText(text, font, size, width)) {
+      page.drawText(line, { x, y, size, font, color });
+      y -= size + lineGap;
     }
   }
 
-  function blank(label: string, indent = 0) {
-    const x = margin + indent;
-    page.drawText("_".repeat(50), { x, y, size: 10, font: regular, color: rgb(0.4, 0.4, 0.4) });
-    y -= 10;
-    page.drawText(label, { x, y, size: 8, font: regular, color: rgb(0.5, 0.5, 0.5) });
-    y -= 16;
+  function fieldRow(
+    intro: string,
+    value: string,
+    hint: string,
+    blankLen = 40
+  ) {
+    const gap = 6;
+    // intro label on its own line
+    drawWrapped(intro, regular, 10);
+    y -= 2;
+
+    if (value) {
+      drawWrapped(value, bold, 10);
+    } else {
+      page.drawText("_".repeat(blankLen), { x: ML, y: y + 10, size: 10, font: regular, color: rgb(0.6, 0.6, 0.6) });
+      y -= 4;
+    }
+    y -= 2;
+    drawWrapped(hint, italic, 8, ML + 4, rgb(0.45, 0.45, 0.45), 2);
+    y -= gap;
   }
 
-  function gap(pts = 8) { y -= pts; }
-
-  // Title
+  // ── title ─────────────────────────────────────────────────────────────
   const title = "POWER OF ATTORNEY";
-  const titleW = bold.widthOfTextAtSize(title, 16);
-  page.drawText(title, { x: (W - titleW) / 2, y, size: 16, font: bold, color: rgb(0, 0, 0) });
-  y -= 28;
+  page.drawText(title, {
+    x: (W - bold.widthOfTextAtSize(title, 16)) / 2,
+    y,
+    size: 16,
+    font: bold,
+    color: rgb(0, 0, 0),
+  });
+  y -= 30;
 
-  // Opening line
-  drawText("I,", regular, 10);
-  y += 10;
-  gap(-2);
-  // Name field — pre-filled or blank
-  if (fullName) {
-    drawText(fullName, bold, 10);
-    gap(-2);
-    drawText("(Full Name and Surname)", regular, 8);
-  } else {
-    blank("(Full Name and Surname)");
-  }
-  gap(2);
-
-  drawText(`with Identity Number`, regular, 10);
-  y += 10;
-  gap(-2);
-  if (idNumber) {
-    drawText(idNumber, bold, 10);
-    gap(-2);
-    drawText("(Identity Number)", regular, 8);
-  } else {
-    blank("(Identity Number)");
-  }
-  gap(2);
+  // ── party fields ──────────────────────────────────────────────────────
+  fieldRow("I,", fullName, "(Full Name and Surname)");
+  fieldRow("with Identity Number", idNumber, "(Identity Number)");
 
   if (isBusiness) {
-    drawText("representing", regular, 10);
-    y += 10;
-    gap(-2);
-    if (company) {
-      drawText(company, bold, 10);
-      gap(-2);
-      drawText("(Company)", regular, 8);
-    } else {
-      blank("(Company)");
-    }
-    gap(2);
-
-    drawText("With registration number", regular, 10);
-    y += 10;
-    gap(-2);
-    if (regNo) {
-      drawText(regNo, bold, 10);
-      gap(-2);
-      drawText("(Registration Number)", regular, 8);
-    } else {
-      blank("(Registration Number)");
-    }
-    gap(2);
+    fieldRow("representing", company, "(Company Name)");
+    fieldRow("with registration number", regNo, "(Company Registration Number)");
   }
 
-  gap(4);
-  drawText(
-    "do hereby give ConveyClear (Pty) Ltd with registration number 2025/057574/07 power of attorney, which shall specifically include, but not be limited to, the authority to perform the following services on my behalf for the property described as:",
+  // ── body paragraph ────────────────────────────────────────────────────
+  y -= 4;
+  drawWrapped(
+    "do hereby give ConveyClear (Pty) Ltd with registration number 2025/057574/07 power of attorney, " +
+    "which shall specifically include, but not be limited to, the authority to perform the following services " +
+    "on my behalf for the property described as:",
     regular, 10
   );
-  gap(4);
-  blank("(Property Description / Address)");
-  drawText("at any Municipality and Local Authority in South Africa:", regular, 10);
-  gap(8);
+  y -= 4;
+  fieldRow("", "", "(Property Description / Address)");
+  drawWrapped("at any Municipality and Local Authority in South Africa:", regular, 10);
+  y -= 10;
 
-  // Services
-  drawText("I. Administrative Support: Municipal Account Queries (MAQ)", bold, 9);
-  gap(2);
-  drawText(
-    "ACCOUNT MANAGEMENT SERVICES: Account Statement Management, Dispute Resolution, Billing Issues Resolution, Account Repayments & Reconnections, Payment Arrangements & Settlements, Debt relief applications, Consolidate Accounts, Submit Meter Readings, Check Journals, and Set Billing Dates.",
-    regular, 9, 12
-  );
-  gap(4);
-  drawText(
-    "Non-Profit Organization Account Management: Assisting with Application for Rates Rebates with Council and Maintaining Benefits by assisting with annual re-applying.",
-    regular, 9, 12
-  );
-  gap(4);
-  drawText(
+  // ── services ──────────────────────────────────────────────────────────
+  drawWrapped("I. Administrative Support: Municipal Account Queries (MAQ)", bold, 9);
+  y -= 2;
+
+  const services = [
+    "ACCOUNT MANAGEMENT SERVICES: Account Statement Management, Dispute Resolution, Billing Issues Resolution, " +
+      "Account Repayments & Reconnections, Payment Arrangements & Settlements, Debt relief applications, " +
+      "Consolidate Accounts, Submit Meter Readings, Check Journals, and Set Billing Dates.",
+    "Non-Profit Organization Account Management: Assisting with Application for Rates Rebates with Council " +
+      "and Maintaining Benefits by assisting with annual re-applying.",
     "Council — Rates Clearance Figures/Certificates: Unsticking Clearance Figures and Obtaining Clearance Certificates.",
-    regular, 9, 12
-  );
-  gap(4);
-  drawText(
-    "Property Management: Property Valuations; Objections of Municipal Valuations, Upliftment of Conditions of Title Deeds, obtaining Tshwane Letterheads for Clearances covering all erven.",
-    regular, 9, 12
-  );
-  gap(4);
-  drawText(
-    "Building Control: Navigating Regulations and Certifications: Collection and delivery of Existing Building Plans; Occupational Certificate Procurement.",
-    regular, 9, 12
-  );
-  gap(12);
+    "Property Management: Property Valuations; Objections of Municipal Valuations, Upliftment of Conditions " +
+      "of Title Deeds, obtaining Tshwane Letterheads for Clearances covering all erven.",
+    "Building Control: Navigating Regulations and Certifications: Collection and delivery of Existing Building Plans; " +
+      "Occupational Certificate Procurement.",
+  ];
 
-  // Effective date
-  drawText(
+  for (const s of services) {
+    drawWrapped(s, regular, 9, ML + 14, rgb(0, 0, 0), 3);
+    y -= 4;
+  }
+  y -= 6;
+
+  // ── duration ──────────────────────────────────────────────────────────
+  drawWrapped(
     "This Power of Attorney shall be effective from the date of my signature below and shall remain in full force and effect until:",
     regular, 10
   );
-  gap(2);
-  blank("(Expiry Date)");
-  drawText("or until revoked by me in writing prior to that date.", regular, 10);
-  gap(12);
+  y -= 2;
+  fieldRow("", "", "(Expiry Date)", 35);
+  drawWrapped("or until revoked by me in writing prior to that date.", regular, 10);
+  y -= 12;
 
-  // Date
-  drawText("Dated this ______ day of ______________________, 20______.", regular, 10);
-  gap(20);
+  // ── date ──────────────────────────────────────────────────────────────
+  page.drawText("Dated this _______ day of __________________________, 20_______.", {
+    x: ML, y, size: 10, font: regular, color: rgb(0, 0, 0),
+  });
+  y -= 28;
 
-  // Signatures
-  function sigLine(label: string) {
-    page.drawLine({ start: { x: margin, y }, end: { x: margin + 200, y }, thickness: 0.5, color: rgb(0, 0, 0) });
-    y -= 12;
-    drawText(label, regular, 9);
-    gap(12);
+  // ── signatures ────────────────────────────────────────────────────────
+  function sigBlock(label: string) {
+    page.drawLine({
+      start: { x: ML, y },
+      end:   { x: ML + 220, y },
+      thickness: 0.75,
+      color: rgb(0, 0, 0),
+    });
+    y -= 14;
+    page.drawText(label, { x: ML, y, size: 9, font: italic, color: rgb(0.4, 0.4, 0.4) });
+    y -= 22;
   }
 
-  sigLine("[Client Signature]");
-  sigLine("[Witness 1 Signature]");
-  sigLine("[Witness 2 Signature]");
+  sigBlock("Client Signature");
+  sigBlock("Witness 1 Signature");
+  sigBlock("Witness 2 Signature");
 
   const pdfBytes = await pdfDoc.save();
 
