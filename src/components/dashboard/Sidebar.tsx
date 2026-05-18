@@ -10,7 +10,6 @@ import {
   ClipboardList,
   UserCircle,
   LogOut,
-  Scale,
   PlusCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -36,9 +35,8 @@ export default function Sidebar() {
   return (
     <aside className="flex flex-col h-full w-64 bg-[#1B2E6B] text-white">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
-        <Scale className="h-6 w-6 text-[#E8521A]" />
-        <span className="font-bold text-lg tracking-tight">ConveyClear</span>
+      <div className="flex items-center px-6 py-4 border-b border-white/10">
+        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-8 w-auto brightness-0 invert" />
       </div>
 
       {/* New request CTA */}

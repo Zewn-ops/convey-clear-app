@@ -10,7 +10,6 @@ import {
   Users,
   ClipboardList,
   LogOut,
-  Scale,
   Menu,
   X,
 } from "lucide-react";
@@ -38,8 +37,8 @@ export default function AdminMobileNav() {
     <>
       <header className="flex items-center justify-between bg-gray-900 px-4 py-4 md:hidden">
         <Link href="/admin" className="flex items-center gap-2">
-          <Scale className="h-5 w-5 text-[#E8521A]" />
-          <span className="text-white font-bold text-base">ConveyClear Admin</span>
+          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-7 w-auto brightness-0 invert" />
+          <span className="text-white/60 text-xs">Admin</span>
         </Link>
         <button
           onClick={() => setOpen((o) => !o)}

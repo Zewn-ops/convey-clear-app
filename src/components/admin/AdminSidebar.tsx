@@ -9,7 +9,6 @@ import {
   Users,
   ClipboardList,
   LogOut,
-  Scale,
   ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -34,14 +33,11 @@ export default function AdminSidebar() {
   return (
     <aside className="flex flex-col h-full w-64 bg-gray-900 text-white">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-white/10">
-        <Scale className="h-6 w-6 text-[#E8521A]" />
-        <div>
-          <span className="font-bold text-lg tracking-tight">ConveyClear</span>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <ShieldCheck className="h-3 w-3" />
-            Admin Panel
-          </div>
+      <div className="flex flex-col px-6 py-4 border-b border-white/10 gap-1.5">
+        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-8 w-auto brightness-0 invert" />
+        <div className="flex items-center gap-1 text-xs text-gray-400">
+          <ShieldCheck className="h-3 w-3" />
+          Admin Panel
         </div>
       </div>
 

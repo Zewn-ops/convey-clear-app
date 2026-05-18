@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Scale } from "lucide-react";
 
 interface AuthLayoutProps {
   title: string;
@@ -15,12 +14,9 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-[#1B2E6B] py-4 px-6">
-        <Link href="/" className="flex items-center gap-2 w-fit">
-          <Scale className="h-6 w-6 text-[#E8521A]" />
-          <span className="text-white font-bold text-lg tracking-tight">
-            ConveyClear
-          </span>
+      <header className="bg-white border-b border-gray-100 shadow-sm py-3 px-6">
+        <Link href="/" className="flex items-center w-fit">
+          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-9 w-auto" />
         </Link>
       </header>
 

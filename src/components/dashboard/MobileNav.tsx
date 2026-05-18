@@ -11,7 +11,6 @@ import {
   ClipboardList,
   UserCircle,
   LogOut,
-  Scale,
   Menu,
   X,
   PlusCircle,
@@ -40,9 +39,8 @@ export default function MobileNav() {
   return (
     <>
       <header className="flex items-center justify-between bg-[#1B2E6B] px-4 py-4 md:hidden">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Scale className="h-5 w-5 text-[#E8521A]" />
-          <span className="text-white font-bold text-base">ConveyClear</span>
+        <Link href="/dashboard" className="flex items-center">
+          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-7 w-auto brightness-0 invert" />
         </Link>
         <button
           onClick={() => setOpen((o) => !o)}

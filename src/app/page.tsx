@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Scale, Shield, FileCheck, Clock, ChevronRight } from "lucide-react";
+import { Shield, FileCheck, Clock, ChevronRight } from "lucide-react";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -23,9 +23,8 @@ export default async function HomePage() {
       {/* Nav */}
       <header className="bg-[#1B2E6B] text-white">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Scale className="h-6 w-6 text-[#E8521A]" />
-            <span className="font-bold text-lg">ConveyClear</span>
+          <div className="flex items-center">
+            <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-9 w-auto brightness-0 invert" />
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -147,9 +146,8 @@ export default async function HomePage() {
 
       <footer className="bg-[#1B2E6B] text-white/60 py-8">
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Scale className="h-4 w-4 text-[#E8521A]" />
-            <span className="text-white font-medium">ConveyClear</span>
+          <div className="flex items-center">
+            <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-7 w-auto brightness-0 invert" />
           </div>
           <p>© {new Date().getFullYear()} ConveyClear. All rights reserved.</p>
           <p>POPIA compliant · South Africa</p>
