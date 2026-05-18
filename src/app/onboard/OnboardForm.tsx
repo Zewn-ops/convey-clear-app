@@ -69,11 +69,13 @@ function DocSlot({
   allowNotAvailable,
   state,
   onChange,
+  templateUrl,
 }: {
   docType: string;
   allowNotAvailable: boolean;
   state: DocSlotState;
   onChange: (next: Partial<DocSlotState>) => void;
+  templateUrl?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const meta = DOC_META[docType] ?? { label: docType, hint: "" };
@@ -119,6 +121,16 @@ function DocSlot({
             </div>
             {meta.hint && (
               <p className="mt-0.5 ml-6 text-xs text-gray-400">{meta.hint}</p>
+            )}
+            {templateUrl && (
+              <a
+                href={templateUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 ml-6 inline-flex items-center gap-1 text-xs text-[#1B2E6B] hover:underline"
+              >
+                Download template →
+              </a>
             )}
           </div>
 
@@ -487,6 +499,7 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
               allowNotAvailable={allowNotAvailable}
               state={docStates[docType]}
               onChange={(next) => updateDoc(docType, next)}
+              templateUrl={docType === "poa" ? `/api/generate-poa?token=${token}` : undefined}
             />
           ))}
         </div>
