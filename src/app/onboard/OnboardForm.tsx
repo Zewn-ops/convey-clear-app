@@ -376,10 +376,10 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
             <p className="mt-6 text-xs text-gray-400">
               Questions? Contact us at{" "}
               <a
-                href="mailto:info@conveyclear.co.za"
+                href="mailto:hello@conveyclear.co.za"
                 className="text-[#1B2E6B] underline"
               >
-                info@conveyclear.co.za
+                hello@conveyclear.co.za
               </a>{" "}
               or call{" "}
               <a href="tel:+27768104790" className="text-[#1B2E6B] underline">
@@ -559,10 +559,10 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
           <p className="text-center text-xs text-gray-400">
             Need help?{" "}
             <a
-              href="mailto:info@conveyclear.co.za"
+              href="mailto:hello@conveyclear.co.za"
               className="text-[#1B2E6B] underline"
             >
-              info@conveyclear.co.za
+              hello@conveyclear.co.za
             </a>{" "}
             · {" "}
             <a href="tel:+27768104790" className="text-[#1B2E6B] underline">

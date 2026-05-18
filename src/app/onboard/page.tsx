@@ -130,10 +130,10 @@ function ErrorPage({ message }: { message: string }) {
           <p className="mt-6 text-xs text-gray-400">
             If you believe this is an error, contact ConveyClear at{" "}
             <a
-              href="mailto:info@conveyclear.co.za"
+              href="mailto:hello@conveyclear.co.za"
               className="text-[#1B2E6B] underline"
             >
-              info@conveyclear.co.za
+              hello@conveyclear.co.za
             </a>
           </p>
         </div>
