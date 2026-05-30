@@ -1,21 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Shield, FileCheck, Clock, ChevronRight } from "lucide-react";
+import { getSessionProfile, homePathForRole } from "@/lib/auth";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    redirect(profile?.role === "admin" ? "/admin" : "/dashboard");
+  const session = await getSessionProfile();
+  if (session) {
+    redirect(homePathForRole(session.profile?.role));
   }
 
   return (

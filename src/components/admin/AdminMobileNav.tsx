@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  ClipboardList,
+  Briefcase,
   LogOut,
   Menu,
   X,
@@ -17,7 +17,7 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/requests", label: "Requests", icon: ClipboardList },
+  { href: "/admin/matters", label: "Matters", icon: Briefcase },
   { href: "/admin/clients", label: "Clients", icon: Users },
 ];
 

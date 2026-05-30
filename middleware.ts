@@ -45,15 +45,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Guard admin routes — requires role check via profile
+  // Guard admin routes — staff roles only (real schema: users by auth_user_id)
   if (user && pathname.startsWith("/admin")) {
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role")
-      .eq("id", user.id)
-      .single();
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
 
-    if (!profile || profile.role !== "admin") {
+    const staffRoles = ["admin", "staff_services", "staff_ops", "staff_delivery"];
+    if (!profile || !staffRoles.includes(profile.role)) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/dashboard";
       return NextResponse.redirect(redirectUrl);

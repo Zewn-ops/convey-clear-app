@@ -3,53 +3,53 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import type { Profile } from "@/types";
+import { isStaffRole, type AppUser } from "@/types";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
+    const loadProfile = async (authUser: User | null) => {
+      setUser(authUser);
+      if (authUser) {
         const { data } = await supabase
-          .from("profiles")
+          .from("users")
           .select("*")
-          .eq("id", user.id)
-          .single();
-        setProfile(data);
-      }
-
-      setLoading(false);
-    };
-
-    fetchUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
-        setProfile(data);
+          .eq("auth_user_id", authUser.id)
+          .maybeSingle();
+        setProfile((data as AppUser) ?? null);
       } else {
         setProfile(null);
       }
+    };
+
+    const init = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      await loadProfile(user);
+      setLoading(false);
+    };
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadProfile(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { user, profile, loading, isAdmin: profile?.role === "admin" };
+  return {
+    user,
+    profile,
+    loading,
+    isStaff: isStaffRole(profile?.role),
+    isAdmin: profile?.role === "admin",
+  };
 }

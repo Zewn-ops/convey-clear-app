@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  ClipboardList,
+  Briefcase,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/requests", label: "All Requests", icon: ClipboardList },
+  { href: "/admin/matters", label: "Matters", icon: Briefcase },
   { href: "/admin/clients", label: "Clients", icon: Users },
 ];
 
@@ -32,7 +32,6 @@ export default function AdminSidebar() {
 
   return (
     <aside className="flex flex-col h-full w-64 bg-gray-900 text-white">
-      {/* Logo */}
       <div className="flex flex-col px-6 py-4 border-b border-white/10 gap-1.5">
         <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-8 w-auto brightness-0 invert" />
         <div className="flex items-center gap-1 text-xs text-gray-400">
