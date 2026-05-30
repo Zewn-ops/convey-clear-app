@@ -80,17 +80,6 @@ export default function SignupForm() {
       return;
     }
 
-    // Update profile with extra fields
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({
-        phone: values.phone || null,
-        id_number: values.id_number || null,
-      }).eq("id", user.id);
-    }
-
     toast.success("Account created! Please check your email to confirm.");
     router.push("/auth/login");
   };

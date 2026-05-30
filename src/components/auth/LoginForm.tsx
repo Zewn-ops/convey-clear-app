@@ -42,14 +42,14 @@ export default function LoginForm() {
       return;
     }
 
-    // Fetch role to redirect appropriately
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role")
-      .eq("id", data.user.id)
-      .single();
+      .eq("auth_user_id", data.user.id)
+      .maybeSingle();
 
-    router.push(profile?.role === "admin" ? "/admin" : "/dashboard");
+    const staffRoles = ["admin", "staff_services", "staff_ops", "staff_delivery"];
+    router.push(staffRoles.includes(profile?.role ?? "") ? "/admin" : "/dashboard");
     router.refresh();
   };
 
