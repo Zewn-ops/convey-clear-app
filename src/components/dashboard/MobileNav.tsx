@@ -7,21 +7,16 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  FolderOpen,
-  ClipboardList,
-  UserCircle,
+  Briefcase,
   LogOut,
   Menu,
   X,
-  PlusCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/requests", label: "Requests", icon: ClipboardList },
-  { href: "/dashboard/documents", label: "Documents", icon: FolderOpen },
-  { href: "/dashboard/profile", label: "Profile", icon: UserCircle },
+  { href: "/dashboard/matters", label: "My Matters", icon: Briefcase },
 ];
 
 export default function MobileNav() {
@@ -52,15 +47,7 @@ export default function MobileNav() {
       </header>
 
       {open && (
-        <nav className="md:hidden bg-[#1B2E6B] border-t border-white/10 px-4 pb-4 space-y-1">
-          <Link
-            href="/dashboard/requests/new"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2 w-full rounded-lg bg-[#E8521A] px-4 py-2.5 text-sm font-medium text-white mt-3 mb-2"
-          >
-            <PlusCircle className="h-4 w-4" />
-            New Request
-          </Link>
+        <nav className="md:hidden bg-[#1B2E6B] border-t border-white/10 px-4 pb-4 space-y-1 pt-2">
           {navItems.map((item) => {
             const active = item.exact
               ? pathname === item.href

@@ -21,10 +21,10 @@ export default function Header({ title }: HeaderProps) {
         {profile && (
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-full bg-[#1B2E6B] flex items-center justify-center text-white text-sm font-semibold">
-              {getInitials(profile.full_name)}
+              {getInitials(profile.full_name ?? profile.email)}
             </div>
             <div className="hidden sm:block text-sm">
-              <p className="font-medium text-gray-900">{profile.full_name}</p>
+              <p className="font-medium text-gray-900">{profile.full_name ?? profile.email}</p>
               <p className="text-gray-500 text-xs capitalize">{profile.role}</p>
             </div>
           </div>

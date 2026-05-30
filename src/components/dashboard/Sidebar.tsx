@@ -6,19 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  FolderOpen,
-  ClipboardList,
-  UserCircle,
+  Briefcase,
   LogOut,
-  PlusCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/requests", label: "My Requests", icon: ClipboardList },
-  { href: "/dashboard/documents", label: "My Documents", icon: FolderOpen },
-  { href: "/dashboard/profile", label: "Profile", icon: UserCircle },
+  { href: "/dashboard/matters", label: "My Matters", icon: Briefcase },
 ];
 
 export default function Sidebar() {
@@ -37,17 +32,6 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center px-6 py-4 border-b border-white/10">
         <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-8 w-auto brightness-0 invert" />
-      </div>
-
-      {/* New request CTA */}
-      <div className="px-4 pt-4">
-        <Link
-          href="/dashboard/requests/new"
-          className="flex items-center justify-center gap-2 w-full rounded-lg bg-[#E8521A] hover:bg-[#c94415] transition-colors px-4 py-2.5 text-sm font-medium"
-        >
-          <PlusCircle className="h-4 w-4" />
-          New Request
-        </Link>
       </div>
 
       {/* Nav */}
