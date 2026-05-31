@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +18,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function LoginForm() {
-  const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
 
@@ -49,8 +47,11 @@ export default function LoginForm() {
       .maybeSingle();
 
     const staffRoles = ["admin", "staff_services", "staff_ops", "staff_delivery"];
-    router.push(staffRoles.includes(profile?.role ?? "") ? "/admin" : "/dashboard");
-    router.refresh();
+    const dest = staffRoles.includes(profile?.role ?? "") ? "/admin" : "/dashboard";
+    // Full-page navigation (not router.push) so the browser re-requests with the
+    // freshly-set auth cookie — avoids a race where middleware on the hard-guarded
+    // /admin route sees no session and bounces back to /auth/login.
+    window.location.assign(dest);
   };
 
   return (
