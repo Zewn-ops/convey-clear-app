@@ -33,7 +33,7 @@ export default function AdminSidebar() {
   return (
     <aside className="flex flex-col h-full w-64 bg-gray-900 text-white">
       <div className="flex flex-col px-6 py-4 border-b border-white/10 gap-1.5">
-        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-8 w-auto brightness-0 invert" />
+        <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-10 w-auto self-start" />
         <div className="flex items-center gap-1 text-xs text-gray-400">
           <ShieldCheck className="h-3 w-3" />
           Admin Panel

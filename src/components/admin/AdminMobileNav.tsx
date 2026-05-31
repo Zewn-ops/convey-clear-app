@@ -37,7 +37,7 @@ export default function AdminMobileNav() {
     <>
       <header className="flex items-center justify-between bg-gray-900 px-4 py-4 md:hidden">
         <Link href="/admin" className="flex items-center gap-2">
-          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-7 w-auto brightness-0 invert" />
+          <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-8 w-auto" />
           <span className="text-white/60 text-xs">Admin</span>
         </Link>
         <button

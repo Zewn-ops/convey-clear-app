@@ -35,7 +35,7 @@ export default function MobileNav() {
     <>
       <header className="flex items-center justify-between bg-[#1B2E6B] px-4 py-4 md:hidden">
         <Link href="/dashboard" className="flex items-center">
-          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-7 w-auto brightness-0 invert" />
+          <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-8 w-auto" />
         </Link>
         <button
           onClick={() => setOpen((o) => !o)}

@@ -31,7 +31,7 @@ export default function Sidebar() {
     <aside className="flex flex-col h-full w-64 bg-[#1B2E6B] text-white">
       {/* Logo */}
       <div className="flex items-center px-6 py-4 border-b border-white/10">
-        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-8 w-auto brightness-0 invert" />
+        <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-11 w-auto" />
       </div>
 
       {/* Nav */}
