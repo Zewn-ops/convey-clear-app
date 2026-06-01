@@ -215,7 +215,7 @@ const inputCls =
 // ---------------------------------------------------------------------------
 // Main form
 // ---------------------------------------------------------------------------
-export default function OnboardForm({ token, data }: OnboardFormProps) {
+export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps) {
   const isBusiness = data.entity_type === "business";
 
   const requiredDocs = (data.service_config.required_documents[data.entity_type] ?? []).filter(
@@ -298,27 +298,41 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
       consents: { popia, terms, marketing },
     };
 
-    const fd = new FormData();
-    fd.append("token", token);
-    fd.append("matter_id", data.matter_id);
-    fd.append("service_code", data.service_code);
-    fd.append("client_name", data.client_name);
-    fd.append("entity_type", data.entity_type);
-    fd.append("popia_consent_agreed", "true");
-    fd.append("fica", JSON.stringify(fica));
+    // Documents go STRAIGHT to n8n (nginx allows 50MB) — routing files through the
+    // Vercel function hits its ~4.5MB body limit (413). Fields go to the Vercel route.
+    const docsForm = new FormData();
+    docsForm.append("token", token);
+    docsForm.append("matter_id", data.matter_id);
+    docsForm.append("service_code", data.service_code);
+    docsForm.append("client_name", data.client_name);
+    docsForm.append("entity_type", data.entity_type);
+    docsForm.append("popia_consent_agreed", "true");
     for (const [docType, s] of Object.entries(docStates)) {
-      if (s.file) fd.append(`doc_${docType}`, s.file, s.file.name);
+      if (s.file) docsForm.append(`doc_${docType}`, s.file, s.file.name);
       else if (s.notAvailable) {
-        fd.append(`not_available_${docType}`, "true");
-        fd.append(`reason_${docType}`, s.reason.trim());
+        docsForm.append(`not_available_${docType}`, "true");
+        docsForm.append(`reason_${docType}`, s.reason.trim());
       }
     }
 
+    const fieldsForm = new FormData();
+    fieldsForm.append("token", token);
+    fieldsForm.append("matter_id", data.matter_id);
+    fieldsForm.append("entity_type", data.entity_type);
+    fieldsForm.append("fica", JSON.stringify(fica));
+
     try {
-      const res = await fetch("/api/onboard/submit", { method: "POST", body: fd });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.message ?? `Server error (${res.status})`);
+      // 1) documents -> n8n (Drive upload + mark used + stage 54). Critical path.
+      const docRes = await fetch(submitUrl ?? "/api/onboard/submit", { method: "POST", body: docsForm });
+      if (!docRes.ok) {
+        const json = await docRes.json().catch(() => ({}));
+        throw new Error(json.message ?? `Server error (${docRes.status})`);
+      }
+      // 2) FICA fields -> Supabase via Vercel route (best-effort; don't block success)
+      try {
+        await fetch("/api/onboard/submit", { method: "POST", body: fieldsForm });
+      } catch {
+        /* field persistence is non-critical relative to the document submission */
       }
       setSubmitted(true);
     } catch (err) {

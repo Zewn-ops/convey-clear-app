@@ -3,7 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
-const N8N_BASE = process.env.N8N_WEBHOOK_URL ?? "https://n8n.conveyclear.co.za";
+// NOTE: documents are sent by the form STRAIGHT to n8n (nginx 50MB) to avoid Vercel's
+// ~4.5MB function body limit. This route only persists the FICA fields (small JSON).
 
 interface FicaDetails {
   full_name?: string;
@@ -134,24 +135,6 @@ export async function POST(request: Request) {
     }
   }
 
-  // 4. Forward documents to the existing n8n webhook (keeps Drive upload + Pipedrive → stage 54)
-  const fwd = new FormData();
-  form.forEach((v, k) => {
-    if (k === "fica") return;
-    fwd.append(k, v as string | Blob);
-  });
-
-  try {
-    const res = await fetch(`${N8N_BASE}/webhook/submit-docs`, { method: "POST", body: fwd });
-    if (!res.ok) {
-      return NextResponse.json(
-        { message: `Document service error (${res.status}).` },
-        { status: 502 }
-      );
-    }
-  } catch {
-    return NextResponse.json({ message: "Could not reach the document service." }, { status: 502 });
-  }
-
+  // Documents are submitted directly to n8n by the form (not through here).
   return NextResponse.json({ ok: true });
 }
