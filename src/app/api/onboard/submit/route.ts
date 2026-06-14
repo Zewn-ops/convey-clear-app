@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,9 @@ interface FicaPayload {
 }
 
 export async function POST(request: Request) {
+  if (!rateLimit(`onboard:${clientIp(request)}`, 15, 60_000)) {
+    return NextResponse.json({ message: "Too many requests — please slow down." }, { status: 429 });
+  }
   const form = await request.formData();
   const token = String(form.get("token") ?? "");
   const matterId = String(form.get("matter_id") ?? "");
@@ -104,11 +108,16 @@ export async function POST(request: Request) {
     }
 
     try {
-      await admin.from("clients").update(patch).eq("id", clientId);
+      // Supabase returns { error } instead of throwing — check it, or a schema
+      // drift (e.g. a missing column) silently drops the whole patch. This exact
+      // class of silent failure hid the person_industry/designation bug before
+      // migration 010 added the columns. Non-blocking, but always logged.
+      const { error: clientErr } = await admin.from("clients").update(patch).eq("id", clientId);
+      if (clientErr) console.error("[onboard/submit] clients update failed:", clientErr.message);
 
       const directors = (fica.directors ?? []).filter((x) => x.full_name || x.email);
       if (directors.length) {
-        await admin.from("contacts").insert(
+        const { error: contactErr } = await admin.from("contacts").insert(
           directors.map((x) => ({
             client_id: clientId,
             name: `${x.full_name ?? ""} ${x.surname ?? ""}`.trim(),
@@ -119,9 +128,10 @@ export async function POST(request: Request) {
             is_director: true,
           }))
         );
+        if (contactErr) console.error("[onboard/submit] contacts insert failed:", contactErr.message);
       }
 
-      await admin.from("consent_events").insert(
+      const { error: consentErr } = await admin.from("consent_events").insert(
         (["popia", "terms", "marketing"] as const).map((t) => ({
           client_id: clientId,
           matter_id: matterId,
@@ -130,8 +140,10 @@ export async function POST(request: Request) {
           source: "fica_form",
         }))
       );
-    } catch {
+      if (consentErr) console.error("[onboard/submit] consent_events insert failed:", consentErr.message);
+    } catch (e) {
       // swallow — field persistence is non-critical relative to doc submission
+      console.error("[onboard/submit] field persistence error:", e);
     }
   }
 

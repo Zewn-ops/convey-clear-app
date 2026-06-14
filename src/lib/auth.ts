@@ -4,7 +4,7 @@
 // (users_self_read policy permits a user to read their own row).
 // ============================================================================
 import { createClient } from "@/lib/supabase/server";
-import { isStaffRole, type AppUser } from "@/types";
+import { isStaffRole, isPartnerRole, type AppUser } from "@/types";
 
 export interface SessionProfile {
   authUserId: string;
@@ -30,5 +30,7 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
 
 /** Where a given role lands after login. */
 export function homePathForRole(role?: AppUser["role"] | null): string {
-  return isStaffRole(role) ? "/admin" : "/dashboard";
+  if (isStaffRole(role)) return "/admin";
+  if (isPartnerRole(role)) return "/partner";
+  return "/dashboard";
 }

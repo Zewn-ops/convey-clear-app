@@ -42,6 +42,15 @@ const DOC_META: Record<string, { label: string; hint: string }> = {
   transfer_letter: { label: "Transfer Confirmation Letter", hint: "From the conveyancing attorney" },
   deed_search: { label: "Deed Search", hint: "Recent deed search for the property" },
   clearance_figures: { label: "Clearance Figures", hint: "Municipal rates clearance figures" },
+  id_certified_trustee: { label: "Trustee's Certified ID", hint: "Certified copy of the authorised trustee's ID" },
+  proof_of_application: { label: "Proof of Application", hint: "Proof a rates clearance application was lodged (if applicable)" },
+  proof_of_payment_figures: { label: "Proof of Payment (Figures)", hint: "Receipt for the rates clearance figures payment (if applicable)" },
+  proof_of_payment_clearance: { label: "Proof of Payment (Clearance)", hint: "COJ — payment proof for clearance figures" },
+  electrical_coc: { label: "Electrical CoC", hint: "COE — electrical certificate of compliance" },
+  rates_account: { label: "Municipal Rates Account", hint: "Most recent council rates account statement" },
+  building_plans: { label: "Existing Building Plans", hint: "Approved building plans (if you have them)" },
+  municipal_account_latest: { label: "Latest Municipal Account", hint: "Full current municipal account statement" },
+  dispute_evidence: { label: "Dispute Evidence", hint: "Correspondence, photos, meter readings supporting the dispute" },
 };
 
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];

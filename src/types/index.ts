@@ -7,8 +7,9 @@
 // remove it once those pages are rebuilt.
 // ============================================================================
 
-// --- Roles (matches users_role_check) --------------------------------------
+// --- Roles (matches users_role_check, migration 013) -----------------------
 export type UserRole =
+  | "super_admin"
   | "admin"
   | "staff_services"
   | "staff_ops"
@@ -19,18 +20,37 @@ export type UserRole =
   | "business_partner"
   | "council";
 
+// Staff = everyone who works the pipeline from the /admin side. super_admin is a
+// superset of admin, so it is staff too. Mirrors app_is_staff() in the DB.
 export const STAFF_ROLES: UserRole[] = [
+  "super_admin",
   "admin",
   "staff_services",
   "staff_ops",
   "staff_delivery",
 ];
 
+// Admin tier = can manage users (admin + super_admin). Mirrors app_is_admin().
+export const ADMIN_ROLES: UserRole[] = ["super_admin", "admin"];
+
 export function isStaffRole(role?: UserRole | null): boolean {
   return !!role && STAFF_ROLES.includes(role);
 }
 
+export function isAdminRole(role?: UserRole | null): boolean {
+  return !!role && ADMIN_ROLES.includes(role);
+}
+
+export function isSuperAdmin(role?: UserRole | null): boolean {
+  return role === "super_admin";
+}
+
+export function isPartnerRole(role?: UserRole | null): boolean {
+  return role === "business_partner";
+}
+
 export const ROLE_LABELS: Record<UserRole, string> = {
+  super_admin: "Super Admin",
   admin: "Administrator",
   staff_services: "Services",
   staff_ops: "Operations",
@@ -41,6 +61,25 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   business_partner: "Business Partner",
   council: "Council",
 };
+
+// Roles a staff user may CREATE/ASSIGN from the user-management screen.
+// super_admin can assign anything; a plain admin cannot mint admin/super_admin.
+export const ASSIGNABLE_ROLES_BY_SUPER: UserRole[] = [
+  "super_admin",
+  "admin",
+  "staff_services",
+  "staff_ops",
+  "staff_delivery",
+  "business_partner",
+  "client",
+];
+export const ASSIGNABLE_ROLES_BY_ADMIN: UserRole[] = [
+  "staff_services",
+  "staff_ops",
+  "staff_delivery",
+  "business_partner",
+  "client",
+];
 
 // --- Enums -----------------------------------------------------------------
 export type EntityType = "natural_person" | "business" | "trust";

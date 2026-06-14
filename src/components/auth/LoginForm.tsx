@@ -7,8 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import { isStaffRole, isPartnerRole, type UserRole } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Turnstile from "@/components/auth/Turnstile";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -20,6 +22,7 @@ type FormValues = z.infer<typeof schema>;
 export default function LoginForm() {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const {
     register,
@@ -32,6 +35,7 @@ export default function LoginForm() {
     const { error, data } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
+      options: { captchaToken: captchaToken ?? undefined },
     });
 
     if (error) {
@@ -46,8 +50,8 @@ export default function LoginForm() {
       .eq("auth_user_id", data.user.id)
       .maybeSingle();
 
-    const staffRoles = ["admin", "staff_services", "staff_ops", "staff_delivery"];
-    const dest = staffRoles.includes(profile?.role ?? "") ? "/admin" : "/dashboard";
+    const role = (profile?.role ?? null) as UserRole | null;
+    const dest = isStaffRole(role) ? "/admin" : isPartnerRole(role) ? "/partner" : "/dashboard";
     // Full-page navigation (not router.push) so the browser re-requests with the
     // freshly-set auth cookie — avoids a race where middleware on the hard-guarded
     // /admin route sees no session and bounces back to /auth/login.
@@ -81,6 +85,8 @@ export default function LoginForm() {
           Forgot password?
         </Link>
       </div>
+
+      <Turnstile onVerify={setCaptchaToken} />
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
         Sign in

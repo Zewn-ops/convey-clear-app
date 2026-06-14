@@ -40,23 +40,15 @@ cp .env.example .env.local
 
 Fill in your Supabase credentials from the [Supabase Dashboard](https://supabase.com/dashboard).
 
-### 4. Set up the database
+### 4. Database
 
-Run the migration in `supabase/migrations/001_initial.sql` via the Supabase SQL Editor or Supabase CLI:
-
-```bash
-# With Supabase CLI
-supabase db push
-```
+> ⚠️ **The `supabase/migrations/001_initial.sql` and `002_storage_policies.sql` files in this app are STALE scaffold** for an old schema (`profiles`/`service_requests`) and are slated for deletion. **Do not run them.**
+>
+> The live schema is maintained in `../cc-notes and stuff/sql/` (`001`–`006`): base schema, seed, deal-sync, 4-phase schema sprint, auth wiring + business partners, and RLS. The DB is already provisioned on Supabase (project `yhgriqagrhyblhmloctc`, eu-west-1) with RLS enabled on all tables. Central table is `matters`; auth maps `auth.users` → `public.users` via `users.auth_user_id`. See `../SECURITY.md` for the security/RLS posture.
 
 ### 5. Configure Supabase Storage
 
-Create a bucket named `documents` in your Supabase project with the following settings:
-- **Public bucket**: No (private)
-- **File size limit**: 10MB
-- **Allowed MIME types**: `application/pdf`, `image/jpeg`, `image/png`, `image/webp`
-
-Apply the storage policies from `supabase/migrations/002_storage_policies.sql`.
+No storage bucket exists yet — uploaded documents currently flow to Google Drive via n8n. When a Supabase `documents` bucket is added it MUST be private + RLS + signed URLs (see `../SECURITY.md`).
 
 ### 6. Run the development server
 
@@ -89,9 +81,11 @@ supabase/
 └── migrations/            # SQL migration files
 ```
 
-## Admin Access
+## Roles & Access
 
-To create an admin account, sign up using the admin invite token set in `ADMIN_INVITE_TOKEN`. Navigate to `/auth/signup?admin=<your-token>`. Change the default token before deploying to production.
+Auth maps `auth.users` → `public.users` (`users.auth_user_id`). A signup trigger creates a `client` profile by default; staff/partner roles are seeded or promoted by an admin (signup metadata is never trusted for role). Roles: `admin`, `staff_services`, `staff_ops`, `staff_delivery`, `client`, `business_partner`, `attorney`, `council`, `contractor`. Staff roles route to `/admin`; everyone else to `/dashboard`. Access is enforced by Postgres RLS, not app logic.
+
+> Note: the old `ADMIN_INVITE_TOKEN` signup flow belongs to the legacy scaffold and is being replaced during the dashboard rebuild.
 
 ## POPIA Compliance
 

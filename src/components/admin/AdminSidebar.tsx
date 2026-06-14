@@ -4,22 +4,28 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { isAdminRole, type UserRole } from "@/types";
 import {
   LayoutDashboard,
   Users,
   Briefcase,
+  UserCog,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const navItems = [
+const baseNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/matters", label: "Matters", icon: Briefcase },
-  { href: "/admin/clients", label: "Clients", icon: Users },
+  { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
+  { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
+];
+const adminNav = [
+  { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ role }: { role?: UserRole | null }) {
+  const navItems = isAdminRole(role) ? [...baseNav, ...adminNav] : baseNav;
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
