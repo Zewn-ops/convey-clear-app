@@ -234,9 +234,9 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
 
   // ---- details state ----
   const [details, setDetails] = useState({
-    full_name: isBusiness ? "" : data.client_name,
+    full_name: isBusiness ? "" : (data.client_name ?? ""),
     surname: "",
-    business_name: isBusiness ? data.client_name : "",
+    business_name: isBusiness ? (data.client_name ?? "") : "",
     registration_no: "",
     cell: "",
     email: data.primary_email ?? "",
@@ -440,7 +440,7 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
                   <h2 className="text-sm font-semibold text-gray-700">Authorised representative / trustee</h2>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Full name" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
+                    <Field label="First name(s)" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
                     <Field label="Surname"><input className={inputCls} value={details.surname} onChange={(e) => setField("surname", e.target.value)} /></Field>
                     <Field label="Cell" required><input className={inputCls} value={details.cell} onChange={(e) => setField("cell", e.target.value)} /></Field>
                     <Field label="Email" required><input className={inputCls} type="email" value={details.email} onChange={(e) => setField("email", e.target.value)} /></Field>
@@ -463,7 +463,7 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                       <div className="grid grid-cols-2 gap-2">
-                        <input className={inputCls} placeholder="Full name" value={d.full_name} onChange={(e) => updateDirector(i, "full_name", e.target.value)} />
+                        <input className={inputCls} placeholder="First name(s)" value={d.full_name} onChange={(e) => updateDirector(i, "full_name", e.target.value)} />
                         <input className={inputCls} placeholder="Surname" value={d.surname} onChange={(e) => updateDirector(i, "surname", e.target.value)} />
                         <input className={inputCls} placeholder="Cell" value={d.cell} onChange={(e) => updateDirector(i, "cell", e.target.value)} />
                         <input className={inputCls} placeholder="Work number" value={d.work_number} onChange={(e) => updateDirector(i, "work_number", e.target.value)} />
@@ -481,7 +481,7 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
                 <h2 className="text-sm font-semibold text-gray-700">Your details</h2>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Full name" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
+                  <Field label="First name(s)" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
                   <Field label="Surname" required><input className={inputCls} value={details.surname} onChange={(e) => setField("surname", e.target.value)} /></Field>
                   <Field label="Cell" required><input className={inputCls} value={details.cell} onChange={(e) => setField("cell", e.target.value)} /></Field>
                   <Field label="Email" required><input className={inputCls} type="email" value={details.email} onChange={(e) => setField("email", e.target.value)} /></Field>
