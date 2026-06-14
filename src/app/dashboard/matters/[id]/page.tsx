@@ -16,6 +16,7 @@ import {
   type MatterStatus,
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
+import ClientDocUpload from "@/components/dashboard/ClientDocUpload";
 
 export default async function MatterDetailPage({
   params,
@@ -46,6 +47,7 @@ export default async function MatterDetailPage({
   const documents = (docsData as MatterDocument[] | null) ?? [];
 
   const phases: MatterPhase[] = ["1", "2", "3", "4"];
+  const isClient = session.profile?.role === "client";
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -100,6 +102,9 @@ export default async function MatterDetailPage({
           {matter.service_notes && <Fact label="Notes" value={matter.service_notes} />}
         </dl>
       </Card>
+
+      {/* Upload (client only) */}
+      {isClient && <ClientDocUpload matterId={matter.id} />}
 
       {/* Documents */}
       <div>

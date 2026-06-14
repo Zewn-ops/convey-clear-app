@@ -85,27 +85,45 @@ async function upsertUser({ email, fullName, role, businessPartnerId = null, cli
     await upsertUser({ email: "demo.services@conveyclear.co.za", fullName: "Demo Services", role: "staff_services" });
     await upsertUser({ email: "demo.ops@conveyclear.co.za", fullName: "Demo Operations", role: "staff_ops" });
 
-    // partner firm + partner user + referred client + matter
-    const { data: firm } = await sb.from("business_partners")
-      .upsert({ name: "Sterling & Associates (Demo)", partner_type: "law_firm", primary_email: "info@sterling-demo.co.za" }, { onConflict: "name" })
-      .select("id").single();
-    const firmId = firm?.id ?? (await sb.from("business_partners").select("id").eq("name", "Sterling & Associates (Demo)").single()).data.id;
+    // partner firm + partner user + referred client + matter (all idempotent —
+    // business_partners.name has no unique constraint, so look-up-then-insert).
+    const FIRM = "Sterling & Associates (Demo)";
+    let firmId;
+    const { data: existingFirm } = await sb.from("business_partners").select("id").eq("name", FIRM).maybeSingle();
+    if (existingFirm) {
+      firmId = existingFirm.id;
+    } else {
+      const { data: newFirm, error: fErr } = await sb.from("business_partners")
+        .insert({ name: FIRM, partner_type: "law_firm", primary_email: "info@sterling-demo.co.za" })
+        .select("id").single();
+      if (fErr) throw new Error(`firm insert: ${fErr.message}`);
+      firmId = newFirm.id;
+    }
 
     await upsertUser({ email: "partner@sterling-demo.co.za", fullName: "Demo Partner", role: "business_partner", businessPartnerId: firmId });
 
-    // a referred client + matter so the partner has something to see
+    // a referred client + matter so the partner has something to see (idempotent by email)
     const { data: svc } = await sb.from("services").select("id").eq("code", "COO").maybeSingle();
-    const { data: client } = await sb.from("clients")
-      .insert({ entity_type: "natural_person", full_name: "Demo Referred Client", primary_email: "referred@demo.co.za", business_partner_id: firmId })
-      .select("id").single();
-    if (client) {
+    let clientId;
+    const { data: existingClient } = await sb.from("clients").select("id").eq("primary_email", "referred@demo.co.za").maybeSingle();
+    if (existingClient) {
+      clientId = existingClient.id;
+    } else {
+      const { data: newClient, error: cErr } = await sb.from("clients")
+        .insert({ entity_type: "natural_person", full_name: "Demo Referred Client", primary_email: "referred@demo.co.za", business_partner_id: firmId })
+        .select("id").single();
+      if (cErr) throw new Error(`client insert: ${cErr.message}`);
+      clientId = newClient.id;
+    }
+    const { data: existingMatter } = await sb.from("matters").select("id").eq("client_id", clientId).maybeSingle();
+    if (!existingMatter) {
       await sb.from("matters").insert({
-        client_id: client.id, service_id: svc?.id ?? null, title: "Demo Referred Client — Erf 99",
+        client_id: clientId, service_id: svc?.id ?? null, title: "Demo Referred Client — Erf 99",
         current_phase: "1", status: "open", priority: "standard", municipality: "COT",
       });
-      // a client-portal login for this referred client
-      await upsertUser({ email: "referred@demo.co.za", fullName: "Demo Referred Client", role: "client", clientId: client.id });
     }
+    // a client-portal login for this referred client
+    await upsertUser({ email: "referred@demo.co.za", fullName: "Demo Referred Client", role: "client", clientId });
   }
 
   console.log("\n=== CREDENTIALS (hand over securely, then rotate) ===");

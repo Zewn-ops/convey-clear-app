@@ -71,10 +71,10 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
 
       <div className="px-4 pb-4 border-t border-white/10 pt-4">
         <Link
-          href="/dashboard"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/50 hover:text-white/80 transition-colors mb-1"
+          href="/account"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors mb-1"
         >
-          Switch to client view
+          Account &amp; password
         </Link>
         <button
           onClick={handleSignOut}

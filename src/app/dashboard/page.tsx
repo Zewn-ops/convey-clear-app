@@ -11,7 +11,7 @@ import {
   type MatterDocument,
   type MatterPhase,
 } from "@/types";
-import { Briefcase, Clock, CheckCircle, FolderOpen, FileText } from "lucide-react";
+import { Briefcase, Clock, CheckCircle, FolderOpen, FileText, PlusCircle } from "lucide-react";
 
 export const metadata = { title: "Dashboard — ConveyClear" };
 
@@ -42,6 +42,7 @@ export default async function DashboardPage() {
   const activeCount = matters.filter((m) => m.status === "open").length;
   const completedCount = matters.filter((m) => m.status === "won").length;
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
+  const isClient = profile?.role === "client";
 
   const stats = [
     { label: "Matters", value: matters.length, icon: Briefcase, tone: "text-[#1B2E6B] bg-[#1B2E6B]/10" },
@@ -52,9 +53,19 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1B2E6B]">Welcome back, {firstName}</h1>
-        <p className="text-sm text-gray-500 mt-1">Here&apos;s a summary of your matters.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1B2E6B]">Welcome back, {firstName}</h1>
+          <p className="text-sm text-gray-500 mt-1">Here&apos;s a summary of your matters.</p>
+        </div>
+        {isClient && (
+          <Link
+            href="/dashboard/request"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415] shrink-0"
+          >
+            <PlusCircle className="h-4 w-4" /> Request a service
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -106,6 +117,14 @@ export default async function DashboardPage() {
           <Card className="text-center py-10">
             <Briefcase className="h-10 w-10 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">No matters yet</p>
+            {isClient && (
+              <Link
+                href="/dashboard/request"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+              >
+                <PlusCircle className="h-4 w-4" /> Request a service
+              </Link>
+            )}
           </Card>
         )}
       </div>

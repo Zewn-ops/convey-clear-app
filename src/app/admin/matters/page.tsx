@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import { Plus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import {
   isStaffRole,
@@ -54,6 +55,12 @@ export default async function AdminMattersPage() {
           <h1 className="text-2xl font-bold text-gray-900">All Matters</h1>
           <p className="text-sm text-gray-500 mt-1">{matters.length} matter{matters.length === 1 ? "" : "s"}</p>
         </div>
+        <Link
+          href="/admin/matters/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+        >
+          <Plus className="h-4 w-4" /> New matter
+        </Link>
       </div>
 
       <Card padding="none">

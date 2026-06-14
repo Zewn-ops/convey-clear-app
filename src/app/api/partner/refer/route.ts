@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { buildMatterTitle } from "@/lib/matter-naming";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
@@ -44,14 +45,14 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Resolve service_id (by id or by code).
+  // Resolve service_id + code (code feeds the matter-naming convention).
   let serviceId: string | null = body.service_id ?? null;
-  if (!serviceId && body.service_code) {
-    const { data: svc } = await admin
-      .from("services")
-      .select("id")
-      .eq("code", body.service_code)
-      .maybeSingle();
+  let serviceCode: string = body.service_code ?? "";
+  if (serviceId) {
+    const { data: svc } = await admin.from("services").select("code").eq("id", serviceId).maybeSingle();
+    serviceCode = svc?.code ?? serviceCode;
+  } else if (body.service_code) {
+    const { data: svc } = await admin.from("services").select("id").eq("code", body.service_code).maybeSingle();
     serviceId = svc?.id ?? null;
   }
 
@@ -70,8 +71,10 @@ export async function POST(request: Request) {
     .single();
   if (clientErr) return NextResponse.json({ message: clientErr.message }, { status: 400 });
 
-  // 2. Matter (Phase 1 — Initial Contact & Setup).
-  const title = [name, body.property_description].filter(Boolean).join(" — ") || name;
+  // 2. Matter (Phase 1 — Initial Contact & Setup). Standard naming convention.
+  const title = buildMatterTitle({
+    municipality: body.municipality, serviceCode, clientName: name, property: body.property_description,
+  });
   const { data: matter, error: matterErr } = await admin
     .from("matters")
     .insert({
