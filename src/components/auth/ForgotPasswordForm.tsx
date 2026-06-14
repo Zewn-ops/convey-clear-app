@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Turnstile from "@/components/auth/Turnstile";
 import { CheckCircle } from "lucide-react";
 
 const schema = z.object({
@@ -21,6 +22,7 @@ export default function ForgotPasswordForm() {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const {
     register,
@@ -32,6 +34,7 @@ export default function ForgotPasswordForm() {
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
+      captchaToken: captchaToken ?? undefined,
     });
 
     if (error) {
@@ -76,6 +79,8 @@ export default function ForgotPasswordForm() {
         error={errors.email?.message}
         {...register("email")}
       />
+      <Turnstile onVerify={setCaptchaToken} />
+
       <Button type="submit" loading={loading} className="w-full" size="lg">
         Send reset link
       </Button>

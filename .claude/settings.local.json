@@ -3,7 +3,27 @@
     "allow": [
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Read(//home/zuaan/projects/convey-clear/**)",
+      "Read(//home/zuaan/**)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "WebFetch(domain:conveyclear.co.za)",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0\" https://conveyclear.co.za)",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0\" https://conveyclear.co.za/about)",
+      "Bash(curl -s -H \"User-Agent: Mozilla/5.0\" https://conveyclear.co.za/contact)",
+      "Bash(git push *)",
+      "Bash(ssh *)",
+      "Bash(pip install *)",
+      "Bash(python3 -c ' *)",
+      "Bash(sudo pacman -S python-docx --noconfirm)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('pdf-lib' in str\\(d\\)\\)\")",
+      "Bash(python3 *)",
+      "Bash(npx tsc *)",
+      "Bash(bash /home/zuaan/projects/convey-clear/trial-monitor.sh)",
+      "Bash(tmux list-sessions *)",
+      "Bash(tmux list-panes *)",
+      "Bash(sudo pacman -S tmux --noconfirm)"
     ]
   }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { isStaffRole, type AppUser } from "@/types";
+import { isStaffRole, isAdminRole, type AppUser } from "@/types";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -50,6 +50,6 @@ export function useAuth() {
     profile,
     loading,
     isStaff: isStaffRole(profile?.role),
-    isAdmin: profile?.role === "admin",
+    isAdmin: isAdminRole(profile?.role),
   };
 }

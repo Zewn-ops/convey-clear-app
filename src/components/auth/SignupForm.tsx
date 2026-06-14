@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { ShieldCheck } from "lucide-react";
+import Turnstile from "@/components/auth/Turnstile";
 
 const schema = z
   .object({
@@ -28,6 +28,8 @@ const schema = z
       .regex(/[A-Z]/, "Include at least one uppercase letter")
       .regex(/[0-9]/, "Include at least one number"),
     confirm_password: z.string(),
+    // Honeypot — must stay empty. Bots fill every field; humans never see it.
+    company: z.string().max(0).optional(),
     popia_consent: z.literal(true, {
       errorMap: () => ({
         message: "You must accept the POPIA data handling notice to continue",
@@ -43,14 +45,9 @@ type FormValues = z.infer<typeof schema>;
 
 export default function SignupForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
-
-  // Admin invite token check
-  const adminToken = searchParams.get("admin");
-  const isAdminSignup =
-    adminToken === process.env.NEXT_PUBLIC_ADMIN_INVITE_TOKEN;
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const {
     register,
@@ -59,18 +56,23 @@ export default function SignupForm() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (values: FormValues) => {
+    // Honeypot tripped → silently pretend success (don't tip off the bot).
+    if (values.company) {
+      toast.success("Account created! Please check your email to confirm.");
+      router.push("/auth/login");
+      return;
+    }
     setLoading(true);
-    const role = isAdminSignup ? "admin" : "client";
 
+    // Role is NEVER set here — the DB trigger forces 'client' on public signup.
+    // Staff/partner/admin accounts are provisioned from /admin/users only.
     const { error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
-        data: {
-          full_name: values.full_name,
-          role,
-        },
+        data: { full_name: values.full_name },
         emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        captchaToken: captchaToken ?? undefined,
       },
     });
 
@@ -86,12 +88,17 @@ export default function SignupForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {isAdminSignup && (
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-          <ShieldCheck className="h-4 w-4 shrink-0" />
-          Creating an admin account
-        </div>
-      )}
+      {/* Honeypot: visually hidden, off-screen, not tab-reachable. */}
+      <div aria-hidden="true" className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden">
+        <label htmlFor="company">Company (leave blank)</label>
+        <input
+          id="company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          {...register("company")}
+        />
+      </div>
 
       <Input
         label="Full name"
@@ -181,6 +188,8 @@ export default function SignupForm() {
           <p className="text-xs text-red-500">{errors.popia_consent.message}</p>
         )}
       </div>
+
+      <Turnstile onVerify={setCaptchaToken} />
 
       <Button type="submit" loading={loading} className="w-full" size="lg">
         Create account
