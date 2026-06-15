@@ -24,6 +24,7 @@ export default function ReferForm({
   const router = useRouter();
   const [entityType, setEntityType] = useState<"natural_person" | "business" | "trust">("natural_person");
   const [name, setName] = useState("");
+  const [regNo, setRegNo] = useState("");
   const [email, setEmail] = useState("");
   const [cell, setCell] = useState("");
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
@@ -43,6 +44,7 @@ export default function ReferForm({
         entity_type: entityType,
         full_name: entityType === "natural_person" ? name : undefined,
         business_name: entityType !== "natural_person" ? name : undefined,
+        registration_no: entityType !== "natural_person" ? regNo : undefined,
         email,
         cell,
         service_id: serviceId || undefined,
@@ -104,6 +106,14 @@ export default function ReferForm({
           onChange={(e) => setName(e.target.value)}
           placeholder={entityType === "natural_person" ? "Jane Smith" : "Acme (Pty) Ltd"}
         />
+        {entityType !== "natural_person" && (
+          <Input
+            label="Registration / IT number"
+            value={regNo}
+            onChange={(e) => setRegNo(e.target.value)}
+            placeholder="2018/123456/07"
+          />
+        )}
         <Input label="Client email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@example.co.za" />
         <Input label="Client cell" value={cell} onChange={(e) => setCell(e.target.value)} placeholder="+27 82 000 0000" />
         <Select

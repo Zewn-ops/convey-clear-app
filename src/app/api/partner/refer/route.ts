@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     entity_type?: "natural_person" | "business" | "trust";
     full_name?: string;
     business_name?: string;
+    registration_no?: string;
     email?: string;
     cell?: string;
     municipality?: string;
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
       entity_type: entityType,
       full_name: entityType === "natural_person" ? name : null,
       business_name: entityType !== "natural_person" ? name : null,
+      registration_no: entityType !== "natural_person" ? (body.registration_no || null) : null,
       primary_email: email || null,
       primary_cell: body.cell || null,
       business_partner_id: auth.partnerId,

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -18,7 +19,11 @@ import {
   type UserRole,
 } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { UserPlus, Building2, Copy, Check, KeyRound } from "lucide-react";
+import { UserPlus, Building2, Copy, Check, KeyRound, X, Mail } from "lucide-react";
+
+// Temp-password handover survives a page reload (sessionStorage) until the admin
+// explicitly dismisses it — so it isn't lost if the page refreshes after create.
+const CRED_KEY = "cc_created_cred";
 
 const ROLE_BADGE: Record<string, "default" | "info" | "success" | "warning" | "gray"> = {
   super_admin: "default",
@@ -40,6 +45,7 @@ export default function UserManager({
   partners: BusinessPartner[];
 }) {
   const router = useRouter();
+  const supabase = createClient();
   const assignable = isSuperAdmin(callerRole)
     ? ASSIGNABLE_ROLES_BY_SUPER
     : ASSIGNABLE_ROLES_BY_ADMIN;
@@ -53,8 +59,36 @@ export default function UserManager({
   const [cell, setCell] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [createdCred, setCreatedCred] = useState<{ email: string; password: string } | null>(null);
+  const [createdCred, setCreatedCredState] = useState<{ email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Restore a pending credential handover after a reload, so it isn't lost.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(CRED_KEY);
+      if (raw) setCreatedCredState(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setCreatedCred = (c: { email: string; password: string } | null) => {
+    setCreatedCredState(c);
+    try {
+      if (c) sessionStorage.setItem(CRED_KEY, JSON.stringify(c));
+      else sessionStorage.removeItem(CRED_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const sendReset = async (u: AppUser) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(`Password reset email sent to ${u.email} (sandboxed during testing)`);
+  };
 
   // --- new partner firm form state ---
   const [showPartnerForm, setShowPartnerForm] = useState(false);
@@ -144,7 +178,7 @@ export default function UserManager({
             <div className="flex-1">
               <p className="font-semibold text-green-900 text-sm">Login created — share these credentials now</p>
               <p className="text-xs text-green-800 mt-0.5">
-                This temporary password is shown once. Email delivery is sandboxed during testing — copy and hand it over directly.
+                This stays here (even if you reload) until you dismiss it. Email delivery is sandboxed during testing — copy and hand it over directly.
               </p>
               <div className="mt-2 rounded-lg bg-white border border-green-200 p-3 text-sm font-mono text-gray-800">
                 <div>Email: {createdCred.email}</div>
@@ -154,6 +188,14 @@ export default function UserManager({
                 {copied ? <><Check className="h-4 w-4" /> Copied</> : <><Copy className="h-4 w-4" /> Copy handover text</>}
               </Button>
             </div>
+            <button
+              type="button"
+              onClick={() => setCreatedCred(null)}
+              aria-label="Dismiss"
+              className="shrink-0 rounded-full p-1 text-green-700 hover:bg-green-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </Card>
       )}
@@ -292,12 +334,20 @@ export default function UserManager({
                     <Badge label={u.active ? "Active" : "Disabled"} variant={u.active ? "success" : "gray"} />
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => toggleActive(u)}
-                      className="text-xs font-medium text-[#E8521A] hover:underline"
-                    >
-                      {u.active ? "Deactivate" : "Activate"}
-                    </button>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => sendReset(u)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
+                      >
+                        <Mail className="h-3.5 w-3.5" /> Send reset
+                      </button>
+                      <button
+                        onClick={() => toggleActive(u)}
+                        className="text-xs font-medium text-[#E8521A] hover:underline"
+                      >
+                        {u.active ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

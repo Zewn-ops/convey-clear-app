@@ -19,6 +19,7 @@ import {
   type MatterStatus,
 } from "@/types";
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings } from "lucide-react";
+import CollectFicaButton from "@/components/admin/CollectFicaButton";
 
 export const dynamic = "force-dynamic";
 
@@ -366,7 +367,10 @@ export default async function AdminMatterDetailPage({
 
       {/* Documents */}
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3">Documents ({documents.length})</h2>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h2 className="font-semibold text-gray-900">Documents ({documents.length})</h2>
+          <CollectFicaButton matterId={id} />
+        </div>
         {documents.length > 0 ? (
           <Card padding="none">
             <ul className="divide-y divide-gray-100">
