@@ -149,13 +149,13 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_notes, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
       )
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, matter_id, document_type, document_status, file_name, verified, created_at")
+      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, verified, created_at")
       .eq("matter_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -369,7 +369,19 @@ export default async function AdminMatterDetailPage({
       <div>
         <div className="flex items-center justify-between gap-3 mb-3">
           <h2 className="font-semibold text-gray-900">Documents ({documents.length})</h2>
-          <CollectFicaButton matterId={id} />
+          <div className="flex items-center gap-3">
+            {(matter as any).drive_folder_id && (
+              <a
+                href={`https://drive.google.com/drive/folders/${(matter as any).drive_folder_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
+              >
+                Open Drive folder
+              </a>
+            )}
+            <CollectFicaButton matterId={id} />
+          </div>
         </div>
         {documents.length > 0 ? (
           <Card padding="none">
@@ -385,6 +397,26 @@ export default async function AdminMatterDetailPage({
                       {doc.document_type} · {formatDate(doc.created_at)}
                     </p>
                   </div>
+                  {doc.drive_file_id ? (
+                    <div className="flex items-center gap-3 shrink-0">
+                      <a
+                        href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-[#1B2E6B] hover:underline"
+                      >
+                        View
+                      </a>
+                      <a
+                        href={`https://drive.google.com/uc?export=download&id=${doc.drive_file_id}`}
+                        className="text-xs font-medium text-[#E8521A] hover:underline"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-300 shrink-0" title="File not in Drive (portal-created matter — see #6)">No file</span>
+                  )}
                   {doc.verified && (
                     <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>
                   )}
