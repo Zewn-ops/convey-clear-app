@@ -1,4 +1,5 @@
 import OnboardForm from "./OnboardForm";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const N8N_URL =
   process.env.N8N_WEBHOOK_URL ?? "https://n8n.conveyclear.co.za";
@@ -14,6 +15,11 @@ export interface TokenData {
   client_name: string;
   entity_type: "natural_person" | "business";
   primary_email: string;
+  // Prefill from the existing client record (best-effort).
+  id_number?: string | null;
+  primary_cell?: string | null;
+  physical_address?: string | null;
+  registration_no?: string | null;
   service_code: string;
   service_name: string;
   service_config: {
@@ -60,6 +66,32 @@ export default async function OnboardPage({
 
   if (error || !data) {
     return <ErrorPage message={error ?? "Invalid link."} />;
+  }
+
+  // Prefill from the existing client record so the applicant doesn't re-type
+  // details already on file (ID, cell, address, reg no). Best-effort — never
+  // block the form if this lookup fails.
+  try {
+    const admin = createAdminClient();
+    const { data: m } = await admin
+      .from("matters")
+      .select("clients(id_number, primary_cell, physical_address, registration_no)")
+      .eq("id", data.matter_id)
+      .maybeSingle();
+    const c = (m?.clients as {
+      id_number?: string | null;
+      primary_cell?: string | null;
+      physical_address?: string | null;
+      registration_no?: string | null;
+    } | null) ?? null;
+    if (c) {
+      data.id_number = c.id_number ?? null;
+      data.primary_cell = c.primary_cell ?? null;
+      data.physical_address = c.physical_address ?? null;
+      data.registration_no = c.registration_no ?? null;
+    }
+  } catch {
+    /* prefill is best-effort */
   }
 
   return (

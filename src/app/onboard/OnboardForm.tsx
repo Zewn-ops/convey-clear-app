@@ -232,16 +232,23 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
   );
   const allowNotAvailable = data.service_config.documents_allow_not_available ?? false;
 
-  // ---- details state ----
+  // ---- details state (prefilled from the existing client record) ----
+  // Client stores one full_name; split last word as surname for the two fields.
+  const splitName = (full: string | null | undefined) => {
+    const parts = (full ?? "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
+    return { first: parts[0] ?? "", last: "" };
+  };
+  const nm = isBusiness ? { first: "", last: "" } : splitName(data.client_name);
   const [details, setDetails] = useState({
-    full_name: isBusiness ? "" : (data.client_name ?? ""),
-    surname: "",
+    full_name: nm.first,
+    surname: nm.last,
     business_name: isBusiness ? (data.client_name ?? "") : "",
-    registration_no: "",
-    cell: "",
+    registration_no: data.registration_no ?? "",
+    cell: data.primary_cell ?? "",
     email: data.primary_email ?? "",
-    id_number: "",
-    home_address: "",
+    id_number: data.id_number ?? "",
+    home_address: data.physical_address ?? "",
     industry: "",
     designation: "",
     municipal_username: "",
