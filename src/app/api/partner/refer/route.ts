@@ -3,6 +3,7 @@ import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { buildMatterTitle } from "@/lib/matter-naming";
+import { firePortalIntake } from "@/lib/n8n";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
@@ -113,6 +114,9 @@ export async function POST(request: Request) {
     activity_type: "post",
     content: "Matter referred by partner.",
   });
+
+  // 6. Create the Drive folder for this portal-originated matter (best-effort).
+  await firePortalIntake(matter.id, title);
 
   return NextResponse.json({
     ok: true,

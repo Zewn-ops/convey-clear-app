@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isStaffRole, type UserRole } from "@/types";
+import { firePortalIntake } from "@/lib/n8n";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
@@ -36,10 +37,16 @@ export async function POST(request: Request) {
 
   const { data: matter } = await admin
     .from("matters")
-    .select("id")
+    .select("id, title, drive_folder_id")
     .eq("id", body.matter_id)
     .maybeSingle();
   if (!matter) return NextResponse.json({ message: "Matter not found" }, { status: 404 });
+
+  // #6: if this matter has no Drive folder yet (portal-originated, pre-intake),
+  // create one now so the uploads collected via this link land in Drive.
+  if (!matter.drive_folder_id) {
+    await firePortalIntake(matter.id, matter.title ?? body.matter_id);
+  }
 
   // Reuse a live, unused link if one exists; otherwise mint a fresh 7-day token.
   const { data: existing } = await admin

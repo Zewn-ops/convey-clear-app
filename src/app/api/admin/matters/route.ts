@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { isStaffRole, type UserRole } from "@/types";
+import { firePortalIntake } from "@/lib/n8n";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
@@ -95,6 +96,10 @@ export async function POST(request: Request) {
   await admin.from("matter_activities").insert({
     matter_id: matter.id, author_id: me?.id ?? null, activity_type: "post", content: "Matter created in portal by staff.",
   });
+
+  // #6: have n8n create the Drive folder for this portal-originated matter so
+  // FICA uploads have somewhere to land. Best-effort — never blocks creation.
+  await firePortalIntake(matter.id, title);
 
   return NextResponse.json({ ok: true, matter_id: matter.id, client_id: clientId, title, onboarding_token: token });
 }

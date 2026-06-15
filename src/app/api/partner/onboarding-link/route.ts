@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { firePortalIntake } from "@/lib/n8n";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   // Ownership check: the matter's client must belong to the caller's firm.
   const { data: matter } = await admin
     .from("matters")
-    .select("id, client_id, clients(business_partner_id)")
+    .select("id, title, drive_folder_id, client_id, clients(business_partner_id)")
     .eq("id", body.matter_id)
     .maybeSingle();
 
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
     (matter?.clients as { business_partner_id?: string } | null)?.business_partner_id ?? null;
   if (!matter || ownerPartner !== auth.partnerId) {
     return NextResponse.json({ message: "Matter not found for your firm" }, { status: 404 });
+  }
+
+  // #6: ensure a Drive folder exists for this portal-originated matter so the
+  // partner's FICA uploads land in Drive.
+  if (!matter.drive_folder_id) {
+    await firePortalIntake(matter.id, matter.title ?? body.matter_id);
   }
 
   // Reuse a live, unused link if one exists.
