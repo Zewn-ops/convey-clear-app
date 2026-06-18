@@ -10,6 +10,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data.user) {
+      // MFA step-up: if the account has a verified factor, go to the challenge
+      // page instead of the portal. Fail-open if the AAL check errors.
+      try {
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal && aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+          return NextResponse.redirect(`${origin}/auth/mfa`);
+        }
+      } catch {
+        /* proceed to destination */
+      }
       const { data: profile } = await supabase
         .from("users")
         .select("role")

@@ -5,6 +5,7 @@ import { getSessionProfile, homePathForRole } from "@/lib/auth";
 import { ROLE_LABELS, isStaffRole } from "@/types";
 import Card from "@/components/ui/Card";
 import ChangePasswordForm from "@/components/auth/ChangePasswordForm";
+import MfaCard from "@/components/auth/MfaCard";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ArrowLeft } from "lucide-react";
@@ -112,6 +113,8 @@ export default async function AccountPage() {
           <h2 className="font-semibold text-gray-900 mb-4">Change password</h2>
           <ChangePasswordForm />
         </Card>
+
+        <MfaCard />
       </div>
     </div>
   );

@@ -72,8 +72,9 @@ export async function middleware(request: NextRequest) {
     role = profile?.role ?? null;
   }
 
-  // Authenticated user on an auth page → send to their home.
-  if (pathname.startsWith("/auth")) {
+  // Authenticated user on an auth page → send to their home. EXCEPT the MFA
+  // step-up challenge, which an authenticated (AAL1) user must be able to reach.
+  if (pathname.startsWith("/auth") && !pathname.startsWith("/auth/mfa")) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = homeForRole(role);
     return NextResponse.redirect(redirectUrl);

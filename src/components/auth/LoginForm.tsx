@@ -45,6 +45,18 @@ export default function LoginForm() {
       return;
     }
 
+    // MFA step-up: if this account has a verified factor, finish at the challenge
+    // page. Fail-open — never block sign-in if the AAL check itself errors.
+    try {
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal && aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+        window.location.assign("/auth/mfa");
+        return;
+      }
+    } catch {
+      /* proceed to destination */
+    }
+
     const { data: profile } = await supabase
       .from("users")
       .select("role")
