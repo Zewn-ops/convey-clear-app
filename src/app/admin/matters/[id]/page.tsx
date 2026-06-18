@@ -185,7 +185,7 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -418,6 +418,26 @@ export default async function AdminMatterDetailPage({
           )}
         </form>
       </Card>
+
+      {/* Service-specific referral details (e.g. PRC: account no., query ref, seller) */}
+      {((matter as any).service_subtype ||
+        Object.keys(((matter as any).service_data ?? {}) as Record<string, unknown>).length > 0) && (
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-3">
+            Service details{(matter as any).service_subtype ? ` · ${(matter as any).service_subtype}` : ""}
+          </h2>
+          <dl className="grid grid-cols-2 gap-4 text-sm">
+            {Object.entries(((matter as any).service_data ?? {}) as Record<string, unknown>)
+              .filter(([, v]) => v)
+              .map(([k, v]) => (
+                <div key={k}>
+                  <dt className="text-xs text-gray-400 capitalize">{k.replace(/_/g, " ")}</dt>
+                  <dd className="text-gray-800 mt-0.5">{String(v)}</dd>
+                </div>
+              ))}
+          </dl>
+        </Card>
+      )}
 
       {/* Celebration when the matter is won/closed (H2) */}
       <Celebrate active={matter.status === "won"} matterId={matter.id} />

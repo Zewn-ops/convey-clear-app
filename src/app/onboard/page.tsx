@@ -1,5 +1,6 @@
 import OnboardForm from "./OnboardForm";
 import CooOnboardForm from "./CooOnboardForm";
+import PrcOnboardForm from "./PrcOnboardForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateOnboardingToken } from "@/lib/onboard-token";
 
@@ -28,6 +29,11 @@ export default async function OnboardPage({
   // COO / multi-party matters get the per-party (buyer/seller) document form.
   if (data.parties && data.parties.length > 0) {
     return <CooOnboardForm token={token} data={data} />;
+  }
+
+  // PRC / Rates Clearance Figures (RCF) gets the municipality-specific doc set.
+  if (data.service_code === "RCF" && data.service_subtype === "RCF") {
+    return <PrcOnboardForm token={token} data={data} />;
   }
 
   return <OnboardForm token={token} data={data} />;

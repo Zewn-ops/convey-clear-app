@@ -22,6 +22,7 @@ export interface TokenData {
   physical_address?: string | null;
   registration_no?: string | null;
   service_code: string;
+  service_subtype: string | null;
   service_name: string;
   service_config: {
     required_documents: {
@@ -79,7 +80,7 @@ export async function validateOnboardingToken(
   const { data: m } = await admin
     .from("matters")
     .select(
-      "id, title, municipality, service_notes, drive_folder_id, client_id, services(code, name, config), clients(entity_type, full_name, business_name, primary_email, id_number, primary_cell, physical_address, registration_no)"
+      "id, title, municipality, service_subtype, service_notes, drive_folder_id, client_id, services(code, name, config), clients(entity_type, full_name, business_name, primary_email, id_number, primary_cell, physical_address, registration_no)"
     )
     .eq("id", link.matter_id)
     .maybeSingle();
@@ -113,6 +114,7 @@ export async function validateOnboardingToken(
     physical_address: c?.physical_address ?? null,
     registration_no: c?.registration_no ?? null,
     service_code: svc?.code ?? "",
+    service_subtype: (m as { service_subtype?: string | null }).service_subtype ?? null,
     service_name: svc?.name ?? "Onboarding",
     service_config: {
       required_documents: {

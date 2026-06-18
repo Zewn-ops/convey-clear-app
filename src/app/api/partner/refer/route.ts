@@ -52,6 +52,8 @@ export async function POST(request: Request) {
     property_description?: string;
     notes?: string;
     partner_file_ref?: string;
+    service_subtype?: string;
+    service_data?: Record<string, unknown>;
     parties?: PartyInput[];
     // legacy single-client fields
     entity_type?: EntityType;
@@ -205,6 +207,8 @@ export async function POST(request: Request) {
       municipality: body.municipality || null,
       service_notes: body.notes || null,
       partner_file_ref: body.partner_file_ref?.trim() || null,
+      service_subtype: body.service_subtype || null,
+      service_data: body.service_data ?? {},
     })
     .select("id")
     .single();
