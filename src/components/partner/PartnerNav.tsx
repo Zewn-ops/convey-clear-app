@@ -10,6 +10,7 @@ import {
   Briefcase,
   Users,
   PlusCircle,
+  MessageSquare,
   LogOut,
   Scale,
   UserCircle,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/partner", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/partner/matters", label: "Matters", icon: Briefcase },
   { href: "/partner/clients", label: "Clients", icon: Users },
+  { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },
   { href: "/partner/refer", label: "Refer a matter", icon: PlusCircle },
 ];
 

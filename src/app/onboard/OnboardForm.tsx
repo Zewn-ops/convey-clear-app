@@ -17,12 +17,13 @@ import {
 import toast from "react-hot-toast";
 import type { TokenData } from "./page";
 import { PERSON_INDUSTRIES, PERSON_DESIGNATIONS } from "@/lib/conveyclear-lists";
+import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Document metadata — labels/hints per doc-type code (from services.config
 // required_documents). Unknown codes fall back to the raw code.
 // ---------------------------------------------------------------------------
-const DOC_META: Record<string, { label: string; hint: string }> = {
+export const DOC_META: Record<string, { label: string; hint: string }> = {
   id: { label: "South African ID Document", hint: "Green ID book, Smart ID card, or Passport" },
   id_certified: { label: "Certified ID Document", hint: "Certified copy — not older than 3 months" },
   id_directors: { label: "Directors' ID Documents", hint: "ID for all directors — one PDF if multiple" },
@@ -51,12 +52,22 @@ const DOC_META: Record<string, { label: string; hint: string }> = {
   building_plans: { label: "Existing Building Plans", hint: "Approved building plans (if you have them)" },
   municipal_account_latest: { label: "Latest Municipal Account", hint: "Full current municipal account statement" },
   dispute_evidence: { label: "Dispute Evidence", hint: "Correspondence, photos, meter readings supporting the dispute" },
+  // Change-of-ownership doc types (see migration 014 + COO_Research.md)
+  deed_of_sale: { label: "Deed of Sale / Offer to Purchase", hint: "Signed sale agreement / proof of ownership transfer" },
+  coc_electrical: { label: "Electrical Certificate of Compliance", hint: "Valid electrical COC for the property/unit" },
+  certificate_of_occupation: { label: "Certificate of Occupation", hint: "For new connections only" },
+  registration_letter: { label: "Registration Letter", hint: "Attorney letter confirming transfer registration" },
+  rates_clearance_figures: { label: "Rates Clearance Figures", hint: "Municipal s118 clearance figures statement" },
+  rates_clearance_certificate: { label: "Rates Clearance Certificate", hint: "Issued s118 clearance certificate" },
+  consumer_agreement: { label: "Consumer Agreement", hint: "Completed municipal account-application form" },
+  service_application: { label: "Municipal Service Application", hint: "Completed municipal service application form" },
+  seller_banking_details: { label: "Banking Details (refund)", hint: "Proof of banking for the rates-account refund" },
 };
 
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024;
 
-type DocSlotState = { file: File | null; notAvailable: boolean; reason: string };
+export type DocSlotState = { file: File | null; notAvailable: boolean; reason: string };
 type FormState = Record<string, DocSlotState>;
 
 interface OnboardFormProps {
@@ -81,7 +92,7 @@ type Stage = number; // 0..3
 // ---------------------------------------------------------------------------
 // Reusable upload slot (unchanged behaviour from the original form)
 // ---------------------------------------------------------------------------
-function DocSlot({
+export function DocSlot({
   docType,
   allowNotAvailable,
   state,
@@ -224,7 +235,7 @@ const inputCls =
 // ---------------------------------------------------------------------------
 // Main form
 // ---------------------------------------------------------------------------
-export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps) {
+export default function OnboardForm({ token, data }: OnboardFormProps) {
   const isBusiness = data.entity_type === "business";
 
   const requiredDocs = (data.service_config.required_documents[data.entity_type] ?? []).filter(
@@ -314,42 +325,58 @@ export default function OnboardForm({ token, data, submitUrl }: OnboardFormProps
       consents: { popia, terms, marketing },
     };
 
-    // Documents go STRAIGHT to n8n (nginx allows 50MB) — routing files through the
-    // Vercel function hits its ~4.5MB body limit (413). Fields go to the Vercel route.
-    const docsForm = new FormData();
-    docsForm.append("token", token);
-    docsForm.append("matter_id", data.matter_id);
-    docsForm.append("service_code", data.service_code);
-    docsForm.append("client_name", data.client_name);
-    docsForm.append("entity_type", data.entity_type);
-    docsForm.append("popia_consent_agreed", "true");
-    for (const [docType, s] of Object.entries(docStates)) {
-      if (s.file) docsForm.append(`doc_${docType}`, s.file, s.file.name);
-      else if (s.notAvailable) {
-        docsForm.append(`not_available_${docType}`, "true");
-        docsForm.append(`reason_${docType}`, s.reason.trim());
-      }
-    }
-
-    const fieldsForm = new FormData();
-    fieldsForm.append("token", token);
-    fieldsForm.append("matter_id", data.matter_id);
-    fieldsForm.append("entity_type", data.entity_type);
-    fieldsForm.append("fica", JSON.stringify(fica));
-
     try {
-      // 1) documents -> n8n (Drive upload + mark used + stage 54). Critical path.
-      const docRes = await fetch(submitUrl ?? "/api/onboard/submit", { method: "POST", body: docsForm });
-      if (!docRes.ok) {
-        const json = await docRes.json().catch(() => ({}));
-        throw new Error(json.message ?? `Server error (${docRes.status})`);
+      const supabase = createBrowserSupabase();
+      const uploaded: {
+        storage_path: string;
+        document_type: string;
+        file_name: string;
+        mime_type: string;
+        size_bytes: number;
+      }[] = [];
+      const notAvailable: { document_type: string; reason: string }[] = [];
+
+      // Upload each file DIRECTLY to Supabase Storage via a token-authed signed
+      // URL (bypasses Vercel's 4.5 MB body limit — no more routing through n8n).
+      for (const [docType, s] of Object.entries(docStates)) {
+        if (s.file) {
+          const r = await fetch("/api/onboard/signed-upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, file_name: s.file.name }),
+          });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.message ?? "Could not start the upload");
+          const { error: upErr } = await supabase.storage.from(j.bucket).uploadToSignedUrl(j.path, j.token, s.file);
+          if (upErr) throw new Error(upErr.message);
+          uploaded.push({
+            storage_path: j.path,
+            document_type: docType,
+            file_name: s.file.name,
+            mime_type: s.file.type,
+            size_bytes: s.file.size,
+          });
+        } else if (s.notAvailable && s.reason.trim()) {
+          notAvailable.push({ document_type: docType, reason: s.reason.trim() });
+        }
       }
-      // 2) FICA fields -> Supabase via Vercel route (best-effort; don't block success)
-      try {
-        await fetch("/api/onboard/submit", { method: "POST", body: fieldsForm });
-      } catch {
-        /* field persistence is non-critical relative to the document submission */
-      }
+
+      // Record documents + FICA fields + mark the link used.
+      const res = await fetch("/api/onboard/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          matter_id: data.matter_id,
+          entity_type: data.entity_type,
+          fica,
+          documents: uploaded,
+          not_available: notAvailable,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message ?? `Server error (${res.status})`);
+
       setSubmitted(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Submission failed. Please try again.";
@@ -644,7 +671,7 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-function ConsentBox({
+export function ConsentBox({
   checked, onChange, title, body, required, optional,
 }: { checked: boolean; onChange: (b: boolean) => void; title: string; body: string; required?: boolean; optional?: boolean }) {
   return (

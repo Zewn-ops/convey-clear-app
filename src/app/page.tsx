@@ -141,6 +141,10 @@ export default async function HomePage() {
             <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-7 w-auto brightness-0 invert" />
           </div>
           <p>© {new Date().getFullYear()} ConveyClear. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white">Terms &amp; Conditions</Link>
+          </div>
           <p>POPIA compliant · South Africa</p>
         </div>
       </footer>

@@ -149,7 +149,8 @@ export interface Client {
 
 export interface Matter {
   id: string;
-  client_id: string;
+  client_id: string | null;
+  business_partner_id: string | null;
   service_id: string | null;
   property_id: string | null;
   title: string | null;
@@ -171,12 +172,41 @@ export interface Matter {
   clients?: Pick<Client, "id" | "entity_type" | "full_name" | "business_name"> | null;
 }
 
+export type MatterPartyRole = "buyer" | "seller" | "owner" | "applicant" | "other";
+
+// A party to a matter (COO buyer/seller etc.) — a DATA CAPTURE under one matter,
+// NOT an auth account. No login. Created/managed by staff or the referring partner.
+export interface MatterParty {
+  id: string;
+  matter_id: string;
+  role: MatterPartyRole;
+  entity_type: EntityType;
+  full_name: string | null;
+  business_name: string | null;
+  registration_no: string | null;
+  id_number: string | null;
+  email: string | null;
+  cell: string | null;
+  physical_address: string | null;
+  // Seller refund banking (Open Rates Account closure). Sensitive PII.
+  bank_name: string | null;
+  bank_account_no: string | null;
+  bank_branch_code: string | null;
+  account_holder: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MatterDocument {
   id: string;
   matter_id: string;
   document_type: string;
   document_status: string | null;
   drive_file_id: string | null;
+  storage_bucket: string | null;
+  storage_path: string | null;
+  matter_party_id: string | null;
   file_name: string | null;
   mime_type: string | null;
   size_bytes: number | null;
@@ -185,6 +215,37 @@ export interface MatterDocument {
   verified: boolean | null;
   created_at: string;
 }
+
+export type EnquiryStatus = "open" | "assigned" | "resolved" | "closed";
+
+export interface Enquiry {
+  id: string;
+  business_partner_id: string | null;
+  matter_id: string | null;
+  created_by: string | null;
+  subject: string;
+  message: string;
+  status: EnquiryStatus;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EnquiryMessage {
+  id: string;
+  enquiry_id: string;
+  author_id: string | null;
+  author_label: string | null;
+  body: string;
+  created_at: string;
+}
+
+export const ENQUIRY_STATUS_LABELS: Record<EnquiryStatus, string> = {
+  open: "Open",
+  assigned: "Assigned",
+  resolved: "Resolved",
+  closed: "Closed",
+};
 
 export interface BusinessPartner {
   id: string;

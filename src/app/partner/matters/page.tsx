@@ -11,6 +11,9 @@ import {
   type MatterPhase,
   type MatterStatus,
 } from "@/types";
+import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
+import MatterFilters from "@/components/matters/MatterFilters";
+import MatterPagination from "@/components/matters/MatterPagination";
 
 export const metadata = { title: "Matters — ConveyClear Partner" };
 
@@ -18,17 +21,33 @@ function statusVariant(s: string): "info" | "success" | "danger" | "warning" | "
   return ({ open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[s] ?? "gray";
 }
 
-export default async function PartnerMatters() {
+export default async function PartnerMatters({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("matters")
-    .select("id, title, current_phase, status, municipality, created_at, clients(full_name, business_name)")
-    .order("created_at", { ascending: false });
+  const filters = parseMatterFilters(searchParams);
+  const { data, count } = await applyMatterFilters(
+    supabase
+      .from("matters")
+      .select("id, title, current_phase, status, municipality, created_at, clients(full_name, business_name)", {
+        count: "exact",
+      }),
+    filters
+  );
   const matters = (data as Matter[] | null) ?? [];
+  const total = count ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Matters</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Matters</h1>
+        <p className="text-sm text-gray-500 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
+      </div>
+
+      <MatterFilters />
+
       <Card padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -56,12 +75,14 @@ export default async function PartnerMatters() {
                 </tr>
               ))}
               {matters.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters yet</td></tr>
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -31,7 +32,11 @@ export default async function PartnerClients() {
             <tbody className="divide-y divide-gray-50">
               {clients.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-gray-900">{clientDisplayName(c)}</td>
+                  <td className="px-5 py-3 font-medium">
+                    <Link href={`/partner/clients/${c.id}`} className="text-[#1B2E6B] hover:underline">
+                      {clientDisplayName(c)}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3"><Badge label={c.entity_type.replace("_", " ")} variant="gray" /></td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{c.primary_email || "—"}</td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(c.created_at)}</td>

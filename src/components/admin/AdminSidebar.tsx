@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Users,
   Briefcase,
+  MessageSquare,
   UserCog,
   LogOut,
   ShieldCheck,
@@ -19,6 +20,7 @@ const baseNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
   { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
+  { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
 ];
 const adminNav = [
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },

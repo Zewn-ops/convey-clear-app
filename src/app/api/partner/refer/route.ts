@@ -8,10 +8,34 @@ import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 
-// A partner refers a new client + matter. The client is bound to the partner's
-// firm (business_partner_id) so RLS will surface it to them automatically. We
-// also auto-subscribe the partner to the matter (notification basis) and mint an
-// onboarding link so they can immediately complete FICA on the client's behalf.
+type EntityType = "natural_person" | "business" | "trust";
+
+interface PartyInput {
+  role?: "buyer" | "seller" | "owner" | "applicant" | "other";
+  entity_type?: EntityType;
+  full_name?: string;
+  business_name?: string;
+  registration_no?: string;
+  id_number?: string;
+  email?: string;
+  cell?: string;
+  physical_address?: string;
+  // seller refund banking (Open Rates Account closure) — optional at referral
+  bank_name?: string;
+  bank_account_no?: string;
+  bank_branch_code?: string;
+  account_holder?: string;
+}
+
+const partyDisplayName = (p: PartyInput): string =>
+  ((p.entity_type ?? "natural_person") === "natural_person" ? p.full_name : p.business_name)?.trim() ?? "";
+
+// A partner refers a new matter. Two shapes:
+//   • Single-client (BC etc.): one client bound to the firm + matter.
+//   • Multi-party (COO): NO client account — buyer + seller captured as
+//     matter_parties data records under one matter. Either way the matter is
+//     linked DIRECTLY to the partner firm (matters.business_partner_id) so RLS
+//     surfaces it, and we mint an onboarding link + auto-subscribe the partner.
 export async function POST(request: Request) {
   if (!rateLimit(`partner-refer:${clientIp(request)}`, 30, 60_000)) {
     return NextResponse.json({ message: "Too many requests." }, { status: 429 });
@@ -24,26 +48,23 @@ export async function POST(request: Request) {
   let body: {
     service_id?: string;
     service_code?: string;
-    entity_type?: "natural_person" | "business" | "trust";
+    municipality?: string;
+    property_description?: string;
+    notes?: string;
+    parties?: PartyInput[];
+    // legacy single-client fields
+    entity_type?: EntityType;
     full_name?: string;
     business_name?: string;
     registration_no?: string;
     email?: string;
     cell?: string;
-    municipality?: string;
-    property_description?: string;
-    notes?: string;
   };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
   }
-
-  const entityType = body.entity_type ?? "natural_person";
-  const email = (body.email ?? "").trim().toLowerCase();
-  const name = entityType === "natural_person" ? (body.full_name ?? "").trim() : (body.business_name ?? "").trim();
-  if (!name) return NextResponse.json({ message: "Client / entity name is required" }, { status: 400 });
 
   const admin = createAdminClient();
 
@@ -58,7 +79,99 @@ export async function POST(request: Request) {
     serviceId = svc?.id ?? null;
   }
 
-  // 1. Client (bound to the partner firm).
+  const parties = Array.isArray(body.parties) ? body.parties.filter((p) => partyDisplayName(p)) : [];
+
+  // ==========================================================================
+  // MULTI-PARTY PATH (COO buyer/seller) — no client account
+  // ==========================================================================
+  if (parties.length > 0) {
+    const buyer = parties.find((p) => p.role === "buyer");
+    const seller = parties.find((p) => p.role === "seller");
+    if (!buyer || !partyDisplayName(buyer)) {
+      return NextResponse.json({ message: "Buyer name is required" }, { status: 400 });
+    }
+    if (!seller || !partyDisplayName(seller)) {
+      return NextResponse.json({ message: "Seller name is required" }, { status: 400 });
+    }
+
+    // Title uses the buyer (incoming owner) as the client segment.
+    const title = buildMatterTitle({
+      municipality: body.municipality,
+      serviceCode,
+      clientName: partyDisplayName(buyer),
+      property: body.property_description,
+    });
+
+    const { data: matter, error: matterErr } = await admin
+      .from("matters")
+      .insert({
+        client_id: null,
+        business_partner_id: auth.partnerId,
+        service_id: serviceId,
+        title,
+        current_phase: "1",
+        status: "open",
+        priority: "standard",
+        municipality: body.municipality || null,
+        service_notes: body.notes || null,
+      })
+      .select("id")
+      .single();
+    if (matterErr) return NextResponse.json({ message: matterErr.message }, { status: 400 });
+
+    const partyRows = parties.map((p) => {
+      const et = p.entity_type ?? "natural_person";
+      return {
+        matter_id: matter.id,
+        role: p.role ?? "other",
+        entity_type: et,
+        full_name: et === "natural_person" ? partyDisplayName(p) || null : null,
+        business_name: et !== "natural_person" ? partyDisplayName(p) || null : null,
+        registration_no: et !== "natural_person" ? p.registration_no?.trim() || null : null,
+        id_number: p.id_number?.trim() || null,
+        email: p.email?.trim().toLowerCase() || null,
+        cell: p.cell?.trim() || null,
+        physical_address: p.physical_address?.trim() || null,
+        bank_name: p.bank_name?.trim() || null,
+        bank_account_no: p.bank_account_no?.trim() || null,
+        bank_branch_code: p.bank_branch_code?.trim() || null,
+        account_holder: p.account_holder?.trim() || null,
+      };
+    });
+    const { error: partyErr } = await admin.from("matter_parties").insert(partyRows);
+    if (partyErr) return NextResponse.json({ message: partyErr.message }, { status: 400 });
+
+    await admin.from("matter_subscribers").insert({ matter_id: matter.id, user_id: auth.userId }).select();
+
+    const token = randomUUID();
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await admin.from("onboarding_links").insert({
+      token,
+      matter_id: matter.id,
+      purpose: "onboarding",
+      expires_at: expires,
+    });
+
+    await admin.from("matter_activities").insert({
+      matter_id: matter.id,
+      author_id: auth.userId,
+      activity_type: "post",
+      body: "Change-of-ownership matter referred by partner (buyer + seller captured).",
+    });
+
+    await firePortalIntake(matter.id, title);
+
+    return NextResponse.json({ ok: true, matter_id: matter.id, onboarding_token: token });
+  }
+
+  // ==========================================================================
+  // SINGLE-CLIENT PATH (BC etc.) — client bound to the firm
+  // ==========================================================================
+  const entityType = body.entity_type ?? "natural_person";
+  const email = (body.email ?? "").trim().toLowerCase();
+  const name = entityType === "natural_person" ? (body.full_name ?? "").trim() : (body.business_name ?? "").trim();
+  if (!name) return NextResponse.json({ message: "Client / entity name is required" }, { status: 400 });
+
   const { data: client, error: clientErr } = await admin
     .from("clients")
     .insert({
@@ -74,7 +187,6 @@ export async function POST(request: Request) {
     .single();
   if (clientErr) return NextResponse.json({ message: clientErr.message }, { status: 400 });
 
-  // 2. Matter (Phase 1 — Initial Contact & Setup). Standard naming convention.
   const title = buildMatterTitle({
     municipality: body.municipality, serviceCode, clientName: name, property: body.property_description,
   });
@@ -82,6 +194,7 @@ export async function POST(request: Request) {
     .from("matters")
     .insert({
       client_id: client.id,
+      business_partner_id: auth.partnerId,
       service_id: serviceId,
       title,
       current_phase: "1",
@@ -94,10 +207,8 @@ export async function POST(request: Request) {
     .single();
   if (matterErr) return NextResponse.json({ message: matterErr.message }, { status: 400 });
 
-  // 3. Subscribe the partner user to the matter (notification basis).
   await admin.from("matter_subscribers").insert({ matter_id: matter.id, user_id: auth.userId }).select();
 
-  // 4. Mint an onboarding link (7-day, single-use) so they can complete FICA now.
   const token = randomUUID();
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   await admin.from("onboarding_links").insert({
@@ -107,21 +218,14 @@ export async function POST(request: Request) {
     expires_at: expires,
   });
 
-  // 5. Activity feed entry.
   await admin.from("matter_activities").insert({
     matter_id: matter.id,
     author_id: auth.userId,
     activity_type: "post",
-    content: "Matter referred by partner.",
+    body: "Matter referred by partner.",
   });
 
-  // 6. Create the Drive folder for this portal-originated matter (best-effort).
   await firePortalIntake(matter.id, title);
 
-  return NextResponse.json({
-    ok: true,
-    matter_id: matter.id,
-    client_id: client.id,
-    onboarding_token: token,
-  });
+  return NextResponse.json({ ok: true, matter_id: matter.id, client_id: client.id, onboarding_token: token });
 }

@@ -14,12 +14,17 @@ import {
   PRIORITY_LABELS,
   type Matter,
   type MatterDocument,
+  type MatterParty,
   type MatterPhase,
   type MatterPriority,
   type MatterStatus,
 } from "@/types";
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
+import PartiesCard from "@/components/matters/PartiesCard";
+import StorageUpload from "@/components/matters/StorageUpload";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { signedDownloadUrls } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -145,7 +150,7 @@ export default async function AdminMatterDetailPage({
 
   const supabase = await createClient();
 
-  const [{ data: matterData }, { data: docsData }, { data: activitiesData }] = await Promise.all([
+  const [{ data: matterData }, { data: docsData }, { data: activitiesData }, { data: partiesData }] = await Promise.all([
     supabase
       .from("matters")
       .select(
@@ -155,7 +160,7 @@ export default async function AdminMatterDetailPage({
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, verified, created_at")
+      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, created_at")
       .eq("matter_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -164,6 +169,11 @@ export default async function AdminMatterDetailPage({
       .eq("matter_id", id)
       .order("created_at", { ascending: false })
       .limit(30),
+    supabase
+      .from("matter_parties")
+      .select("*")
+      .eq("matter_id", id)
+      .order("role", { ascending: true }),
   ]);
 
   const matter = matterData as (Matter & { services?: { id: string; code: string; name: string; config: any } | null }) | null;
@@ -171,6 +181,12 @@ export default async function AdminMatterDetailPage({
 
   const documents = (docsData as MatterDocument[] | null) ?? [];
   const activities = (activitiesData as ActivityItem[] | null) ?? [];
+  const parties = (partiesData as MatterParty[] | null) ?? [];
+  const partyById = new Map(parties.map((p) => [p.id, p]));
+
+  // Short-lived signed URLs for docs stored in Supabase Storage (private bucket).
+  const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
+  const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
 
   const serviceConfig = (matter as any).services?.config;
   const allStages: Stage[] = serviceConfig?.stages ?? [];
@@ -179,7 +195,8 @@ export default async function AdminMatterDetailPage({
     ? allStages.filter((s) => s.phase === currentPhaseNum)
     : [];
 
-  const displayName = clientDisplayName(matter.clients) || matter.title || "Matter";
+  const clientName = matter.clients ? clientDisplayName(matter.clients) : null;
+  const displayName = clientName || matter.title || "Matter";
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -365,6 +382,9 @@ export default async function AdminMatterDetailPage({
         </Card>
       )}
 
+      {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
+      <PartiesCard parties={parties} />
+
       {/* Documents */}
       <div>
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -380,6 +400,7 @@ export default async function AdminMatterDetailPage({
                 Open Drive folder
               </a>
             )}
+            <StorageUpload matterId={id} />
             <CollectFicaButton matterId={id} />
           </div>
         </div>
@@ -395,9 +416,29 @@ export default async function AdminMatterDetailPage({
                     </p>
                     <p className="text-xs text-gray-400">
                       {doc.document_type} · {formatDate(doc.created_at)}
+                      {doc.matter_party_id && partyById.get(doc.matter_party_id)
+                        ? ` · ${partyById.get(doc.matter_party_id)!.role}`
+                        : ""}
                     </p>
                   </div>
-                  {doc.drive_file_id ? (
+                  {doc.storage_path && signedUrls[doc.storage_path] ? (
+                    <div className="flex items-center gap-3 shrink-0">
+                      <a
+                        href={signedUrls[doc.storage_path]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-[#1B2E6B] hover:underline"
+                      >
+                        View
+                      </a>
+                      <a
+                        href={`${signedUrls[doc.storage_path]}&download=${encodeURIComponent(doc.file_name ?? "document")}`}
+                        className="text-xs font-medium text-[#E8521A] hover:underline"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ) : doc.drive_file_id ? (
                     <div className="flex items-center gap-3 shrink-0">
                       <a
                         href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`}
@@ -415,7 +456,7 @@ export default async function AdminMatterDetailPage({
                       </a>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-300 shrink-0" title="File not in Drive (portal-created matter — see #6)">No file</span>
+                    <span className="text-xs text-gray-300 shrink-0">No file</span>
                   )}
                   {doc.verified && (
                     <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>

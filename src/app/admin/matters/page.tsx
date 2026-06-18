@@ -17,6 +17,9 @@ import {
   type MatterPriority,
   type MatterStatus,
 } from "@/types";
+import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
+import MatterFilters from "@/components/matters/MatterFilters";
+import MatterPagination from "@/components/matters/MatterPagination";
 
 export const metadata = { title: "All Matters — ConveyClear Admin" };
 
@@ -34,26 +37,35 @@ function priorityVariant(priority: string): "default" | "danger" | "warning" | "
   return map[priority] ?? "gray";
 }
 
-export default async function AdminMattersPage() {
+export default async function AdminMattersPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getSessionProfile();
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("matters")
-    .select(
-      "id, title, current_phase, current_stage, status, priority, deadline, municipality, created_at, clients(full_name, business_name)"
-    )
-    .order("created_at", { ascending: false });
+  const filters = parseMatterFilters(searchParams);
+  const { data, count } = await applyMatterFilters(
+    supabase
+      .from("matters")
+      .select(
+        "id, title, current_phase, current_stage, status, priority, deadline, municipality, created_at, clients(full_name, business_name)",
+        { count: "exact" }
+      ),
+    filters
+  );
 
   const matters = (data as Matter[] | null) ?? [];
+  const total = count ?? 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">All Matters</h1>
-          <p className="text-sm text-gray-500 mt-1">{matters.length} matter{matters.length === 1 ? "" : "s"}</p>
+          <p className="text-sm text-gray-500 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
         </div>
         <Link
           href="/admin/matters/new"
@@ -62,6 +74,8 @@ export default async function AdminMattersPage() {
           <Plus className="h-4 w-4" /> New matter
         </Link>
       </div>
+
+      <MatterFilters />
 
       <Card padding="none">
         <div className="overflow-x-auto">
@@ -129,13 +143,15 @@ export default async function AdminMattersPage() {
               ))}
               {matters.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">No matters yet</td>
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
     </div>
   );
 }

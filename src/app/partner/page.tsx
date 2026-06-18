@@ -11,7 +11,8 @@ import {
   type MatterPhase,
   type MatterStatus,
 } from "@/types";
-import { Briefcase, Users, Clock, ArrowRight, PlusCircle } from "lucide-react";
+import { Briefcase, Users, Clock, ArrowRight, PlusCircle, Phone, MessageSquare } from "lucide-react";
+import { CONVEYCLEAR_PHONE, CONVEYCLEAR_EMAIL, telHref } from "@/lib/contact";
 
 export const metadata = { title: "Partner Overview — ConveyClear" };
 
@@ -31,6 +32,7 @@ export default async function PartnerOverview() {
       supabase
         .from("matters")
         .select("id, title, current_phase, status, created_at, clients(full_name, business_name)")
+        .in("status", ["open", "on_hold"])
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
@@ -44,12 +46,26 @@ export default async function PartnerOverview() {
           <h1 className="text-2xl font-bold text-gray-900">Your matters</h1>
           <p className="text-sm text-gray-500 mt-1">Matters ConveyClear is handling for your clients.</p>
         </div>
-        <Link
-          href="/partner/refer"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
-        >
-          <PlusCircle className="h-4 w-4" /> Refer a matter
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={CONVEYCLEAR_PHONE ? telHref(CONVEYCLEAR_PHONE) : `mailto:${CONVEYCLEAR_EMAIL}`}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
+          >
+            <Phone className="h-4 w-4" /> {CONVEYCLEAR_PHONE ? "Call ConveyClear" : "Email ConveyClear"}
+          </a>
+          <Link
+            href="/partner/enquiries"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
+          >
+            <MessageSquare className="h-4 w-4" /> New enquiry
+          </Link>
+          <Link
+            href="/partner/refer"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+          >
+            <PlusCircle className="h-4 w-4" /> Refer a matter
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -69,7 +85,7 @@ export default async function PartnerOverview() {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Recent matters</h2>
+          <h2 className="font-semibold text-gray-900">Active matters</h2>
           <Link href="/partner/matters" className="flex items-center gap-1 text-sm text-[#E8521A] hover:underline">
             View all <ArrowRight className="h-3.5 w-3.5" />
           </Link>

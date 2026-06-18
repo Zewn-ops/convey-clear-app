@@ -11,6 +11,7 @@ import { isStaffRole, isPartnerRole, type UserRole } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile from "@/components/auth/Turnstile";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -91,6 +92,13 @@ export default function LoginForm() {
       <Button type="submit" loading={loading} className="w-full" size="lg">
         Sign in
       </Button>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-gray-200" />
+        <span className="text-xs text-gray-400">or</span>
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+      <GoogleSignInButton />
 
       <p className="text-center text-sm text-gray-600">
         Don&apos;t have an account?{" "}

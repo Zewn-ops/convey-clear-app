@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile from "@/components/auth/Turnstile";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const schema = z
   .object({
@@ -194,6 +195,13 @@ export default function SignupForm() {
       <Button type="submit" loading={loading} className="w-full" size="lg">
         Create account
       </Button>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-gray-200" />
+        <span className="text-xs text-gray-400">or</span>
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+      <GoogleSignInButton label="Sign up with Google" />
 
       <p className="text-center text-sm text-gray-600">
         Already have an account?{" "}

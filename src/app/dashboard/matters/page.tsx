@@ -12,29 +12,43 @@ import {
   type MatterPhase,
   type MatterStatus,
 } from "@/types";
+import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
+import MatterFilters from "@/components/matters/MatterFilters";
+import MatterPagination from "@/components/matters/MatterPagination";
 import { Briefcase } from "lucide-react";
 
 export const metadata = { title: "Matters — ConveyClear" };
 
-export default async function MattersPage() {
+export default async function MattersPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getSessionProfile();
   if (!session) redirect("/auth/login");
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("matters")
-    .select(
-      "id, title, current_phase, status, priority, deadline, created_at, municipality, clients(id, entity_type, full_name, business_name)"
-    )
-    .order("created_at", { ascending: false });
+  const filters = parseMatterFilters(searchParams);
+  const { data, count } = await applyMatterFilters(
+    supabase
+      .from("matters")
+      .select(
+        "id, title, current_phase, status, priority, deadline, created_at, municipality, clients(id, entity_type, full_name, business_name)",
+        { count: "exact" }
+      ),
+    filters
+  );
   const matters = (data as Matter[] | null) ?? [];
+  const total = count ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[#1B2E6B]">Matters</h1>
-        <p className="text-sm text-gray-500 mt-1">{matters.length} matter{matters.length === 1 ? "" : "s"}</p>
+        <p className="text-sm text-gray-500 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
       </div>
+
+      <MatterFilters />
 
       {matters.length > 0 ? (
         <div className="space-y-3">
@@ -71,9 +85,11 @@ export default async function MattersPage() {
       ) : (
         <Card className="text-center py-12">
           <Briefcase className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">No matters to show</p>
+          <p className="text-gray-500 text-sm">No matters match your filters</p>
         </Card>
       )}
+
+      <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
     </div>
   );
 }
