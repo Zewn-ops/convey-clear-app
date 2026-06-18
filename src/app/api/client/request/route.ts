@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     service_id: body.service_id || null,
     title,
     current_phase: "1",
-    status: "open",
+    status: "new", // partner/client referrals await staff review (H1)
     priority: "standard",
     municipality: body.municipality || null,
     service_notes: body.notes || null,
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   if (mErr) return NextResponse.json({ message: mErr.message }, { status: 400 });
 
   await admin.from("matter_activities").insert({
-    matter_id: matter.id, author_id: me.id, activity_type: "post", content: "Service requested by client via portal.",
+    matter_id: matter.id, author_id: me.id, activity_type: "post", body: "Service requested by client via portal.",
   });
 
   return NextResponse.json({ ok: true, matter_id: matter.id, title });

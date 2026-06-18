@@ -8,7 +8,7 @@ import Badge from "@/components/ui/Badge";
 import EnquiryReply from "@/components/enquiries/EnquiryReply";
 import { formatDateTime } from "@/lib/utils";
 import { isStaffRole, ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryMessage, type EnquiryStatus } from "@/types";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Phone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -48,14 +48,20 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
   if (!eData) notFound();
   const enquiry = eData as unknown as EnquiryRow;
 
-  const [{ data: msgData }, assignee] = await Promise.all([
+  const [{ data: msgData }, assignee, matterRow] = await Promise.all([
     supabase.from("enquiry_messages").select("id, author_label, body, created_at").eq("enquiry_id", id).order("created_at", { ascending: true }),
     enquiry.assigned_to
-      ? supabase.from("users").select("full_name").eq("id", enquiry.assigned_to).maybeSingle()
+      ? supabase.from("users").select("full_name, phone").eq("id", enquiry.assigned_to).maybeSingle()
+      : Promise.resolve({ data: null }),
+    enquiry.matter_id
+      ? supabase.from("matters").select("title").eq("id", enquiry.matter_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
   const messages = (msgData as EnquiryMessage[] | null) ?? [];
-  const assigneeName = (assignee?.data as { full_name: string | null } | null)?.full_name ?? null;
+  const assigneeRow = assignee?.data as { full_name: string | null; phone: string | null } | null;
+  const assigneeName = assigneeRow?.full_name ?? null;
+  const assigneePhone = assigneeRow?.phone ?? null;
+  const matterTitle = (matterRow?.data as { title: string | null } | null)?.title ?? null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -70,8 +76,8 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
             {enquiry.business_partners?.name ?? "—"}
             {enquiry.matter_id ? (
               <>
-                {" · "}
-                <Link href={`/admin/matters/${enquiry.matter_id}`} className="text-[#E8521A] hover:underline">View matter</Link>
+                {" · Re: "}
+                <Link href={`/admin/matters/${enquiry.matter_id}`} className="text-[#E8521A] hover:underline">{matterTitle || "View matter"}</Link>
               </>
             ) : null}
           </p>
@@ -89,6 +95,14 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
             Claim (assign to me)
           </button>
         </form>
+        {assigneePhone && (
+          <a
+            href={`tel:${assigneePhone}`}
+            className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 inline-flex items-center gap-1"
+          >
+            <Phone className="h-3.5 w-3.5" /> Call {assigneeName ?? "assignee"}
+          </a>
+        )}
         <div className="flex-1" />
         {(["open", "assigned", "resolved", "closed"] as EnquiryStatus[]).map((st) => (
           <form key={st} action={setStatus}>

@@ -8,10 +8,11 @@ import { UploadCloud, Copy, Check, ExternalLink } from "lucide-react";
 // Staff-facing "collect FICA docs" control on a matter. Mints (or reuses) an
 // onboarding link on demand so docs can be gathered at any point in the matter,
 // not only at creation. Shows a copyable link + opens the proven /onboard flow.
-export default function CollectFicaButton({ matterId }: { matterId: string }) {
+export default function CollectFicaButton({ matterId, fica = true }: { matterId: string; fica?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const noun = fica ? "FICA documents" : "documents"; // COO has no FICA (A7)
 
   const getLink = async () => {
     setLoading(true);
@@ -38,7 +39,7 @@ export default function CollectFicaButton({ matterId }: { matterId: string }) {
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-3 space-y-2 w-full">
         <p className="text-xs font-medium text-green-900">
-          FICA document link — valid 7 days, single use
+          {fica ? "FICA document" : "Document"} link — valid 7 days, single use
         </p>
         <div className="rounded bg-white border border-green-200 px-3 py-2 text-xs font-mono text-gray-700 break-all">
           {link}
@@ -57,7 +58,7 @@ export default function CollectFicaButton({ matterId }: { matterId: string }) {
 
   return (
     <Button size="sm" variant="secondary" loading={loading} onClick={getLink}>
-      <UploadCloud className="h-4 w-4" /> Collect FICA documents
+      <UploadCloud className="h-4 w-4" /> Collect {noun}
     </Button>
   );
 }

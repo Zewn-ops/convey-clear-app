@@ -28,7 +28,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, status, municipality, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell)")
+    .select("id, title, current_phase, status, municipality, partner_file_ref, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell)")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -47,7 +47,9 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const [{ data: docsData }, { data: actData }, { data: partiesData }] = await Promise.all([
     supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id").eq("matter_id", params.id),
-    supabase.from("matter_activities").select("id, body, activity_type, created_at").eq("matter_id", params.id).order("created_at", { ascending: false }).limit(20),
+    // Comment-type ('post') activities are INTERNAL ONLY — partners (and clients)
+    // see only lifecycle events, never staff notes. (Jukka, 2026-06-16.)
+    supabase.from("matter_activities").select("id, body, activity_type, created_at").eq("matter_id", params.id).in("activity_type", ["status_change", "document_upload", "phase_transition", "poa_signed"]).order("created_at", { ascending: false }).limit(20),
     supabase.from("matter_parties").select("*").eq("matter_id", params.id).order("role", { ascending: true }),
   ]);
   const docs = (docsData as MatterDocument[] | null) ?? [];
@@ -55,6 +57,14 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   const storagePaths = docs.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
   const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
   const activities = (actData as { id: string; body: string; activity_type: string; created_at: string }[] | null) ?? [];
+
+  // Enquiries linked to this matter (C2 — partners view them from the matter page).
+  const { data: enqData } = await supabase
+    .from("enquiries")
+    .select("id, subject, status, created_at")
+    .eq("matter_id", params.id)
+    .order("created_at", { ascending: false });
+  const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
 
   const currentPhaseNum = matter.current_phase ? parseInt(matter.current_phase, 10) : 0;
 
@@ -67,12 +77,15 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{matter.title || clientDisplayName(client) || "Matter"}</h1>
-          <p className="text-sm text-gray-500 mt-1">{matter.municipality || "—"} · Opened {formatDate(matter.created_at)}</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {matter.municipality || "—"} · Opened {formatDate(matter.created_at)}
+            {matter.partner_file_ref ? ` · Your ref: ${matter.partner_file_ref}` : ""}
+          </p>
         </div>
         {matter.status && (
           <Badge
             label={MATTER_STATUS_LABELS[matter.status as MatterStatus]}
-            variant={({ open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[matter.status] ?? "gray"}
+            variant={({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[matter.status] ?? "gray"}
           />
         )}
       </div>
@@ -167,6 +180,23 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
           </ul>
         )}
       </Card>
+
+      {/* Related enquiries (C2) */}
+      {relatedEnquiries.length > 0 && (
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-3">Enquiries ({relatedEnquiries.length})</h2>
+          <ul className="divide-y divide-gray-100">
+            {relatedEnquiries.map((e) => (
+              <li key={e.id} className="py-2">
+                <Link href={`/partner/enquiries/${e.id}`} className="flex items-center justify-between gap-3 text-sm hover:text-[#1B2E6B]">
+                  <span className="text-gray-800 truncate">{e.subject}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{e.status} · {formatDate(e.created_at)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

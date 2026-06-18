@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     expires_at: new Date(Date.now() + 7 * 864e5).toISOString(),
   });
   await admin.from("matter_activities").insert({
-    matter_id: matter.id, author_id: me?.id ?? null, activity_type: "post", content: "Matter created in portal by staff.",
+    matter_id: matter.id, author_id: me?.id ?? null, activity_type: "post", body: "Matter created in portal by staff.",
   });
 
   // #6: have n8n create the Drive folder for this portal-originated matter so

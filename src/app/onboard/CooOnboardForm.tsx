@@ -6,44 +6,66 @@ import { CheckCircle, Lock, ShieldCheck, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import { DocSlot, ConsentBox, type DocSlotState } from "./OnboardForm";
+import { cooSharedDocs, cooPartyDocs, cooDocFileName, partyRoleOrder, type CooEntity } from "@/lib/coo-docs";
 import type { TokenData } from "@/lib/onboard-token";
-
-// Sensible per-role defaults if the COO service config has no required_documents.
-const COO_DEFAULT_DOCS: Record<string, string[]> = {
-  buyer: ["id", "deed_of_sale", "coc_electrical", "proof_of_address"],
-  seller: ["id", "seller_banking_details", "proof_of_address"],
-};
 
 const STAGES = ["Documents", "Consent", "Review"] as const;
 
-type Slot = { key: string; partyId: string; partyRole: string; partyName: string; docType: string };
+type Slot = {
+  key: string;
+  partyId: string | null; // null = shared / matter-level
+  sectionKey: string;
+  ownerName: string; // who the file gets named after (A6)
+  docType: string;
+  optional: boolean;
+};
 
 function roleLabel(role: string, name: string): string {
   const base = role === "buyer" ? "Buyer (new owner)" : role === "seller" ? "Seller (current owner)" : role;
   return name ? `${base} — ${name}` : base;
 }
 
-// Change-of-Ownership onboarding: collects supporting documents for BOTH parties
-// (buyer + seller) under one matter, each tagged to its matter_party. Files go
-// direct to Supabase Storage via signed URLs (same path as the single-client form).
+// Change-of-Ownership onboarding (Jukka 2026-06-16 spec):
+//   • Shared documents collected ONCE per matter (transfer letter, deed search,
+//     clearance figures, POP-for-figures).
+//   • Then per-party (seller, then buyer): certified ID + COR 14.3 (business) /
+//     LoA (trust); seller also Electrical COC for COT only.
+// Files go direct to Supabase Storage via signed URLs and are auto-renamed
+// "<Owner>_<Doc Type>.<ext>" before being recorded.
 export default function CooOnboardForm({ token, data }: { token: string; data: TokenData }) {
-  const parties = data.parties ?? [];
+  // Seller first, then buyer (A3).
+  const parties = useMemo(
+    () => [...(data.parties ?? [])].sort((a, b) => partyRoleOrder(a.role) - partyRoleOrder(b.role)),
+    [data.parties]
+  );
+  const sharedOwner = useMemo(
+    () => parties.find((p) => p.role === "buyer")?.display_name || data.matter_title || "ConveyClear",
+    [parties, data.matter_title]
+  );
+  // Required docs follow the service config; optional COO docs always allow "not
+  // available" (handled per-slot below via `|| s.optional`).
   const allowNotAvailable = data.service_config.documents_allow_not_available ?? false;
 
   const slots: Slot[] = useMemo(() => {
     const out: Slot[] = [];
+    for (const d of cooSharedDocs()) {
+      out.push({ key: `shared::${d.docType}`, partyId: null, sectionKey: "shared", ownerName: sharedOwner, docType: d.docType, optional: Boolean(d.optional) });
+    }
     for (const p of parties) {
-      const etKey = p.entity_type === "natural_person" ? "natural_person" : "business";
-      const fromConfig = data.service_config.required_documents[etKey] ?? [];
-      const docTypes = (fromConfig.length ? fromConfig : COO_DEFAULT_DOCS[p.role] ?? ["id", "proof_of_address"]).filter(
-        (d) => d !== "popia_consent"
-      );
-      for (const dt of docTypes) {
-        out.push({ key: `${p.id}::${dt}`, partyId: p.id, partyRole: p.role, partyName: p.display_name, docType: dt });
+      for (const d of cooPartyDocs(p.role, p.entity_type as CooEntity, data.municipality)) {
+        out.push({ key: `${p.id}::${d.docType}`, partyId: p.id, sectionKey: p.id, ownerName: p.display_name, docType: d.docType, optional: Boolean(d.optional) });
       }
     }
     return out;
-  }, [parties, data.service_config]);
+  }, [parties, data.municipality, sharedOwner]);
+
+  const sections = useMemo(() => {
+    const order: { key: string; label: string }[] = [
+      { key: "shared", label: "Shared documents (one set for this matter)" },
+      ...parties.map((p) => ({ key: p.id, label: roleLabel(p.role, p.display_name) })),
+    ];
+    return order.map((sec) => ({ ...sec, slots: slots.filter((s) => s.sectionKey === sec.key) }));
+  }, [parties, slots]);
 
   const [docStates, setDocStates] = useState<Record<string, DocSlotState>>(() =>
     Object.fromEntries(slots.map((s) => [s.key, { file: null, notAvailable: false, reason: "" }]))
@@ -61,18 +83,19 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const complete = slots.filter((s) => {
+  const slotDone = (s: Slot) => {
     const st = docStates[s.key];
     return st.file !== null || (st.notAvailable && st.reason.trim().length > 0);
-  }).length;
+  };
+  // Only required (non-optional) docs gate submission.
+  const requiredSlots = slots.filter((s) => !s.optional);
+  const complete = requiredSlots.filter(slotDone).length;
 
   const stageValid: Record<number, boolean> = {
-    0: complete === slots.length,
+    0: complete === requiredSlots.length,
     1: popia && terms,
     2: confirmed,
   };
-
-  const byParty = parties.map((p) => ({ party: p, partySlots: slots.filter((s) => s.partyId === p.id) }));
 
   async function handleSubmit() {
     if (!stageValid[1] || !confirmed) {
@@ -89,9 +112,9 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
         file_name: string;
         mime_type: string;
         size_bytes: number;
-        matter_party_id: string;
+        matter_party_id: string | null;
       }[] = [];
-      const notAvailable: { document_type: string; reason: string; matter_party_id: string }[] = [];
+      const notAvailable: { document_type: string; reason: string; matter_party_id: string | null }[] = [];
 
       for (const s of slots) {
         const st = docStates[s.key];
@@ -108,7 +131,7 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
           uploaded.push({
             storage_path: j.path,
             document_type: s.docType,
-            file_name: st.file.name,
+            file_name: cooDocFileName(s.ownerName, s.docType, st.file.name),
             mime_type: st.file.type,
             size_bytes: st.file.size,
             matter_party_id: s.partyId,
@@ -200,37 +223,39 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
               <p className="text-blue-200 text-xs font-medium uppercase tracking-wider mb-1">{data.service_name || "Change of Ownership"}</p>
               <h1 className="text-xl font-semibold mb-2">Supporting documents</h1>
               <p className="text-blue-100 text-sm leading-relaxed">
-                A change of ownership has two sides. Please upload the supporting documents for the buyer and the seller below.
-                You can mark a document as not available with a short reason if you don&apos;t have it yet.
+                Upload one shared set of documents for the matter, then the documents for the seller and buyer.
+                You can mark an optional document as not available with a short reason if you don&apos;t have it yet.
               </p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-gray-600">Documents completed</span>
-                <span className="text-xs font-semibold text-[#1B2E6B]">{complete} / {slots.length}</span>
+                <span className="text-xs font-medium text-gray-600">Required documents completed</span>
+                <span className="text-xs font-semibold text-[#1B2E6B]">{complete} / {requiredSlots.length}</span>
               </div>
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#E8521A] rounded-full transition-all duration-500"
-                  style={{ width: `${slots.length > 0 ? (complete / slots.length) * 100 : 100}%` }}
+                  style={{ width: `${requiredSlots.length > 0 ? (complete / requiredSlots.length) * 100 : 100}%` }}
                 />
               </div>
             </div>
 
-            {byParty.map(({ party, partySlots }) => (
-              <div key={party.id} className="space-y-3">
-                <h2 className="text-sm font-semibold text-[#1B2E6B] pt-2">{roleLabel(party.role, party.display_name)}</h2>
-                {partySlots.map((s) => (
-                  <DocSlot
-                    key={s.key}
-                    docType={s.docType}
-                    allowNotAvailable={allowNotAvailable}
-                    state={docStates[s.key]}
-                    onChange={(next) => updateDoc(s.key, next)}
-                  />
+            {sections.map((sec) => (
+              <div key={sec.key} className="space-y-3">
+                <h2 className="text-sm font-semibold text-[#1B2E6B] pt-2">{sec.label}</h2>
+                {sec.slots.map((s) => (
+                  <div key={s.key} className="space-y-1">
+                    {s.optional && <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Optional — not required</p>}
+                    <DocSlot
+                      docType={s.docType}
+                      allowNotAvailable={allowNotAvailable || s.optional}
+                      state={docStates[s.key]}
+                      onChange={(next) => updateDoc(s.key, next)}
+                    />
+                  </div>
                 ))}
-                {partySlots.length === 0 && <p className="text-sm text-gray-400">No documents listed for this party.</p>}
+                {sec.slots.length === 0 && <p className="text-sm text-gray-400">No documents listed for this party.</p>}
               </div>
             ))}
           </>
@@ -266,15 +291,12 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
           <div className="space-y-3">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2 text-sm">
               <h2 className="font-semibold text-gray-700 mb-2">Review</h2>
-              {byParty.map(({ party, partySlots }) => {
-                const done = partySlots.filter((s) => {
-                  const st = docStates[s.key];
-                  return st.file !== null || (st.notAvailable && st.reason.trim().length > 0);
-                }).length;
+              {sections.map((sec) => {
+                const done = sec.slots.filter(slotDone).length;
                 return (
-                  <div key={party.id} className="flex justify-between gap-4">
-                    <span className="text-gray-400">{roleLabel(party.role, party.display_name)}</span>
-                    <span className="text-gray-900 text-right">{done} / {partySlots.length} provided</span>
+                  <div key={sec.key} className="flex justify-between gap-4">
+                    <span className="text-gray-400">{sec.label}</span>
+                    <span className="text-gray-900 text-right">{done} / {sec.slots.length} provided</span>
                   </div>
                 );
               })}

@@ -20,11 +20,10 @@ interface PartyInput {
   email?: string;
   cell?: string;
   physical_address?: string;
-  // seller refund banking (Open Rates Account closure) — optional at referral
-  bank_name?: string;
-  bank_account_no?: string;
-  bank_branch_code?: string;
-  account_holder?: string;
+  // contact person — business / trust parties (A1)
+  contact_name?: string;
+  contact_email?: string;
+  contact_cell?: string;
 }
 
 const partyDisplayName = (p: PartyInput): string =>
@@ -51,6 +50,7 @@ export async function POST(request: Request) {
     municipality?: string;
     property_description?: string;
     notes?: string;
+    partner_file_ref?: string;
     parties?: PartyInput[];
     // legacy single-client fields
     entity_type?: EntityType;
@@ -114,6 +114,7 @@ export async function POST(request: Request) {
         priority: "standard",
         municipality: body.municipality || null,
         service_notes: body.notes || null,
+        partner_file_ref: body.partner_file_ref?.trim() || null,
       })
       .select("id")
       .single();
@@ -132,10 +133,9 @@ export async function POST(request: Request) {
         email: p.email?.trim().toLowerCase() || null,
         cell: p.cell?.trim() || null,
         physical_address: p.physical_address?.trim() || null,
-        bank_name: p.bank_name?.trim() || null,
-        bank_account_no: p.bank_account_no?.trim() || null,
-        bank_branch_code: p.bank_branch_code?.trim() || null,
-        account_holder: p.account_holder?.trim() || null,
+        contact_name: et !== "natural_person" ? p.contact_name?.trim() || null : null,
+        contact_email: et !== "natural_person" ? p.contact_email?.trim().toLowerCase() || null : null,
+        contact_cell: et !== "natural_person" ? p.contact_cell?.trim() || null : null,
       };
     });
     const { error: partyErr } = await admin.from("matter_parties").insert(partyRows);
@@ -198,10 +198,11 @@ export async function POST(request: Request) {
       service_id: serviceId,
       title,
       current_phase: "1",
-      status: "open",
+      status: "new", // partner referral awaits staff review (H1)
       priority: "standard",
       municipality: body.municipality || null,
       service_notes: body.notes || null,
+      partner_file_ref: body.partner_file_ref?.trim() || null,
     })
     .select("id")
     .single();

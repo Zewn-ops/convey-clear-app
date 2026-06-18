@@ -27,16 +27,20 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Ownership check: the matter's client must belong to the caller's firm.
+  // Ownership check: the matter must belong to the caller's firm — either directly
+  // (portal-first COO matters link the partner on matters.business_partner_id, with
+  // client_id null), or via the matter's client (clients.business_partner_id).
   const { data: matter } = await admin
     .from("matters")
-    .select("id, title, drive_folder_id, client_id, clients(business_partner_id)")
+    .select("id, title, drive_folder_id, client_id, business_partner_id, clients(business_partner_id)")
     .eq("id", body.matter_id)
     .maybeSingle();
 
-  const ownerPartner =
+  const matterPartner = (matter as { business_partner_id?: string } | null)?.business_partner_id ?? null;
+  const clientPartner =
     (matter?.clients as { business_partner_id?: string } | null)?.business_partner_id ?? null;
-  if (!matter || ownerPartner !== auth.partnerId) {
+  const owns = matterPartner === auth.partnerId || clientPartner === auth.partnerId;
+  if (!matter || !owns) {
     return NextResponse.json({ message: "Matter not found for your firm" }, { status: 404 });
   }
 

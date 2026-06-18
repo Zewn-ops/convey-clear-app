@@ -19,8 +19,9 @@ export interface MatterFilters {
   page: number; // 1-indexed
 }
 
-// "Active" = not yet closed out. Closed = won/lost/archived.
-const ACTIVE_STATUSES: MatterStatus[] = ["open", "on_hold"];
+// "Active" = not yet closed out. Closed = won/lost/archived. 'new' = awaiting
+// staff review (H1) and counts as active.
+const ACTIVE_STATUSES: MatterStatus[] = ["new", "open", "on_hold"];
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -55,7 +56,7 @@ export function applyMatterFilters(query: any, f: MatterFilters): any {
   if (f.status === "active") q = q.in("status", ACTIVE_STATUSES);
   if (f.scope === "month") q = q.gte("created_at", startOfMonthISO());
   const s = sanitize(f.q);
-  if (s) q = q.or(`title.ilike.%${s}%,municipality.ilike.%${s}%`);
+  if (s) q = q.or(`title.ilike.%${s}%,municipality.ilike.%${s}%,partner_file_ref.ilike.%${s}%`);
   const from = (f.page - 1) * MATTER_PAGE_SIZE;
   return q.order("created_at", { ascending: false }).range(from, from + MATTER_PAGE_SIZE - 1);
 }

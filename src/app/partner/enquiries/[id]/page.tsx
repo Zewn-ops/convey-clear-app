@@ -17,18 +17,20 @@ export default async function PartnerEnquiryDetail({ params }: { params: { id: s
 
   const { data: eData } = await supabase
     .from("enquiries")
-    .select("id, subject, message, status, created_at")
+    .select("id, subject, message, status, matter_id, created_at")
     .eq("id", params.id)
     .maybeSingle();
   if (!eData) notFound();
   const enquiry = eData as Enquiry;
 
-  const { data: msgData } = await supabase
-    .from("enquiry_messages")
-    .select("id, author_label, body, created_at")
-    .eq("enquiry_id", params.id)
-    .order("created_at", { ascending: true });
+  const [{ data: msgData }, matterRow] = await Promise.all([
+    supabase.from("enquiry_messages").select("id, author_label, body, created_at").eq("enquiry_id", params.id).order("created_at", { ascending: true }),
+    enquiry.matter_id
+      ? supabase.from("matters").select("title").eq("id", enquiry.matter_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
   const messages = (msgData as EnquiryMessage[] | null) ?? [];
+  const matterTitle = (matterRow?.data as { title: string | null } | null)?.title ?? null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -37,7 +39,15 @@ export default async function PartnerEnquiryDetail({ params }: { params: { id: s
       </Link>
 
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">{enquiry.subject}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{enquiry.subject}</h1>
+          {enquiry.matter_id && (
+            <p className="text-sm text-gray-500 mt-1">
+              Re:{" "}
+              <Link href={`/partner/matters/${enquiry.matter_id}`} className="text-[#E8521A] hover:underline">{matterTitle || "View matter"}</Link>
+            </p>
+          )}
+        </div>
         <Badge label={ENQUIRY_STATUS_LABELS[enquiry.status]} variant={statusVariant(enquiry.status)} />
       </div>
 

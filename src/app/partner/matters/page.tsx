@@ -18,7 +18,7 @@ import MatterPagination from "@/components/matters/MatterPagination";
 export const metadata = { title: "Matters — ConveyClear Partner" };
 
 function statusVariant(s: string): "info" | "success" | "danger" | "warning" | "gray" {
-  return ({ open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[s] ?? "gray";
+  return ({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[s] ?? "gray";
 }
 
 export default async function PartnerMatters({

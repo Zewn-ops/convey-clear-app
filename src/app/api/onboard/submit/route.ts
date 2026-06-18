@@ -146,20 +146,27 @@ export async function POST(request: Request) {
         );
         if (contactErr) console.error("[onboard/submit] contacts insert failed:", contactErr.message);
       }
-
-      const { error: consentErr } = await admin.from("consent_events").insert(
-        (["popia", "terms", "marketing"] as const).map((t) => ({
-          client_id: clientId,
-          matter_id: matterId,
-          consent_type: t,
-          granted: Boolean(consents[t]),
-          source: "fica_form",
-        }))
-      );
-      if (consentErr) console.error("[onboard/submit] consent_events insert failed:", consentErr.message);
     } catch (e) {
       console.error("[onboard/submit] field persistence error:", e);
     }
+  }
+
+  // 3b. Record consent events at the MATTER level — ALWAYS, even for COO /
+  // partner-managed matters that have no client row (client_id is nullable).
+  // POPIA requires a durable record of consent regardless of who submitted.
+  if (fica.consents) {
+    const consents = fica.consents;
+    const { error: consentErr } = await admin.from("consent_events").insert(
+      (["popia", "terms", "marketing"] as const).map((t) => ({
+        client_id: clientId ?? null,
+        matter_id: matterId,
+        consent_type: t,
+        granted: Boolean(consents[t]),
+        source: "fica_form",
+        ip_address: clientIp(request),
+      }))
+    );
+    if (consentErr) console.error("[onboard/submit] consent_events insert failed:", consentErr.message);
   }
 
   // 4. Record document rows from their Storage paths (files already uploaded).

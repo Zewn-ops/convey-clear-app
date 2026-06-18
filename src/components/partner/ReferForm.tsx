@@ -27,10 +27,10 @@ type Party = {
   email: string;
   cell: string;
   physical_address: string;
-  bank_name: string;
-  bank_account_no: string;
-  bank_branch_code: string;
-  account_holder: string;
+  // Contact person — for business / trust parties (A1).
+  contact_name: string;
+  contact_email: string;
+  contact_cell: string;
 };
 
 const emptyParty = (): Party => ({
@@ -42,28 +42,25 @@ const emptyParty = (): Party => ({
   email: "",
   cell: "",
   physical_address: "",
-  bank_name: "",
-  bank_account_no: "",
-  bank_branch_code: "",
-  account_holder: "",
+  contact_name: "",
+  contact_email: "",
+  contact_cell: "",
 });
 
 const partyName = (p: Party) => (p.entity_type === "natural_person" ? p.full_name : p.business_name).trim();
 
-// One buyer/seller capture block. Banking fields shown only for the seller
-// (Open Rates Account closure → deposit/credit refund).
+// One buyer/seller capture block. Business/trust parties also capture a contact
+// person (the human ConveyClear deals with).
 function PartySection({
   title,
   subtitle,
   party,
   onChange,
-  showBanking,
 }: {
   title: string;
   subtitle: string;
   party: Party;
   onChange: (patch: Partial<Party>) => void;
-  showBanking?: boolean;
 }) {
   const isPerson = party.entity_type === "natural_person";
   return (
@@ -113,14 +110,13 @@ function PartySection({
         onChange={(e) => onChange({ physical_address: e.target.value })}
         placeholder="Street, suburb, city"
       />
-      {showBanking && (
+      {!isPerson && (
         <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-3">
-          <p className="text-xs font-medium text-gray-600">Refund banking (optional — for the rates account closure refund)</p>
+          <p className="text-xs font-medium text-gray-600">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Account holder" value={party.account_holder} onChange={(e) => onChange({ account_holder: e.target.value })} />
-            <Input label="Bank" value={party.bank_name} onChange={(e) => onChange({ bank_name: e.target.value })} />
-            <Input label="Account number" value={party.bank_account_no} onChange={(e) => onChange({ bank_account_no: e.target.value })} />
-            <Input label="Branch code" value={party.bank_branch_code} onChange={(e) => onChange({ bank_branch_code: e.target.value })} />
+            <Input label="Name" value={party.contact_name} onChange={(e) => onChange({ contact_name: e.target.value })} placeholder="Authorised representative" />
+            <Input label="Email" type="email" value={party.contact_email} onChange={(e) => onChange({ contact_email: e.target.value })} placeholder="contact@example.co.za" />
+            <Input label="Cell" value={party.contact_cell} onChange={(e) => onChange({ contact_cell: e.target.value })} placeholder="+27 82 000 0000" />
           </div>
         </div>
       )}
@@ -140,6 +136,7 @@ export default function ReferForm({
   const [municipality, setMunicipality] = useState("COT");
   const [property, setProperty] = useState("");
   const [notes, setNotes] = useState("");
+  const [fileRef, setFileRef] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<{ matterId: string; token: string } | null>(null);
 
@@ -167,10 +164,9 @@ export default function ReferForm({
     email: p.email,
     cell: p.cell,
     physical_address: p.physical_address,
-    bank_name: p.bank_name,
-    bank_account_no: p.bank_account_no,
-    bank_branch_code: p.bank_branch_code,
-    account_holder: p.account_holder,
+    contact_name: p.entity_type !== "natural_person" ? p.contact_name : undefined,
+    contact_email: p.entity_type !== "natural_person" ? p.contact_email : undefined,
+    contact_cell: p.entity_type !== "natural_person" ? p.contact_cell : undefined,
   });
 
   const submit = async () => {
@@ -188,7 +184,8 @@ export default function ReferForm({
           municipality,
           property_description: property,
           notes,
-          parties: [partyPayload(buyer, "buyer"), partyPayload(seller, "seller")],
+          partner_file_ref: fileRef || undefined,
+          parties: [partyPayload(seller, "seller"), partyPayload(buyer, "buyer")],
         }
       : {
           entity_type: entityType,
@@ -201,6 +198,7 @@ export default function ReferForm({
           municipality,
           property_description: property,
           notes,
+          partner_file_ref: fileRef || undefined,
         };
 
     const res = await fetch("/api/partner/refer", {
@@ -257,11 +255,12 @@ export default function ReferForm({
         </div>
         <Input label="Property description" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="Erf 123, Bondtown" />
         <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any context for ConveyClear" />
+        <Input label="Your file reference (optional)" value={fileRef} onChange={(e) => setFileRef(e.target.value)} placeholder="Your own internal file / matter number" />
 
         {isCoo && (
           <p className="text-xs text-[#1B2E6B] bg-[#1B2E6B]/5 border border-[#1B2E6B]/10 rounded-lg px-3 py-2">
-            Change of Ownership has two sides — capture both the <strong>buyer</strong> (new owner / Open Rates Account) and the{" "}
-            <strong>seller</strong> (account closure &amp; refund) below.
+            Change of Ownership has two sides — capture both the <strong>seller</strong> (current owner) and the{" "}
+            <strong>buyer</strong> (new owner / Open Rates Account) below.
           </p>
         )}
       </Card>
@@ -269,17 +268,16 @@ export default function ReferForm({
       {isCoo ? (
         <>
           <PartySection
+            title="Seller (current owner)"
+            subtitle="Closes the old municipal rates account."
+            party={seller}
+            onChange={(patch) => setSeller((p) => ({ ...p, ...patch }))}
+          />
+          <PartySection
             title="Buyer (new owner)"
             subtitle="Opens the new municipal rates account (ORA)."
             party={buyer}
             onChange={(patch) => setBuyer((p) => ({ ...p, ...patch }))}
-          />
-          <PartySection
-            title="Seller (current owner)"
-            subtitle="Closes the old account and receives the deposit/credit refund."
-            party={seller}
-            onChange={(patch) => setSeller((p) => ({ ...p, ...patch }))}
-            showBanking
           />
         </>
       ) : (

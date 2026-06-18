@@ -18,7 +18,7 @@ import { ArrowLeft, Mail, Phone, MapPin } from "lucide-react";
 export const metadata = { title: "Client — ConveyClear Partner" };
 
 function statusVariant(s: string): "info" | "success" | "danger" | "warning" | "gray" {
-  return ({ open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[s] ?? "gray";
+  return ({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[s] ?? "gray";
 }
 
 // Partner-facing client profile. RLS scopes `clients`/`matters` to the partner's

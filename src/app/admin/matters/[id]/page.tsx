@@ -22,6 +22,8 @@ import {
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
+import DocRenameButton from "@/components/matters/DocRenameButton";
+import Celebrate from "@/components/matters/Celebrate";
 import StorageUpload from "@/components/matters/StorageUpload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDownloadUrls } from "@/lib/storage";
@@ -46,7 +48,7 @@ interface ActivityItem {
 
 function statusVariant(status: string): "info" | "success" | "danger" | "warning" | "gray" {
   const map: Record<string, "info" | "success" | "danger" | "warning" | "gray"> = {
-    open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning",
+    new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning",
   };
   return map[status] ?? "gray";
 }
@@ -129,6 +131,24 @@ export default async function AdminMatterDetailPage({
     revalidatePath(`/admin/matters/${matterId}`);
   }
 
+  async function setMatterStatus(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const status = formData.get("status") as string;
+    const matterId = formData.get("matter_id") as string;
+    const userId = formData.get("author_id") as string;
+    if (!status?.trim()) return;
+
+    await supabase.from("matters").update({ status }).eq("id", matterId);
+    await supabase.from("matter_activities").insert({
+      matter_id: matterId,
+      author_id: userId || null,
+      activity_type: "status_change",
+      body: `Status changed to: ${MATTER_STATUS_LABELS[status as MatterStatus] ?? status}`,
+    });
+    revalidatePath(`/admin/matters/${matterId}`);
+  }
+
   async function postNote(formData: FormData) {
     "use server";
     const supabase = await createClient();
@@ -154,7 +174,7 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -184,11 +204,21 @@ export default async function AdminMatterDetailPage({
   const parties = (partiesData as MatterParty[] | null) ?? [];
   const partyById = new Map(parties.map((p) => [p.id, p]));
 
+  // Enquiries linked to this matter (C2 — view enquiries from the matter page).
+  const { data: enqData } = await supabase
+    .from("enquiries")
+    .select("id, subject, status, created_at")
+    .eq("matter_id", id)
+    .order("created_at", { ascending: false });
+  const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
+
   // Short-lived signed URLs for docs stored in Supabase Storage (private bucket).
   const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
   const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
 
   const serviceConfig = (matter as any).services?.config;
+  // COO has no FICA — its document button + onboarding link say "documents" (A7).
+  const isCoo = ((matter as any).services?.code ?? "").toUpperCase() === "COO";
   const allStages: Stage[] = serviceConfig?.stages ?? [];
   const currentPhaseNum = matter.current_phase ? Number(matter.current_phase) : null;
   const stagesForCurrentPhase = currentPhaseNum
@@ -340,6 +370,12 @@ export default async function AdminMatterDetailPage({
               <dd className="text-gray-800 mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
             </div>
           )}
+          {(matter as any).partner_file_ref && (
+            <div>
+              <dt className="text-xs text-gray-400">Partner file ref</dt>
+              <dd className="text-gray-800 mt-0.5">{(matter as any).partner_file_ref}</dd>
+            </div>
+          )}
           {matter.service_notes && (
             <div className="col-span-2">
               <dt className="text-xs text-gray-400">Service Notes</dt>
@@ -347,7 +383,50 @@ export default async function AdminMatterDetailPage({
             </div>
           )}
         </dl>
+
+        {/* Status control (H1) — partner/client referrals arrive as "New"; staff
+            review then set Open (or Won/Lost/etc.). Won triggers the celebration. */}
+        <form action={setMatterStatus} className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="matter_id" value={id} />
+          <input type="hidden" name="author_id" value={authorId ?? ""} />
+          <label className="text-xs font-medium text-gray-500">Status</label>
+          <select
+            name="status"
+            defaultValue={matter.status ?? "new"}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+          >
+            {(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => (
+              <option key={s} value={s}>{MATTER_STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+          <button type="submit" className="px-3 py-1.5 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">
+            Update status
+          </button>
+          {matter.status === "new" && (
+            <span className="text-xs font-medium text-amber-600">Awaiting review — set to Open once reviewed</span>
+          )}
+        </form>
       </Card>
+
+      {/* Celebration when the matter is won/closed (H2) */}
+      <Celebrate active={matter.status === "won"} matterId={matter.id} />
+
+      {/* Related enquiries (C2) */}
+      {relatedEnquiries.length > 0 && (
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-3">Related enquiries ({relatedEnquiries.length})</h2>
+          <ul className="divide-y divide-gray-100">
+            {relatedEnquiries.map((e) => (
+              <li key={e.id} className="py-2">
+                <Link href={`/admin/enquiries/${e.id}`} className="flex items-center justify-between gap-3 text-sm hover:text-[#1B2E6B]">
+                  <span className="text-gray-800 truncate">{e.subject}</span>
+                  <span className="text-xs text-gray-400 shrink-0">{e.status} · {formatDate(e.created_at)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* Client info */}
       {matter.clients && (
@@ -383,7 +462,7 @@ export default async function AdminMatterDetailPage({
       )}
 
       {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
-      <PartiesCard parties={parties} />
+      <PartiesCard parties={parties} manage />
 
       {/* Documents */}
       <div>
@@ -401,7 +480,7 @@ export default async function AdminMatterDetailPage({
               </a>
             )}
             <StorageUpload matterId={id} />
-            <CollectFicaButton matterId={id} />
+            <CollectFicaButton matterId={id} fica={!isCoo} />
           </div>
         </div>
         {documents.length > 0 ? (
@@ -458,6 +537,7 @@ export default async function AdminMatterDetailPage({
                   ) : (
                     <span className="text-xs text-gray-300 shrink-0">No file</span>
                   )}
+                  <DocRenameButton documentId={doc.id} current={doc.file_name || doc.document_type} />
                   {doc.verified && (
                     <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>
                   )}
@@ -504,13 +584,24 @@ export default async function AdminMatterDetailPage({
             <ul className="divide-y divide-gray-100">
               {activities.map((a) => {
                 const authorName = (a.users as any)?.full_name ?? a.author_label ?? "System";
+                // Internal = not in the external-safe set (mirrors the partner-page
+                // whitelist). Staff see these on a grey background so it's obvious
+                // at a glance what the client/partner can and cannot see.
+                const isInternal = !["status_change", "document_upload", "phase_transition", "poa_signed"].includes(a.activity_type);
                 return (
-                  <li key={a.id} className="flex gap-3 px-5 py-4">
+                  <li key={a.id} className={"flex gap-3 px-5 py-4 " + (isInternal ? "bg-gray-100" : "")}>
                     <div className="mt-0.5 shrink-0">
                       <ActivityIcon type={a.activity_type} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800">{a.body || a.activity_type}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-gray-800">{a.body || a.activity_type}</p>
+                        {isInternal && (
+                          <span className="shrink-0 rounded bg-gray-300 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600" title="Not visible to client or business partner">
+                            Internal
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400 mt-1">
                         {authorName} · {formatDateTime(a.created_at)}
                       </p>

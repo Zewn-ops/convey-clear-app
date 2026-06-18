@@ -83,7 +83,7 @@ export const ASSIGNABLE_ROLES_BY_ADMIN: UserRole[] = [
 
 // --- Enums -----------------------------------------------------------------
 export type EntityType = "natural_person" | "business" | "trust";
-export type MatterStatus = "open" | "won" | "lost" | "archived" | "on_hold";
+export type MatterStatus = "new" | "open" | "won" | "lost" | "archived" | "on_hold";
 export type MatterPriority =
   | "priority"
   | "standard"
@@ -101,6 +101,7 @@ export const PHASE_LABELS: Record<MatterPhase, string> = {
 };
 
 export const MATTER_STATUS_LABELS: Record<MatterStatus, string> = {
+  new: "New",
   open: "Open",
   won: "Won",
   lost: "Lost",
@@ -163,6 +164,7 @@ export interface Matter {
   deal_value: number | null;
   status: MatterStatus | null;
   municipality: string | null;
+  partner_file_ref: string | null;
   additional_services: string | null;
   invoice_status: string | null;
   drive_folder_id: string | null;
@@ -188,11 +190,10 @@ export interface MatterParty {
   email: string | null;
   cell: string | null;
   physical_address: string | null;
-  // Seller refund banking (Open Rates Account closure). Sensitive PII.
-  bank_name: string | null;
-  bank_account_no: string | null;
-  bank_branch_code: string | null;
-  account_holder: string | null;
+  // Contact person for a business/trust party (A1).
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_cell: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

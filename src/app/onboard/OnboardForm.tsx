@@ -40,6 +40,7 @@ export const DOC_META: Record<string, { label: string; hint: string }> = {
   cipc_docs: { label: "CIPC Documents", hint: "Company registration documents" },
   cor14_3: { label: "COR14.3 Certificate", hint: "CIPC registration certificate" },
   letter_of_authority: { label: "Letter of Authority", hint: "Master's letter of authority (trusts)" },
+  cor_14_3: { label: "COR 14.3 Certificate", hint: "Company registration certificate (business entities)" },
   transfer_letter: { label: "Transfer Confirmation Letter", hint: "From the conveyancing attorney" },
   deed_search: { label: "Deed Search", hint: "Recent deed search for the property" },
   clearance_figures: { label: "Clearance Figures", hint: "Municipal rates clearance figures" },
@@ -61,7 +62,6 @@ export const DOC_META: Record<string, { label: string; hint: string }> = {
   rates_clearance_certificate: { label: "Rates Clearance Certificate", hint: "Issued s118 clearance certificate" },
   consumer_agreement: { label: "Consumer Agreement", hint: "Completed municipal account-application form" },
   service_application: { label: "Municipal Service Application", hint: "Completed municipal service application form" },
-  seller_banking_details: { label: "Banking Details (refund)", hint: "Proof of banking for the rates-account refund" },
 };
 
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];

@@ -25,7 +25,7 @@ export const metadata = { title: "All Matters — ConveyClear Admin" };
 
 function statusVariant(status: string): "info" | "success" | "danger" | "warning" | "gray" {
   const map: Record<string, "info" | "success" | "danger" | "warning" | "gray"> = {
-    open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning",
+    new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning",
   };
   return map[status] ?? "gray";
 }

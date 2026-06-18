@@ -11,6 +11,7 @@ export interface TokenData {
   purpose: string;
   expires_at: string;
   matter_title: string;
+  municipality: string | null;
   sub_service: string | null;
   drive_folder_id: string | null;
   client_name: string;
@@ -78,7 +79,7 @@ export async function validateOnboardingToken(
   const { data: m } = await admin
     .from("matters")
     .select(
-      "id, title, service_notes, drive_folder_id, client_id, services(code, name, config), clients(entity_type, full_name, business_name, primary_email, id_number, primary_cell, physical_address, registration_no)"
+      "id, title, municipality, service_notes, drive_folder_id, client_id, services(code, name, config), clients(entity_type, full_name, business_name, primary_email, id_number, primary_cell, physical_address, registration_no)"
     )
     .eq("id", link.matter_id)
     .maybeSingle();
@@ -101,6 +102,7 @@ export async function validateOnboardingToken(
     purpose: link.purpose,
     expires_at: link.expires_at ?? "",
     matter_title: m.title ?? "",
+    municipality: m.municipality ?? null,
     sub_service: m.service_notes ?? null,
     drive_folder_id: m.drive_folder_id ?? null,
     client_name: clientName,
