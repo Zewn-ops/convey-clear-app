@@ -18,10 +18,12 @@ import {
   type MatterPhase,
   type MatterPriority,
   type MatterStatus,
+  type CouncilPoc,
 } from "@/types";
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
+import MatterPocsCard from "@/components/matters/MatterPocsCard";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import Celebrate from "@/components/matters/Celebrate";
 import { notifyMatterParties } from "@/lib/notify";
@@ -222,6 +224,21 @@ export default async function AdminMatterDetailPage({
     .eq("matter_id", id)
     .order("created_at", { ascending: false });
   const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
+
+  // Council POCs (B5 / Theme G) — POCs linked to this matter + the full
+  // directory for the assign dropdown. Staff-only (admin portal).
+  const [{ data: linkedPocData }, { data: allPocData }] = await Promise.all([
+    supabase
+      .from("matter_council_pocs")
+      .select("council_pocs(*)")
+      .eq("matter_id", id)
+      .order("created_at", { ascending: false }),
+    supabase.from("council_pocs").select("*").order("council", { ascending: true }).order("first_name", { ascending: true }),
+  ]);
+  const linkedPocs = ((linkedPocData as { council_pocs: CouncilPoc | null }[] | null) ?? [])
+    .map((r) => r.council_pocs)
+    .filter((p): p is CouncilPoc => Boolean(p));
+  const allPocs = (allPocData as CouncilPoc[] | null) ?? [];
 
   // Short-lived signed URLs for docs stored in Supabase Storage (private bucket).
   const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
@@ -494,6 +511,9 @@ export default async function AdminMatterDetailPage({
 
       {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
       <PartiesCard parties={parties} manage />
+
+      {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
+      <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
 
       {/* Documents */}
       <div>

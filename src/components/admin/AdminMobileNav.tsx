@@ -12,6 +12,7 @@ import {
   Briefcase,
   MessageSquare,
   UserCog,
+  Landmark,
   LogOut,
   Menu,
   X,
@@ -23,6 +24,7 @@ const baseNav = [
   { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
   { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
+  { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
 ];
 const adminNav = [
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },

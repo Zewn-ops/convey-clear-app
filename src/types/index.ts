@@ -266,6 +266,28 @@ export function clientDisplayName(
   return c.business_name || c.full_name || "—";
 }
 
+// A council/municipal point-of-contact — the internal-only contact book of
+// people ConveyClear deals with at each council (Theme G / B5). No login;
+// staff-only. Linked to matters via matter_council_pocs (many-to-many).
+export interface CouncilPoc {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string | null;
+  cell: string | null;
+  council: string | null;
+  department: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function councilPocName(p?: { first_name?: string | null; last_name?: string | null } | null): string {
+  if (!p) return "—";
+  return [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+}
+
 // ============================================================================
 // LEGACY (old scaffold schema) — DEPRECATED. Only kept so un-migrated pages
 // (dashboard/requests, dashboard/profile, admin/*, api/requests) still compile.
