@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { notifyStaff, notifyUsers } from "@/lib/notify";
+import { STAFF_ROLES, type UserRole } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -31,7 +33,11 @@ export async function POST(request: Request) {
   }
 
   // RLS: enquiry visible only if staff or owning partner → authorises the reply.
-  const { data: enquiry } = await supabase.from("enquiries").select("id").eq("id", enquiryId).maybeSingle();
+  const { data: enquiry } = await supabase
+    .from("enquiries")
+    .select("id, subject, created_by, assigned_to")
+    .eq("id", enquiryId)
+    .maybeSingle();
   if (!enquiry) return NextResponse.json({ message: "Enquiry not found or access denied" }, { status: 403 });
 
   const { data: me } = await supabase
@@ -50,6 +56,19 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
   await admin.from("enquiries").update({ updated_at: new Date().toISOString() }).eq("id", enquiryId);
+
+  // Notify the OTHER side: staff reply → the partner who raised it; partner
+  // reply → the assigned staffer (or all staff if unassigned).
+  const e = enquiry as { id: string; subject: string | null; created_by: string | null; assigned_to: string | null };
+  const replierIsStaff = STAFF_ROLES.includes((me?.role ?? "") as UserRole);
+  const payload = { type: "enquiry_reply", title: `Reply: ${e.subject ?? "enquiry"}`, body: text.slice(0, 140), enquiry_id: e.id };
+  if (replierIsStaff) {
+    await notifyUsers([e.created_by], payload);
+  } else if (e.assigned_to) {
+    await notifyUsers([e.assigned_to], payload);
+  } else {
+    await notifyStaff(payload, { enquiryPref: true });
+  }
 
   return NextResponse.json({ ok: true });
 }

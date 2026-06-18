@@ -1,5 +1,6 @@
 import Sidebar from "@/components/dashboard/Sidebar";
 import MobileNav from "@/components/dashboard/MobileNav";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function DashboardLayout({
   children,
@@ -17,6 +18,7 @@ export default function DashboardLayout({
       <div className="flex flex-col flex-1 md:ml-64">
         {/* Mobile nav */}
         <MobileNav />
+        <NotificationBell base="/dashboard" />
 
         <main className="flex-1 p-6">{children}</main>
       </div>

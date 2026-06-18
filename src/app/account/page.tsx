@@ -21,9 +21,12 @@ export default async function AccountPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: me } = user
-    ? await supabase.from("users").select("phone").eq("auth_user_id", user.id).maybeSingle()
+    ? await supabase.from("users").select("phone, notify_sound, notify_enquiries").eq("auth_user_id", user.id).maybeSingle()
     : { data: null };
-  const phone = (me as { phone: string | null } | null)?.phone ?? "";
+  const meRow = me as { phone: string | null; notify_sound: boolean | null; notify_enquiries: boolean | null } | null;
+  const phone = meRow?.phone ?? "";
+  const notifySound = meRow?.notify_sound !== false;
+  const notifyEnquiries = meRow?.notify_enquiries !== false;
 
   async function savePhone(formData: FormData) {
     "use server";
@@ -33,6 +36,21 @@ export default async function AccountPage() {
     if (!user) return;
     // Service-role update, scoped to the caller's own row (users has no self-update RLS policy).
     await createAdminClient().from("users").update({ phone: value || null }).eq("auth_user_id", user.id);
+    revalidatePath("/account");
+  }
+
+  async function saveNotifyPrefs(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await createAdminClient()
+      .from("users")
+      .update({
+        notify_sound: formData.get("notify_sound") === "on",
+        notify_enquiries: formData.get("notify_enquiries") === "on",
+      })
+      .eq("auth_user_id", user.id);
     revalidatePath("/account");
   }
 
@@ -68,6 +86,26 @@ export default async function AccountPage() {
               This is the number the enquiry &ldquo;Call&rdquo; button dials when an enquiry is assigned to you.
             </p>
           )}
+        </Card>
+
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4">Notifications</h2>
+          <form action={saveNotifyPrefs} className="space-y-3">
+            <label className="flex items-center gap-3 text-sm text-gray-700">
+              <input type="checkbox" name="notify_sound" defaultChecked={notifySound} className="h-4 w-4 accent-[#1B2E6B]" />
+              Play a sound for new notifications
+            </label>
+            {isStaffRole(profile?.role) && (
+              <label className="flex items-center gap-3 text-sm text-gray-700">
+                <input type="checkbox" name="notify_enquiries" defaultChecked={notifyEnquiries} className="h-4 w-4 accent-[#1B2E6B]" />
+                Notify me about new enquiries
+              </label>
+            )}
+            <button type="submit" className="px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">
+              Save preferences
+            </button>
+          </form>
+          <p className="text-xs text-gray-400 mt-2">Red dots always show; the sound is the one-time browser-enabled chime.</p>
         </Card>
 
         <Card>

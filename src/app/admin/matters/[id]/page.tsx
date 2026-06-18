@@ -24,6 +24,7 @@ import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import Celebrate from "@/components/matters/Celebrate";
+import { notifyMatterParties } from "@/lib/notify";
 import StorageUpload from "@/components/matters/StorageUpload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDownloadUrls } from "@/lib/storage";
@@ -103,6 +104,11 @@ export default async function AdminMatterDetailPage({
       activity_type: "phase_transition",
       body: `Matter advanced to Phase ${newPhase}: ${PHASE_LABELS[newPhase as MatterPhase]}`,
     });
+    await notifyMatterParties(
+      matterId,
+      { type: "phase", title: `Advanced to Phase ${newPhase}: ${PHASE_LABELS[newPhase as MatterPhase]}` },
+      { excludeUserId: userId || null }
+    );
 
     revalidatePath(`/admin/matters/${matterId}`);
   }
@@ -146,6 +152,11 @@ export default async function AdminMatterDetailPage({
       activity_type: "status_change",
       body: `Status changed to: ${MATTER_STATUS_LABELS[status as MatterStatus] ?? status}`,
     });
+    await notifyMatterParties(
+      matterId,
+      { type: "status", title: `Status: ${MATTER_STATUS_LABELS[status as MatterStatus] ?? status}` },
+      { excludeUserId: userId || null }
+    );
     revalidatePath(`/admin/matters/${matterId}`);
   }
 

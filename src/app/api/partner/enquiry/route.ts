@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { notifyStaff } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,11 @@ export async function POST(request: Request) {
     .select("id")
     .single();
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+
+  await notifyStaff(
+    { type: "enquiry", title: `New enquiry: ${subject}`, body: message.slice(0, 140), enquiry_id: enquiry.id, matter_id: matterId },
+    { enquiryPref: true }
+  );
 
   return NextResponse.json({ ok: true, enquiry_id: enquiry.id });
 }

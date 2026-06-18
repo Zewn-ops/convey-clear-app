@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
+import { notifyStaff } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -217,6 +218,16 @@ export async function POST(request: Request) {
     author_label: "Client (onboarding form)",
     body: `Onboarding submitted — ${docs.length} document(s) uploaded${na.length ? `, ${na.length} marked not available` : ""}.`,
   });
+
+  if (docs.length > 0) {
+    await notifyStaff({
+      type: "document",
+      title: "Documents uploaded",
+      body: `${docs.length} document(s) received via onboarding`,
+      matter_id: matterId,
+      link: `/admin/matters/${matterId}`,
+    });
+  }
 
   return NextResponse.json({ ok: true, doc_count: docs.length });
 }
