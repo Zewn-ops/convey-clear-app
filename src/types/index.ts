@@ -127,6 +127,7 @@ export interface AppUser {
   role: UserRole;
   client_id: string | null;
   business_partner_id: string | null;
+  phone: string | null;
   active: boolean;
   last_login_at: string | null;
   created_at: string;

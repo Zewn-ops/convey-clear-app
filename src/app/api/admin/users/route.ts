@@ -178,13 +178,28 @@ export async function POST(request: Request) {
   });
 }
 
+// PATCH — edit an existing user: details (name/email/phone), role, active,
+// and (optionally) set a new login password. Tiering:
+//   • A plain admin may NOT edit a super_admin/admin account, nor assign those
+//     roles — only a super_admin can (mirrors the create-side rule + DB guard).
+//   • No self-lockout: a caller can't deactivate or change their own role.
+// Email + password changes also update the auth account (service role).
 export async function PATCH(request: Request) {
   const auth = await requireAdmin();
   if ("error" in auth) {
     return NextResponse.json({ message: auth.error }, { status: auth.status });
   }
 
-  let body: { user_id?: string; active?: boolean; role?: UserRole };
+  let body: {
+    user_id?: string;
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    active?: boolean;
+    role?: UserRole;
+    password?: string;          // explicit new password (>= 8 chars)
+    generate_password?: boolean; // mint a one-time temp password (returned)
+  };
   try {
     body = await request.json();
   } catch {
@@ -195,25 +210,78 @@ export async function PATCH(request: Request) {
   }
 
   const admin = createAdminClient();
+  const isSuper = auth.callerRole === "super_admin";
+
+  // Resolve the target so we can enforce tiering + reach the auth account.
+  const { data: target } = await admin
+    .from("users")
+    .select("id, auth_user_id, role, email")
+    .eq("id", body.user_id)
+    .maybeSingle();
+  if (!target) return NextResponse.json({ message: "User not found" }, { status: 404 });
+
+  // A plain admin cannot edit a privileged (admin/super_admin) account.
+  if (!isSuper && ADMIN_ROLES.includes(target.role as UserRole)) {
+    return NextResponse.json(
+      { message: "Only a super admin can edit an admin or super-admin account." },
+      { status: 403 }
+    );
+  }
+
+  const isSelf = target.id === auth.callerId;
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
-  if (typeof body.active === "boolean") patch.active = body.active;
+  if (typeof body.full_name === "string") patch.full_name = body.full_name.trim() || null;
+  if (typeof body.phone === "string") patch.phone = body.phone.trim() || null;
+
+  if (typeof body.active === "boolean") {
+    if (isSelf && body.active === false) {
+      return NextResponse.json({ message: "You can't deactivate your own account." }, { status: 400 });
+    }
+    patch.active = body.active;
+  }
 
   if (body.role) {
-    const allowed =
-      auth.callerRole === "super_admin"
-        ? ASSIGNABLE_ROLES_BY_SUPER
-        : ASSIGNABLE_ROLES_BY_ADMIN;
+    if (isSelf && body.role !== target.role) {
+      return NextResponse.json({ message: "You can't change your own role." }, { status: 400 });
+    }
+    const allowed = isSuper ? ASSIGNABLE_ROLES_BY_SUPER : ASSIGNABLE_ROLES_BY_ADMIN;
     if (!allowed.includes(body.role)) {
-      return NextResponse.json(
-        { message: `Your role may not assign "${body.role}".` },
-        { status: 403 }
-      );
+      return NextResponse.json({ message: `Your role may not assign "${body.role}".` }, { status: 403 });
     }
     patch.role = body.role;
   }
 
+  // Email change — update the auth account first (must stay in sync).
+  const newEmail = (body.email ?? "").trim().toLowerCase();
+  if (newEmail && newEmail !== (target.email ?? "").toLowerCase()) {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) {
+      return NextResponse.json({ message: "A valid email is required" }, { status: 400 });
+    }
+    if (!target.auth_user_id) {
+      return NextResponse.json({ message: "This user has no login account — email can't be changed." }, { status: 400 });
+    }
+    const { error: emailErr } = await admin.auth.admin.updateUserById(target.auth_user_id, {
+      email: newEmail,
+      email_confirm: true,
+    });
+    if (emailErr) return NextResponse.json({ message: emailErr.message }, { status: 400 });
+    patch.email = newEmail;
+  }
+
+  // Password set — generate a one-time temp password or use the one provided.
+  let tempPassword: string | null = null;
+  if (body.generate_password || (body.password && body.password.length >= 8)) {
+    if (!target.auth_user_id) {
+      return NextResponse.json({ message: "This user has no login account — password can't be set." }, { status: 400 });
+    }
+    const newPw = body.generate_password ? genTempPassword() : body.password!;
+    const { error: pwErr } = await admin.auth.admin.updateUserById(target.auth_user_id, { password: newPw });
+    if (pwErr) return NextResponse.json({ message: pwErr.message }, { status: 400 });
+    if (body.generate_password) tempPassword = newPw; // only echo generated ones
+  }
+
   const { error } = await admin.from("users").update(patch).eq("id", body.user_id);
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, temp_password: tempPassword });
 }

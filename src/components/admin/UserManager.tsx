@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +10,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import {
+  ADMIN_ROLES,
   ASSIGNABLE_ROLES_BY_ADMIN,
   ASSIGNABLE_ROLES_BY_SUPER,
   ROLE_LABELS,
@@ -19,7 +20,7 @@ import {
   type UserRole,
 } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { UserPlus, Building2, Copy, Check, KeyRound, X, Mail } from "lucide-react";
+import { UserPlus, Building2, Copy, Check, KeyRound, X, Mail, Pencil, RotateCcw } from "lucide-react";
 
 // Temp-password handover survives a page reload (sessionStorage) until the admin
 // explicitly dismisses it — so it isn't lost if the page refreshes after create.
@@ -155,6 +156,61 @@ export default function UserManager({
     }
     toast.success(u.active ? "Account deactivated" : "Account activated");
     router.refresh();
+  };
+
+  // --- edit existing user ---
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", role: "client" as UserRole });
+  const [editLoading, setEditLoading] = useState(false);
+
+  // A plain admin can't edit a privileged (admin/super_admin) account.
+  const canEdit = (u: AppUser) => isSuperAdmin(callerRole) || !ADMIN_ROLES.includes(u.role);
+
+  const startEdit = (u: AppUser) => {
+    setEditingId(u.id);
+    setEditForm({ full_name: u.full_name ?? "", email: u.email, phone: u.phone ?? "", role: u.role });
+  };
+
+  // Role options for the editor: the caller's assignable roles, plus the target's
+  // current role if it isn't assignable (legacy roles) so it still shows.
+  const editRoleOptions = (current: UserRole) => {
+    const opts = [...assignable];
+    if (!opts.includes(current)) opts.unshift(current);
+    return opts.map((r) => ({ value: r, label: ROLE_LABELS[r] ?? r }));
+  };
+
+  const saveEdit = async (u: AppUser) => {
+    setEditLoading(true);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: u.id,
+        full_name: editForm.full_name,
+        email: editForm.email,
+        phone: editForm.phone,
+        role: editForm.role,
+      }),
+    });
+    const json = await res.json();
+    setEditLoading(false);
+    if (!res.ok) return toast.error(json.message ?? "Update failed");
+    toast.success("User updated");
+    setEditingId(null);
+    router.refresh();
+  };
+
+  const resetPassword = async (u: AppUser) => {
+    if (!confirm(`Generate a new temporary password for ${u.full_name || u.email}? Their current password will stop working.`)) return;
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: u.id, generate_password: true }),
+    });
+    const json = await res.json();
+    if (!res.ok) return toast.error(json.message ?? "Could not reset password");
+    setCreatedCred({ email: u.email, password: json.temp_password });
+    toast.success("New password generated — hand it over below");
   };
 
   const copyCred = () => {
@@ -321,35 +377,70 @@ export default function UserManager({
             </thead>
             <tbody className="divide-y divide-gray-50">
               {initialUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3">
-                    <div className="font-medium text-gray-900">{u.full_name || "—"}</div>
-                    <div className="text-xs text-gray-500">{u.email}</div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <Badge label={ROLE_LABELS[u.role] ?? u.role} variant={ROLE_BADGE[u.role] ?? "gray"} />
-                  </td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(u.created_at)}</td>
-                  <td className="px-5 py-3">
-                    <Badge label={u.active ? "Active" : "Disabled"} variant={u.active ? "success" : "gray"} />
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => sendReset(u)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
-                      >
-                        <Mail className="h-3.5 w-3.5" /> Send reset
-                      </button>
-                      <button
-                        onClick={() => toggleActive(u)}
-                        className="text-xs font-medium text-[#E8521A] hover:underline"
-                      >
-                        {u.active ? "Deactivate" : "Activate"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <Fragment key={u.id}>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3">
+                      <div className="font-medium text-gray-900">{u.full_name || "—"}</div>
+                      <div className="text-xs text-gray-500">{u.email}</div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge label={ROLE_LABELS[u.role] ?? u.role} variant={ROLE_BADGE[u.role] ?? "gray"} />
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(u.created_at)}</td>
+                    <td className="px-5 py-3">
+                      <Badge label={u.active ? "Active" : "Disabled"} variant={u.active ? "success" : "gray"} />
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        {canEdit(u) && (
+                          <button
+                            onClick={() => (editingId === u.id ? setEditingId(null) : startEdit(u))}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:underline"
+                          >
+                            <Pencil className="h-3.5 w-3.5" /> {editingId === u.id ? "Close" : "Edit"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => sendReset(u)}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> Send reset
+                        </button>
+                        <button
+                          onClick={() => toggleActive(u)}
+                          className="text-xs font-medium text-[#E8521A] hover:underline"
+                        >
+                          {u.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {editingId === u.id && (
+                    <tr className="bg-gray-50">
+                      <td colSpan={5} className="px-5 py-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <Input label="Full name" value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} />
+                          <Input label="Email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                          <Input label="Cell number" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="+27 82 000 0000" />
+                          <Select
+                            label="Role"
+                            value={editForm.role}
+                            onChange={(e) => setEditForm({ ...editForm, role: e.target.value as UserRole })}
+                            options={editRoleOptions(u.role)}
+                          />
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <Button size="sm" onClick={() => saveEdit(u)} loading={editLoading}>Save changes</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                          <Button size="sm" variant="outline" onClick={() => resetPassword(u)}>
+                            <RotateCcw className="h-4 w-4" /> Reset password
+                          </Button>
+                          <span className="text-xs text-gray-400">Reset issues a new temp password shown once above.</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
               {initialUsers.length === 0 && (
                 <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No users yet</td></tr>
