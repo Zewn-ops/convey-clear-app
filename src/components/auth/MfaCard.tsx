@@ -41,6 +41,7 @@ export default function MfaCard() {
       }
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
+        issuer: "ConveyClear",
         friendlyName: `Authenticator ${Date.now()}`,
       });
       if (error) return toast.error(error.message);
