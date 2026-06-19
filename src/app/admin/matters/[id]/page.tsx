@@ -443,7 +443,7 @@ export default async function AdminMatterDetailPage({
           <h2 className="font-semibold text-gray-900 mb-3">
             Service details{(matter as any).service_subtype ? ` · ${(matter as any).service_subtype}` : ""}
           </h2>
-          <dl className="grid grid-cols-2 gap-4 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             {Object.entries(((matter as any).service_data ?? {}) as Record<string, unknown>)
               .filter(([, v]) => v)
               .map(([k, v]) => (
@@ -488,7 +488,7 @@ export default async function AdminMatterDetailPage({
               View profile
             </Link>
           </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-xs text-gray-400">Name</dt>
               <dd className="font-medium mt-0.5">{clientDisplayName(matter.clients)}</dd>

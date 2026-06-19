@@ -125,7 +125,7 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
           </button>
         </div>
       </div>
-      <dl className="grid grid-cols-2 gap-4 text-sm">
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <Row k="First name" v={poc.first_name} />
         <Row k="Surname" v={poc.last_name} />
         <Row k="Council" v={poc.council} />

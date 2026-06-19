@@ -62,7 +62,7 @@ export default async function AdminMattersPage({
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">All Matters</h1>
           <p className="text-sm text-gray-500 mt-1">{total} matter{total === 1 ? "" : "s"}</p>

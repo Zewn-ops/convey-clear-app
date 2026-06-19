@@ -81,7 +81,7 @@ export default async function AdminClientDetailPage({
 
       <Card>
         <h2 className="font-semibold text-gray-900 mb-4">Details</h2>
-        <dl className="grid grid-cols-2 gap-4 text-sm">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           {client.full_name && (
             <div>
               <dt className="text-gray-400 text-xs">Full Name</dt>

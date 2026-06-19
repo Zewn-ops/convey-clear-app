@@ -113,7 +113,7 @@ export default function NotificationBell({ base }: { base: string }) {
   }
 
   return (
-    <div className="fixed top-3 right-4 z-40">
+    <div className="fixed top-3 right-16 z-40 md:right-4">
       <button
         onClick={toggle}
         className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
@@ -130,7 +130,7 @@ export default function NotificationBell({ base }: { base: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-40">
+          <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-5rem)] max-h-96 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-40">
             <div className="px-4 py-2.5 border-b border-gray-100">
               <p className="text-sm font-semibold text-gray-900">Notifications</p>
             </div>

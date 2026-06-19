@@ -32,7 +32,7 @@ export default async function PartnerLayout({
       <div className="flex flex-col flex-1 md:ml-64">
         <PartnerNav firmName={firmName} variant="mobile" />
         <NotificationBell base="/partner" />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

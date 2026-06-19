@@ -41,12 +41,12 @@ export default async function PartnerOverview() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Your matters</h1>
           <p className="text-sm text-gray-500 mt-1">Matters ConveyClear is handling for your clients.</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href={`mailto:${CONVEYCLEAR_EMAIL}`}
             className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
@@ -74,7 +74,7 @@ export default async function PartnerOverview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="flex items-center gap-3">
           <div className="rounded-lg bg-[#1B2E6B]/10 p-2.5"><Briefcase className="h-5 w-5 text-[#1B2E6B]" /></div>
           <div><p className="text-2xl font-bold text-[#1B2E6B]">{totalMatters ?? 0}</p><p className="text-xs text-gray-500">Total matters</p></div>

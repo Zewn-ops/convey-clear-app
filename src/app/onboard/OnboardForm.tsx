@@ -478,7 +478,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
                   <h2 className="text-sm font-semibold text-gray-700">Authorised representative / trustee</h2>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field label="First name(s)" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
                     <Field label="Surname"><input className={inputCls} value={details.surname} onChange={(e) => setField("surname", e.target.value)} /></Field>
                     <Field label="Cell" required><input className={inputCls} value={details.cell} onChange={(e) => setField("cell", e.target.value)} /></Field>
@@ -501,7 +501,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                       <button type="button" onClick={() => removeDirector(i)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input className={inputCls} placeholder="First name(s)" value={d.full_name} onChange={(e) => updateDirector(i, "full_name", e.target.value)} />
                         <input className={inputCls} placeholder="Surname" value={d.surname} onChange={(e) => updateDirector(i, "surname", e.target.value)} />
                         <input className={inputCls} placeholder="Cell" value={d.cell} onChange={(e) => updateDirector(i, "cell", e.target.value)} />
@@ -519,7 +519,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
                 <h2 className="text-sm font-semibold text-gray-700">Your details</h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="First name(s)" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
                   <Field label="Surname" required><input className={inputCls} value={details.surname} onChange={(e) => setField("surname", e.target.value)} /></Field>
                   <Field label="Cell" required><input className={inputCls} value={details.cell} onChange={(e) => setField("cell", e.target.value)} /></Field>
@@ -527,7 +527,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                 </div>
                 <Field label="ID number" required><input className={inputCls} value={details.id_number} onChange={(e) => setField("id_number", e.target.value)} /></Field>
                 <Field label="Home address"><input className={inputCls} value={details.home_address} onChange={(e) => setField("home_address", e.target.value)} placeholder="Street, suburb, city" /></Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Industry">
                     <select className={inputCls} value={details.industry} onChange={(e) => setField("industry", e.target.value)}>
                       <option value="">Select…</option>
@@ -548,7 +548,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
               <h2 className="text-sm font-semibold text-gray-700">Municipal profile login <span className="font-normal text-gray-400">(optional)</span></h2>
               <p className="text-xs text-gray-400">If provided, this lets us pull your municipal account statements for you.</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Username"><input className={inputCls} value={details.municipal_username} onChange={(e) => setField("municipal_username", e.target.value)} /></Field>
                 <Field label="Password"><input className={inputCls} type="password" value={details.municipal_password} onChange={(e) => setField("municipal_password", e.target.value)} /></Field>
               </div>
