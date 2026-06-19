@@ -20,6 +20,10 @@ export default function MfaCard() {
   const [enrolling, setEnrolling] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  // When removing a verified factor from an AAL1 session, Supabase requires a
+  // step-up first. `removing` holds that factor id while we collect a code.
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase.auth.mfa.listFactors();
@@ -71,12 +75,43 @@ export default function MfaCard() {
     }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm("Remove this authenticator? Sign-in will no longer ask for a code.")) return;
+  const doUnenroll = async (id: string) => {
     const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
     if (error) return toast.error(error.message);
     toast.success("Authenticator removed");
+    setRemoving(null);
+    setCode("");
     await load();
+  };
+
+  const remove = async (id: string) => {
+    // Unenrolling a verified factor needs an AAL2 session. If we're already
+    // stepped up, remove directly; otherwise collect a code and step up first
+    // (so the user never hits "AAL2 required to unenroll verified factor").
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel === "aal2") {
+      if (!confirm("Remove this authenticator? Sign-in will no longer ask for a code.")) return;
+      await doUnenroll(id);
+      return;
+    }
+    setRemoving(id);
+    setCode("");
+  };
+
+  const confirmRemove = async () => {
+    if (!removing) return;
+    const c = code.trim();
+    if (!/^\d{6}$/.test(c)) return toast.error("Enter the 6-digit code from your app");
+    setRemoveBusy(true);
+    try {
+      const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: removing });
+      if (chErr) return toast.error(chErr.message);
+      const { error: vErr } = await supabase.auth.mfa.verify({ factorId: removing, challengeId: ch.id, code: c });
+      if (vErr) return toast.error(vErr.message);
+      await doUnenroll(removing);
+    } finally {
+      setRemoveBusy(false);
+    }
   };
 
   return (
@@ -103,6 +138,15 @@ export default function MfaCard() {
           <div className="flex gap-2">
             <Button onClick={verifyEnroll} loading={busy}>Verify &amp; enable</Button>
             <Button variant="ghost" onClick={() => { setEnrolling(null); setCode(""); }}>Cancel</Button>
+          </div>
+        </div>
+      ) : removing ? (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">Enter your current 6-digit code to confirm removing two-factor authentication.</p>
+          <Input label="6-digit code" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
+          <div className="flex gap-2">
+            <Button onClick={confirmRemove} loading={removeBusy}>Remove authenticator</Button>
+            <Button variant="ghost" onClick={() => { setRemoving(null); setCode(""); }}>Cancel</Button>
           </div>
         </div>
       ) : verified.length > 0 ? (

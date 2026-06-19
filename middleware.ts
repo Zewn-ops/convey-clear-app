@@ -80,6 +80,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Two-factor is MANDATORY for staff/admin roles. On any protected page, a staff
+  // user with no verified factor is sent to enrol; one who hasn't stepped up this
+  // session is sent to the challenge. Clients/business partners are exempt (optional
+  // MFA). /auth/mfa + /auth/mfa-setup aren't protected paths, so they stay reachable
+  // (no redirect loop). If AAL can't be determined we don't force, to avoid lockout.
+  if (isProtected && role && STAFF_ROLES.includes(role)) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal) {
+      if (aal.nextLevel !== "aal2") {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/auth/mfa-setup";
+        return NextResponse.redirect(redirectUrl);
+      }
+      if (aal.currentLevel !== "aal2") {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/auth/mfa";
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+  }
+
   // /admin → staff only (incl. super_admin). Non-staff bounced to their home.
   if (pathname.startsWith("/admin")) {
     if (!role || !STAFF_ROLES.includes(role)) {
