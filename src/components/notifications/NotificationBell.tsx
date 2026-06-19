@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Bell } from "lucide-react";
+import { playDing, unlockAudio, getStoredVolume } from "@/lib/notify-sound";
 
 interface Notif {
   id: string;
@@ -27,9 +28,25 @@ export default function NotificationBell({ base }: { base: string }) {
   const supabaseRef = useRef(createClient());
   const userIdRef = useRef<string | null>(null);
   const soundPrefRef = useRef(false);
-  const ctxRef = useRef<AudioContext | null>(null);
 
   const unread = items.filter((n) => !n.read_at).length;
+
+  // Unlock audio on the FIRST user gesture anywhere on the page, so a realtime
+  // notification arriving later can chime without the user having clicked the
+  // bell first (the previous behaviour, which left it silent in most sessions).
+  useEffect(() => {
+    const handler = () => {
+      unlockAudio();
+      window.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", handler);
+    };
+    window.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", handler);
+    };
+  }, []);
 
   useEffect(() => {
     const supabase = supabaseRef.current;
@@ -63,7 +80,7 @@ export default function NotificationBell({ base }: { base: string }) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (payload: any) => {
             setItems((prev) => [payload.new as Notif, ...prev].slice(0, 30));
-            ding();
+            if (soundPrefRef.current) playDing(getStoredVolume());
           }
         )
         .subscribe();
@@ -72,35 +89,6 @@ export default function NotificationBell({ base }: { base: string }) {
       if (channel) supabaseRef.current.removeChannel(channel);
     };
   }, []);
-
-  function unlockAudio() {
-    if (ctxRef.current) return;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (Ctx) ctxRef.current = new Ctx();
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function ding() {
-    if (!soundPrefRef.current || !ctxRef.current) return;
-    const ctx = ctxRef.current;
-    if (ctx.state === "suspended") ctx.resume();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.type = "sine";
-    o.frequency.setValueAtTime(880, ctx.currentTime);
-    o.frequency.setValueAtTime(1175, ctx.currentTime + 0.09);
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32);
-    o.start();
-    o.stop(ctx.currentTime + 0.33);
-  }
 
   async function markAllRead() {
     const uid = userIdRef.current;

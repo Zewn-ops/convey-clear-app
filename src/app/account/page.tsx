@@ -6,6 +6,7 @@ import { ROLE_LABELS, isStaffRole } from "@/types";
 import Card from "@/components/ui/Card";
 import ChangePasswordForm from "@/components/auth/ChangePasswordForm";
 import MfaCard from "@/components/auth/MfaCard";
+import NotifyVolumeControl from "@/components/notifications/NotifyVolumeControl";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ArrowLeft } from "lucide-react";
@@ -106,7 +107,10 @@ export default async function AccountPage() {
               Save preferences
             </button>
           </form>
-          <p className="text-xs text-gray-400 mt-2">Red dots always show; the sound is the one-time browser-enabled chime.</p>
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <NotifyVolumeControl />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">Red dots always show; the chime needs one click anywhere first (browser audio rule).</p>
         </Card>
 
         <Card>

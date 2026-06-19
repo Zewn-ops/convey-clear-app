@@ -6,7 +6,8 @@ import Badge from "@/components/ui/Badge";
 import EnquiryReply from "@/components/enquiries/EnquiryReply";
 import { formatDateTime } from "@/lib/utils";
 import { ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryMessage, type EnquiryStatus } from "@/types";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Phone } from "lucide-react";
+import { CONVEYCLEAR_PHONE, telHref } from "@/lib/contact";
 
 function statusVariant(s: EnquiryStatus): "info" | "success" | "warning" | "gray" {
   return ({ open: "warning", assigned: "info", resolved: "success", closed: "gray" } as const)[s] ?? "gray";
@@ -48,7 +49,15 @@ export default async function PartnerEnquiryDetail({ params }: { params: { id: s
             </p>
           )}
         </div>
-        <Badge label={ENQUIRY_STATUS_LABELS[enquiry.status]} variant={statusVariant(enquiry.status)} />
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <Badge label={ENQUIRY_STATUS_LABELS[enquiry.status]} variant={statusVariant(enquiry.status)} />
+          <a
+            href={telHref(CONVEYCLEAR_PHONE)}
+            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+          >
+            <Phone className="h-3.5 w-3.5" /> Call ConveyClear
+          </a>
+        </div>
       </div>
 
       <Card className="space-y-4">

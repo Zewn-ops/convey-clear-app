@@ -28,6 +28,19 @@ declare global {
   }
 }
 
+// True when a Turnstile site key is configured — auth forms use this to gate
+// their submit button (no token yet => button disabled) instead of letting the
+// raw Supabase "no captcha_token found" error fire after a click.
+export const TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+// Replace Supabase's unbranded captcha error with a friendly, on-brand message.
+export function friendlyAuthError(message: string): string {
+  if (/captcha/i.test(message)) {
+    return "Please complete the “Verify you are human” check, then try again.";
+  }
+  return message;
+}
+
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 export default function Turnstile({ onVerify }: { onVerify: (token: string | null) => void }) {

@@ -165,6 +165,14 @@ export default function ReferForm({
   const prcSub = PRC_SUBTYPES.find((s) => s.code === prcSubtype);
   const prcBlocked = isPrc && !!prcSub && !prcSub.inPortal; // RCA / RCC → contact CC, no submit
 
+  // Submit stays disabled until every required field (the ones marked *) is filled —
+  // mirrors the validation in submit(). RCA/RCC (prcBlocked) can never submit in-portal.
+  const canSubmit = isCoo
+    ? !!partyName(seller) && !!partyName(buyer)
+    : isPrc
+    ? !prcBlocked && prcSubtype === "RCF" && !!sellerName.trim() && !!municipalAccountNo.trim() && !!name.trim()
+    : !!name.trim();
+
   const partyPayload = (p: Party, role: "buyer" | "seller") => ({
     role,
     entity_type: p.entity_type,
@@ -320,7 +328,7 @@ export default function ReferForm({
         </div>
         <Input label="Property description" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="Erf 123, Bondtown" />
         <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any context for ConveyClear" />
-        <Input label="Your file reference (optional)" value={fileRef} onChange={(e) => setFileRef(e.target.value)} placeholder="Your own internal file / matter number" />
+        <Input label="Internal File Reference (optional)" value={fileRef} onChange={(e) => setFileRef(e.target.value)} placeholder="Your own internal file / matter number" />
 
         {isCoo && (
           <p className="text-xs text-[#1B2E6B] bg-[#1B2E6B]/5 border border-[#1B2E6B]/10 rounded-lg px-3 py-2">
@@ -390,9 +398,14 @@ export default function ReferForm({
         entityCard
       )}
 
-      <Button onClick={submit} loading={loading} disabled={prcBlocked} className="w-full" size="lg">
+      <Button onClick={submit} loading={loading} disabled={!canSubmit} className="w-full" size="lg">
         {prcBlocked ? "Contact ConveyClear to proceed" : "Refer matter"}
       </Button>
+      {!canSubmit && !prcBlocked && (
+        <p className="text-center text-xs text-gray-400 -mt-2">
+          Fill in all required fields (marked <span className="text-red-500">*</span>) to continue.
+        </p>
+      )}
     </div>
   );
 }

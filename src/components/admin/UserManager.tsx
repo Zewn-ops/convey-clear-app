@@ -3,7 +3,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -20,7 +19,7 @@ import {
   type UserRole,
 } from "@/types";
 import { formatDate } from "@/lib/utils";
-import { UserPlus, Building2, Copy, Check, KeyRound, X, Mail, Pencil, RotateCcw } from "lucide-react";
+import { UserPlus, Building2, Copy, Check, KeyRound, X, Pencil, RotateCcw } from "lucide-react";
 
 // Temp-password handover survives a page reload (sessionStorage) until the admin
 // explicitly dismisses it — so it isn't lost if the page refreshes after create.
@@ -46,7 +45,6 @@ export default function UserManager({
   partners: BusinessPartner[];
 }) {
   const router = useRouter();
-  const supabase = createClient();
   const assignable = isSuperAdmin(callerRole)
     ? ASSIGNABLE_ROLES_BY_SUPER
     : ASSIGNABLE_ROLES_BY_ADMIN;
@@ -83,13 +81,8 @@ export default function UserManager({
     }
   };
 
-  const sendReset = async (u: AppUser) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
-    if (error) return toast.error(error.message);
-    toast.success(`Password reset email sent to ${u.email} (sandboxed during testing)`);
-  };
+  // Password reset is admin-only for the demo (self-service email reset is off —
+  // reset emails don't deliver yet). Reset is done inline via Edit → Reset password.
 
   // --- new partner firm form state ---
   const [showPartnerForm, setShowPartnerForm] = useState(false);
@@ -400,12 +393,6 @@ export default function UserManager({
                             <Pencil className="h-3.5 w-3.5" /> {editingId === u.id ? "Close" : "Edit"}
                           </button>
                         )}
-                        <button
-                          onClick={() => sendReset(u)}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
-                        >
-                          <Mail className="h-3.5 w-3.5" /> Send reset
-                        </button>
                         <button
                           onClick={() => toggleActive(u)}
                           className="text-xs font-medium text-[#E8521A] hover:underline"

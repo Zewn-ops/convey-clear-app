@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Turnstile from "@/components/auth/Turnstile";
+import Turnstile, { TURNSTILE_ENABLED, friendlyAuthError } from "@/components/auth/Turnstile";
 import { CheckCircle } from "lucide-react";
 
 const schema = z.object({
@@ -38,7 +38,7 @@ export default function ForgotPasswordForm() {
     });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyAuthError(error.message));
     } else {
       setSent(true);
     }
@@ -81,9 +81,20 @@ export default function ForgotPasswordForm() {
       />
       <Turnstile onVerify={setCaptchaToken} />
 
-      <Button type="submit" loading={loading} className="w-full" size="lg">
+      <Button
+        type="submit"
+        loading={loading}
+        disabled={TURNSTILE_ENABLED && !captchaToken}
+        className="w-full"
+        size="lg"
+      >
         Send reset link
       </Button>
+      {TURNSTILE_ENABLED && !captchaToken && (
+        <p className="text-center text-xs text-gray-400 -mt-2">
+          Complete the verification above to continue.
+        </p>
+      )}
       <p className="text-center text-sm text-gray-600">
         <Link href="/auth/login" className="text-[#1B2E6B] hover:underline">
           Back to sign in

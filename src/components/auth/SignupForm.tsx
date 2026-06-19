@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Turnstile from "@/components/auth/Turnstile";
+import Turnstile, { TURNSTILE_ENABLED, friendlyAuthError } from "@/components/auth/Turnstile";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const schema = z
@@ -78,7 +78,7 @@ export default function SignupForm() {
     });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyAuthError(error.message));
       setLoading(false);
       return;
     }
@@ -192,9 +192,20 @@ export default function SignupForm() {
 
       <Turnstile onVerify={setCaptchaToken} />
 
-      <Button type="submit" loading={loading} className="w-full" size="lg">
+      <Button
+        type="submit"
+        loading={loading}
+        disabled={TURNSTILE_ENABLED && !captchaToken}
+        className="w-full"
+        size="lg"
+      >
         Create account
       </Button>
+      {TURNSTILE_ENABLED && !captchaToken && (
+        <p className="text-center text-xs text-gray-400 -mt-2">
+          Complete the verification above to continue.
+        </p>
+      )}
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-gray-200" />

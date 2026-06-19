@@ -520,16 +520,6 @@ export default async function AdminMatterDetailPage({
         <div className="flex items-center justify-between gap-3 mb-3">
           <h2 className="font-semibold text-gray-900">Documents ({documents.length})</h2>
           <div className="flex items-center gap-3">
-            {(matter as any).drive_folder_id && (
-              <a
-                href={`https://drive.google.com/drive/folders/${(matter as any).drive_folder_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
-              >
-                Open Drive folder
-              </a>
-            )}
             <StorageUpload matterId={id} />
             <CollectFicaButton matterId={id} fica={!isCoo} />
           </div>

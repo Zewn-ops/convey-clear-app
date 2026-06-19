@@ -11,7 +11,7 @@ import {
   type MatterPhase,
   type MatterStatus,
 } from "@/types";
-import { Briefcase, Users, Clock, ArrowRight, PlusCircle, Phone, MessageSquare } from "lucide-react";
+import { Briefcase, Users, Clock, ArrowRight, PlusCircle, Phone, Mail, MessageSquare } from "lucide-react";
 import { CONVEYCLEAR_PHONE, CONVEYCLEAR_EMAIL, telHref } from "@/lib/contact";
 
 export const metadata = { title: "Partner Overview — ConveyClear" };
@@ -48,10 +48,16 @@ export default async function PartnerOverview() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <a
-            href={CONVEYCLEAR_PHONE ? telHref(CONVEYCLEAR_PHONE) : `mailto:${CONVEYCLEAR_EMAIL}`}
+            href={`mailto:${CONVEYCLEAR_EMAIL}`}
             className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
           >
-            <Phone className="h-4 w-4" /> {CONVEYCLEAR_PHONE ? "Call ConveyClear" : "Email ConveyClear"}
+            <Mail className="h-4 w-4" /> Email ConveyClear
+          </a>
+          <a
+            href={telHref(CONVEYCLEAR_PHONE)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
+          >
+            <Phone className="h-4 w-4" /> Call ConveyClear
           </a>
           <Link
             href="/partner/enquiries"

@@ -2,6 +2,7 @@ import Card from "@/components/ui/Card";
 import type { MatterParty } from "@/types";
 import { partyRoleOrder } from "@/lib/coo-docs";
 import CreatePartyAccount from "@/components/matters/CreatePartyAccount";
+import EditPartyButton from "@/components/matters/EditPartyButton";
 
 const ROLE_LABELS: Record<string, string> = {
   buyer: "Buyer (new owner)",
@@ -62,7 +63,12 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                   </dl>
                 </div>
               )}
-              {manage && <CreatePartyAccount partyId={p.id} partyName={name || "this party"} />}
+              {manage && (
+                <div className="space-y-3 border-t border-gray-100 pt-3">
+                  <EditPartyButton party={p} />
+                  <CreatePartyAccount partyId={p.id} partyName={name || "this party"} />
+                </div>
+              )}
             </Card>
           );
         })}

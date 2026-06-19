@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isStaffRole, isPartnerRole, type UserRole } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Turnstile from "@/components/auth/Turnstile";
+import Turnstile, { TURNSTILE_ENABLED, friendlyAuthError } from "@/components/auth/Turnstile";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 const schema = z.object({
@@ -40,7 +40,7 @@ export default function LoginForm() {
     });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(friendlyAuthError(error.message));
       setLoading(false);
       return;
     }
@@ -101,9 +101,20 @@ export default function LoginForm() {
 
       <Turnstile onVerify={setCaptchaToken} />
 
-      <Button type="submit" loading={loading} className="w-full" size="lg">
+      <Button
+        type="submit"
+        loading={loading}
+        disabled={TURNSTILE_ENABLED && !captchaToken}
+        className="w-full"
+        size="lg"
+      >
         Sign in
       </Button>
+      {TURNSTILE_ENABLED && !captchaToken && (
+        <p className="text-center text-xs text-gray-400 -mt-2">
+          Complete the verification above to sign in.
+        </p>
+      )}
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-gray-200" />
