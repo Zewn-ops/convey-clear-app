@@ -25,17 +25,24 @@ export interface PrcDocRule {
   optional?: boolean;
 }
 
-// RCF document requirements by municipality. COT lodges via a "memo requested"
-// screenshot; COJ/COE via a Clearance Query Issue (CQI) screenshot. Meter
-// readings are optional everywhere; the council account statement is required.
-export function prcRcfDocs(municipality: string | null): PrcDocRule[] {
-  const muni = (municipality ?? "").toUpperCase();
-  const lodgementDoc = muni === "COT" ? "memo_screenshot" : "cqi_screenshot";
+// RCF/RCC document requirements — from the Rates Clearance SOP, Email Template 1
+// ("Document Request to Conveyancer"). The conveyancer uploads the SELLER's
+// FICA/CIPC (always) plus, where applicable, Proof of Application (applied but no
+// figures yet) and/or Proof of Payment for the figures (paid but no certificate).
+// Property description + municipal account number are captured as referral FIELDS,
+// not uploads. FICA varies by the seller's entity type.
+export function prcRcfDocs(sellerEntityType?: string | null): PrcDocRule[] {
+  const et = (sellerEntityType ?? "natural_person").toLowerCase();
+  const ficaDocs: PrcDocRule[] =
+    et === "business"
+      ? [{ docType: "cipc_docs" }, { docType: "id_certified_representative" }]
+      : et === "trust"
+      ? [{ docType: "letter_of_authority" }, { docType: "id_certified_trustee" }]
+      : [{ docType: "id_certified" }];
   return [
-    { docType: lodgementDoc },
-    { docType: "council_account_statement" },
-    { docType: "water_meter_reading", optional: true },
-    { docType: "electricity_meter_reading", optional: true },
+    ...ficaDocs,
+    { docType: "proof_of_application", optional: true },
+    { docType: "proof_of_payment_figures", optional: true },
   ];
 }
 

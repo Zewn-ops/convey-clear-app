@@ -17,9 +17,12 @@ type Slot = { key: string; docType: string; optional: boolean };
 // document set (COT vs COJ/COE differ). No buyer/seller parties. Files go
 // direct to Supabase Storage via signed URLs.
 export default function PrcOnboardForm({ token, data }: { token: string; data: TokenData }) {
+  // Seller's entity type drives which FICA/CIPC docs are requested.
+  const sellerEntity =
+    data.parties?.find((p) => p.role === "seller")?.entity_type ?? data.parties?.[0]?.entity_type ?? null;
   const slots: Slot[] = useMemo(
-    () => prcRcfDocs(data.municipality).map((d) => ({ key: d.docType, docType: d.docType, optional: Boolean(d.optional) })),
-    [data.municipality]
+    () => prcRcfDocs(sellerEntity).map((d) => ({ key: d.docType, docType: d.docType, optional: Boolean(d.optional) })),
+    [sellerEntity]
   );
 
   const [docStates, setDocStates] = useState<Record<string, DocSlotState>>(() =>

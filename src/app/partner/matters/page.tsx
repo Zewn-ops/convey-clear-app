@@ -31,15 +31,16 @@ export default async function PartnerMatters({
   const { data, count } = await applyMatterFilters(
     supabase
       .from("matters")
-      .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code)", {
+      .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code, name)", {
         count: "exact",
       }),
     filters
   );
   type PartnerMatterRow = Matter & {
     service_subtype?: string | null;
-    services?: { code?: string | null } | null;
+    services?: { code?: string | null; name?: string | null } | null;
   };
+  const serviceLabel = (m: PartnerMatterRow) => [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
   const matters = (data as PartnerMatterRow[] | null) ?? [];
   const total = count ?? 0;
 
@@ -81,6 +82,7 @@ export default async function PartnerMatters({
                     <Link href={`/partner/matters/${m.id}`} className="hover:text-[#E8521A] hover:underline">
                       {m.title || clientDisplayName(m.clients) || "—"}
                     </Link>
+                    {serviceLabel(m) && <p className="text-xs font-normal text-gray-400 mt-0.5">{serviceLabel(m)}</p>}
                   </td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{municipalityLabel(m.municipality)}</td>
                   <td className="px-5 py-3 text-gray-600">

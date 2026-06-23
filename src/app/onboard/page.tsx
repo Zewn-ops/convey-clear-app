@@ -26,14 +26,17 @@ export default async function OnboardPage({
     return <ErrorPage message={error ?? "This link is invalid, has already been used, or has expired."} />;
   }
 
+  // PRC / Rates Clearance (service code RCF; both RCF + RCC subtypes) gets the
+  // rates-clearance doc set. PRC matters now carry a single seller party, so this
+  // MUST come before the parties check below — otherwise they'd be sent to the
+  // COO multi-party form and shown COO documents.
+  if (data.service_code === "RCF") {
+    return <PrcOnboardForm token={token} data={data} />;
+  }
+
   // COO / multi-party matters get the per-party (buyer/seller) document form.
   if (data.parties && data.parties.length > 0) {
     return <CooOnboardForm token={token} data={data} />;
-  }
-
-  // PRC / Rates Clearance Figures (RCF) gets the municipality-specific doc set.
-  if (data.service_code === "RCF" && data.service_subtype === "RCF") {
-    return <PrcOnboardForm token={token} data={data} />;
   }
 
   return <OnboardForm token={token} data={data} />;

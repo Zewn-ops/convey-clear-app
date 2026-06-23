@@ -30,7 +30,7 @@ export default async function PartnerOverview() {
       supabase.from("clients").select("id", { count: "exact", head: true }),
       supabase
         .from("matters")
-        .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code)")
+        .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code, name)")
         .in("status", ["open", "on_hold"])
         .order("created_at", { ascending: false })
         .limit(10),
@@ -39,8 +39,9 @@ export default async function PartnerOverview() {
   type PartnerMatterRow = Matter & {
     municipality?: string | null;
     service_subtype?: string | null;
-    services?: { code?: string | null } | null;
+    services?: { code?: string | null; name?: string | null } | null;
   };
+  const serviceLabel = (m: PartnerMatterRow) => [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
   const matters = (recent as PartnerMatterRow[] | null) ?? [];
 
   return (
@@ -121,6 +122,7 @@ export default async function PartnerOverview() {
                       <Link href={`/partner/matters/${m.id}`} className="hover:text-[#E8521A] hover:underline">
                         {m.title || clientDisplayName(m.clients) || "—"}
                       </Link>
+                      {serviceLabel(m) && <p className="text-xs font-normal text-gray-400 mt-0.5">{serviceLabel(m)}</p>}
                     </td>
                     <td className="px-5 py-3 text-gray-600">
                       {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
