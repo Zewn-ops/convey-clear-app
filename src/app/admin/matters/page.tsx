@@ -73,6 +73,19 @@ export default async function AdminMattersPage({
   const matters = (data as MatterRow[] | null) ?? [];
   const total = count ?? 0;
 
+  // Per-row unread notification dots (cleared when the matter is opened).
+  const meId = session.profile?.id ?? null;
+  const unread = new Set<string>();
+  if (meId && matters.length) {
+    const { data: notes } = await supabase
+      .from("notifications")
+      .select("matter_id")
+      .eq("user_id", meId)
+      .is("read_at", null)
+      .in("matter_id", matters.map((m) => m.id));
+    (notes ?? []).forEach((n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id));
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,9 +126,12 @@ export default async function AdminMattersPage({
                 return (
                 <tr key={m.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3">
-                    <Link href={`/admin/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
-                      {m.title || clientDisplayName(m.clients) || "Untitled"}
-                    </Link>
+                    <span className="flex items-center gap-2">
+                      {unread.has(m.id) && <span className="h-2 w-2 rounded-full bg-[#E8521A] shrink-0" title="New activity" />}
+                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
+                        {m.title || clientDisplayName(m.clients) || "Untitled"}
+                      </Link>
+                    </span>
                     <div className="text-xs text-gray-400 mt-0.5 space-y-0.5">
                       {seller && <p>Seller: {seller}</p>}
                       {buyer && <p>Buyer: {buyer}</p>}

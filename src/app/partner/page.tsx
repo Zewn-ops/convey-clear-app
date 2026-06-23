@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
@@ -43,6 +44,19 @@ export default async function PartnerOverview() {
   };
   const serviceLabel = (m: PartnerMatterRow) => [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
   const matters = (recent as PartnerMatterRow[] | null) ?? [];
+
+  // Per-row unread notification dots (cleared when the matter is opened).
+  const meId = (await getSessionProfile())?.profile?.id ?? null;
+  const unread = new Set<string>();
+  if (meId && matters.length) {
+    const { data: notes } = await supabase
+      .from("notifications")
+      .select("matter_id")
+      .eq("user_id", meId)
+      .is("read_at", null)
+      .in("matter_id", matters.map((m) => m.id));
+    (notes ?? []).forEach((n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id));
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -119,9 +133,12 @@ export default async function PartnerOverview() {
                   return (
                   <tr key={m.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-medium text-gray-900">
-                      <Link href={`/partner/matters/${m.id}`} className="hover:text-[#E8521A] hover:underline">
-                        {m.title || clientDisplayName(m.clients) || "—"}
-                      </Link>
+                      <span className="flex items-center gap-2">
+                        {unread.has(m.id) && <span className="h-2 w-2 rounded-full bg-[#E8521A] shrink-0" title="New activity" />}
+                        <Link href={`/partner/matters/${m.id}`} className="hover:text-[#E8521A] hover:underline">
+                          {m.title || clientDisplayName(m.clients) || "—"}
+                        </Link>
+                      </span>
                       {serviceLabel(m) && <p className="text-xs font-normal text-gray-400 mt-0.5">{serviceLabel(m)}</p>}
                     </td>
                     <td className="px-5 py-3 text-gray-600">

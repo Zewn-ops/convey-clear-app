@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
@@ -26,12 +27,23 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, partner_file_ref, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code)")
+    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code)")
     .eq("id", params.id)
     .maybeSingle();
 
   if (!matterData) notFound();
   const matter = matterData as unknown as Matter;
+
+  // Opening a matter clears its unread notification dot for this user.
+  const meId = (await getSessionProfile())?.profile?.id ?? null;
+  if (meId) {
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", meId)
+      .eq("matter_id", params.id)
+      .is("read_at", null);
+  }
   const client = matter.clients as
     | {
         id: string;
@@ -67,6 +79,23 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   const serviceCode = (matter as unknown as { services?: { code?: string } | null }).services?.code ?? null;
   const pipeline = getPipeline(serviceCode, matter.municipality, (matter as unknown as { service_subtype?: string | null }).service_subtype);
 
+  // Council/COT decision the partner is allowed to see. Resolved from
+  // service_data.stage_outcome against the pipeline; shown only when the chosen
+  // outcome is client-visible (e.g. RCF Memo Approved/Delayed/Rejected + reason).
+  const sd = ((matter as unknown as { service_data?: Record<string, unknown> | null }).service_data ?? {}) as Record<string, unknown>;
+  let decisionLabel: string | null = null;
+  if (pipeline && sd.stage_outcome) {
+    for (const ph of pipeline.phases) {
+      for (const st of ph.stages) {
+        const o = st.outcomes?.find((x) => x.key === sd.stage_outcome);
+        if (o && o.clientVisible) {
+          const r = o.reasons?.find((x) => x.key === sd.stage_reason);
+          decisionLabel = `${o.label}${r ? ` — ${r.label}` : ""}`;
+        }
+      }
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Link href="/partner/matters" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
@@ -98,6 +127,14 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
             currentStage={(matter as unknown as { current_stage?: string | null }).current_stage ?? null}
             audience="client"
           />
+        </Card>
+      )}
+
+      {/* Council decision (e.g. COT Decision: Memo Approved/Delayed/Rejected) */}
+      {decisionLabel && (
+        <Card className="border-[#E8521A]/30 bg-[#E8521A]/5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#E8521A] mb-1">Council decision</p>
+          <p className="text-lg font-semibold text-gray-900">{decisionLabel}</p>
         </Card>
       )}
 

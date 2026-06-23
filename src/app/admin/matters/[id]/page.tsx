@@ -250,6 +250,16 @@ export default async function AdminMatterDetailPage({
 
   const supabase = await createClient();
 
+  // Opening a matter clears its unread notification dot for this user.
+  if (authorId) {
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", authorId)
+      .eq("matter_id", id)
+      .is("read_at", null);
+  }
+
   const [{ data: matterData }, { data: docsData }, { data: activitiesData }, { data: partiesData }] = await Promise.all([
     supabase
       .from("matters")
