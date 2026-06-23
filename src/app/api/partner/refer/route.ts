@@ -183,7 +183,7 @@ export async function POST(request: Request) {
     });
 
     await firePortalIntake(matter.id, title);
-    await notifyStaff({ type: "referral", title: `New matter referred: ${title}`, link: `/admin/matters/${matter.id}`, matter_id: matter.id });
+    await notifyStaff({ type: "referral", title: "New matter referred", link: `/admin/matters/${matter.id}`, matter_id: matter.id });
 
     return NextResponse.json({ ok: true, matter_id: matter.id, onboarding_token: token });
   }
@@ -248,7 +248,7 @@ export async function POST(request: Request) {
   });
 
   await firePortalIntake(matter.id, title);
-  await notifyStaff({ type: "referral", title: `New matter referred: ${title}`, link: `/admin/matters/${matter.id}`, matter_id: matter.id });
+  await notifyStaff({ type: "referral", title: "New matter referred", link: `/admin/matters/${matter.id}`, matter_id: matter.id });
 
   return NextResponse.json({ ok: true, matter_id: matter.id, client_id: client.id, onboarding_token: token });
 }

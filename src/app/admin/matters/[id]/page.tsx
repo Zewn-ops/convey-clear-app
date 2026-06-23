@@ -76,6 +76,21 @@ function ActivityIcon({ type }: { type: string }) {
   return <>{icons[type] ?? <MessageSquare className="h-4 w-4 text-gray-400" />}</>;
 }
 
+// Resolve a matter's pipeline + current status/stage. MODULE-SCOPE on purpose:
+// the "use server" actions below reference it, and inline server actions are
+// extracted into their own bundle — a helper defined inside the component is not
+// in scope there at runtime (ReferenceError in prod, though dev tolerates it).
+async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, matterId: string) {
+  const { data } = await supabase
+    .from("matters")
+    .select("status, current_stage, municipality, service_subtype, services(code)")
+    .eq("id", matterId)
+    .maybeSingle();
+  const code = (data as { services?: { code?: string } | null } | null)?.services?.code ?? null;
+  const pl = getPipeline(code, data?.municipality, (data as { service_subtype?: string | null } | null)?.service_subtype);
+  return { row: data, pl };
+}
+
 export default async function AdminMatterDetailPage({
   params,
 }: {
@@ -86,18 +101,6 @@ export default async function AdminMatterDetailPage({
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
   const authorId = session.profile?.id ?? null;
-
-  // Resolve a matter's pipeline + current status/stage (server-action helper).
-  async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, matterId: string) {
-    const { data } = await supabase
-      .from("matters")
-      .select("status, current_stage, municipality, service_subtype, services(code)")
-      .eq("id", matterId)
-      .maybeSingle();
-    const code = (data as { services?: { code?: string } | null } | null)?.services?.code ?? null;
-    const pl = getPipeline(code, data?.municipality, (data as { service_subtype?: string | null } | null)?.service_subtype);
-    return { row: data, pl };
-  }
 
   async function advancePhase(formData: FormData) {
     "use server";
@@ -233,10 +236,10 @@ export default async function AdminMatterDetailPage({
     });
 
     // Internal notes notify ConveyClear staff (note 11) — never the client/partner.
-    const { data: m } = await supabase.from("matters").select("title").eq("id", matterId).maybeSingle();
+    // Title prefixing ("<matter title>: …") is centralised in notifyUsers.
     await notifyStaff({
       type: "note",
-      title: `Internal note · ${m?.title ?? "matter"}`,
+      title: "Internal note",
       body: body.trim().slice(0, 140),
       link: `/admin/matters/${matterId}`,
       matter_id: matterId,
