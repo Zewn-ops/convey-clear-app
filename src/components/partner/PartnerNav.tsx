@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { useNotifyDots } from "@/lib/use-notify-dots";
 import {
   LayoutDashboard,
   Briefcase,
@@ -37,6 +38,7 @@ export default function PartnerNav({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const dots = useNotifyDots();
   const [open, setOpen] = useState(false);
 
   const signOut = async () => {
@@ -60,6 +62,10 @@ export default function PartnerNav({
         >
           <item.icon className="h-4 w-4 shrink-0" />
           {item.label}
+          {((item.href === "/partner/matters" && dots.matters) ||
+            (item.href === "/partner/enquiries" && dots.enquiries)) && (
+            <span className="ml-auto h-2 w-2 rounded-full bg-[#E8521A]" title="New activity" />
+          )}
         </Link>
       );
     });

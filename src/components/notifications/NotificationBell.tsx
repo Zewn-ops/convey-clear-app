@@ -96,6 +96,8 @@ export default function NotificationBell({ base }: { base: string }) {
     const now = new Date().toISOString();
     setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
     await supabaseRef.current.from("notifications").update({ read_at: now }).eq("user_id", uid).is("read_at", null);
+    // Clear the sidebar Matters/Enquiries dots in this tab immediately.
+    window.dispatchEvent(new Event("cc:notifs-read"));
   }
 
   function toggle() {
