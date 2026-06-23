@@ -9,7 +9,7 @@ import {
   type Matter,
   type MatterStatus,
 } from "@/types";
-import { getPipeline, phaseLabel } from "@/lib/pipelines";
+import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
 import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
 import MatterFilters from "@/components/matters/MatterFilters";
 import MatterPagination from "@/components/matters/MatterPagination";
@@ -31,7 +31,7 @@ export default async function PartnerMatters({
   const { data, count } = await applyMatterFilters(
     supabase
       .from("matters")
-      .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code, name)", {
+      .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code, name)", {
         count: "exact",
       }),
     filters
@@ -69,6 +69,7 @@ export default async function PartnerMatters({
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Municipality</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Phase</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Stage</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3" />
               </tr>
@@ -88,6 +89,13 @@ export default async function PartnerMatters({
                   <td className="px-5 py-3 text-gray-600">
                     {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
                   </td>
+                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">
+                    {pl
+                      ? (m.current_stage
+                          ? (isStageClientVisible(pl, m.current_stage) ? stageLabel(pl, m.current_stage) : "In progress")
+                          : "—")
+                      : (m.current_stage || "—")}
+                  </td>
                   <td className="px-5 py-3">{m.status && <Badge label={MATTER_STATUS_LABELS[m.status as MatterStatus]} variant={statusVariant(m.status)} />}</td>
                   <td className="px-5 py-3 text-right">
                     <Link href={`/partner/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">View</Link>
@@ -96,7 +104,7 @@ export default async function PartnerMatters({
                 );
               })}
               {matters.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td></tr>
               )}
             </tbody>
           </table>
