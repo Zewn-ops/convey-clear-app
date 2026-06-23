@@ -3,6 +3,8 @@ import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { buildMatterTitle } from "@/lib/matter-naming";
+import { getPipeline } from "@/lib/pipelines";
+import { composeFullName } from "@/types";
 import { firePortalIntake } from "@/lib/n8n";
 import { notifyStaff } from "@/lib/notify";
 import { randomUUID } from "crypto";
@@ -14,6 +16,8 @@ type EntityType = "natural_person" | "business" | "trust";
 interface PartyInput {
   role?: "buyer" | "seller" | "owner" | "applicant" | "other";
   entity_type?: EntityType;
+  first_name?: string;
+  last_name?: string;
   full_name?: string;
   business_name?: string;
   registration_no?: string;
@@ -27,15 +31,20 @@ interface PartyInput {
   contact_cell?: string;
 }
 
-const partyDisplayName = (p: PartyInput): string =>
-  ((p.entity_type ?? "natural_person") === "natural_person" ? p.full_name : p.business_name)?.trim() ?? "";
+const partyDisplayName = (p: PartyInput): string => {
+  if ((p.entity_type ?? "natural_person") === "natural_person") {
+    return (composeFullName(p.first_name, p.last_name) || (p.full_name ?? "")).trim();
+  }
+  return (p.business_name ?? "").trim();
+};
 
-// A partner refers a new matter. Two shapes:
-//   • Single-client (BC etc.): one client bound to the firm + matter.
-//   • Multi-party (COO): NO client account — buyer + seller captured as
-//     matter_parties data records under one matter. Either way the matter is
-//     linked DIRECTLY to the partner firm (matters.business_partner_id) so RLS
-//     surfaces it, and we mint an onboarding link + auto-subscribe the partner.
+// A partner refers a new matter. Shapes:
+//   • Multi-party (COO): buyer + seller captured as matter_parties.
+//   • Single-party (PRC): the seller/applicant captured as one matter_party +
+//     referral fields in service_data (note 2026-06-22 — merged into parties).
+//   • Single-client (BC etc.): one client bound to the firm.
+// Either way the matter links to the partner firm (matters.business_partner_id),
+// starts at the pipeline pre-phase, status 'new', and mints an onboarding link.
 export async function POST(request: Request) {
   if (!rateLimit(`partner-refer:${clientIp(request)}`, 30, 60_000)) {
     return NextResponse.json({ message: "Too many requests." }, { status: 429 });
@@ -57,6 +66,8 @@ export async function POST(request: Request) {
     parties?: PartyInput[];
     // legacy single-client fields
     entity_type?: EntityType;
+    first_name?: string;
+    last_name?: string;
     full_name?: string;
     business_name?: string;
     registration_no?: string;
@@ -71,7 +82,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Resolve service_id + code (code feeds the matter-naming convention).
+  // Resolve service_id + code (code feeds matter-naming + the pipeline lookup).
   let serviceId: string | null = body.service_id ?? null;
   let serviceCode: string = body.service_code ?? "";
   if (serviceId) {
@@ -82,28 +93,36 @@ export async function POST(request: Request) {
     serviceId = svc?.id ?? null;
   }
 
+  // New matters start at the pipeline pre-phase ("New Instruction"); staff advance.
+  const pipeline = getPipeline(serviceCode, body.municipality, body.service_subtype);
+  const initialPhase = pipeline?.prePhase.key ?? null;
+
+  const title = buildMatterTitle({
+    internalRef: body.partner_file_ref,
+    property: body.property_description,
+    municipality: body.municipality,
+    serviceCode,
+  });
+
   const parties = Array.isArray(body.parties) ? body.parties.filter((p) => partyDisplayName(p)) : [];
 
   // ==========================================================================
-  // MULTI-PARTY PATH (COO buyer/seller) — no client account
+  // MULTI-PARTY PATH (COO buyer/seller · PRC seller) — no client account
   // ==========================================================================
   if (parties.length > 0) {
-    const buyer = parties.find((p) => p.role === "buyer");
-    const seller = parties.find((p) => p.role === "seller");
-    if (!buyer || !partyDisplayName(buyer)) {
-      return NextResponse.json({ message: "Buyer name is required" }, { status: 400 });
+    const isCoo = serviceCode.toUpperCase() === "COO";
+    if (isCoo) {
+      const buyer = parties.find((p) => p.role === "buyer");
+      const seller = parties.find((p) => p.role === "seller");
+      if (!buyer || !partyDisplayName(buyer)) {
+        return NextResponse.json({ message: "Buyer name is required" }, { status: 400 });
+      }
+      if (!seller || !partyDisplayName(seller)) {
+        return NextResponse.json({ message: "Seller name is required" }, { status: 400 });
+      }
+    } else if (!partyDisplayName(parties[0])) {
+      return NextResponse.json({ message: "Seller / applicant name is required" }, { status: 400 });
     }
-    if (!seller || !partyDisplayName(seller)) {
-      return NextResponse.json({ message: "Seller name is required" }, { status: 400 });
-    }
-
-    // Title uses the buyer (incoming owner) as the client segment.
-    const title = buildMatterTitle({
-      municipality: body.municipality,
-      serviceCode,
-      clientName: partyDisplayName(buyer),
-      property: body.property_description,
-    });
 
     const { data: matter, error: matterErr } = await admin
       .from("matters")
@@ -112,12 +131,14 @@ export async function POST(request: Request) {
         business_partner_id: auth.partnerId,
         service_id: serviceId,
         title,
-        current_phase: "1",
-        status: "open",
+        current_phase: initialPhase,
+        status: "new", // all partner referrals await staff review (note 12)
         priority: "standard",
         municipality: body.municipality || null,
         service_notes: body.notes || null,
         partner_file_ref: body.partner_file_ref?.trim() || null,
+        service_subtype: body.service_subtype || null,
+        service_data: body.service_data ?? {},
       })
       .select("id")
       .single();
@@ -125,10 +146,14 @@ export async function POST(request: Request) {
 
     const partyRows = parties.map((p) => {
       const et = p.entity_type ?? "natural_person";
+      const first = p.first_name?.trim() || null;
+      const last = p.last_name?.trim() || null;
       return {
         matter_id: matter.id,
         role: p.role ?? "other",
         entity_type: et,
+        first_name: et === "natural_person" ? first : null,
+        last_name: et === "natural_person" ? last : null,
         full_name: et === "natural_person" ? partyDisplayName(p) || null : null,
         business_name: et !== "natural_person" ? partyDisplayName(p) || null : null,
         registration_no: et !== "natural_person" ? p.registration_no?.trim() || null : null,
@@ -148,18 +173,13 @@ export async function POST(request: Request) {
 
     const token = randomUUID();
     const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    await admin.from("onboarding_links").insert({
-      token,
-      matter_id: matter.id,
-      purpose: "onboarding",
-      expires_at: expires,
-    });
+    await admin.from("onboarding_links").insert({ token, matter_id: matter.id, purpose: "onboarding", expires_at: expires });
 
     await admin.from("matter_activities").insert({
       matter_id: matter.id,
       author_id: auth.userId,
       activity_type: "post",
-      body: "Change-of-ownership matter referred by partner (buyer + seller captured).",
+      body: "Matter referred by partner.",
     });
 
     await firePortalIntake(matter.id, title);
@@ -173,13 +193,16 @@ export async function POST(request: Request) {
   // ==========================================================================
   const entityType = body.entity_type ?? "natural_person";
   const email = (body.email ?? "").trim().toLowerCase();
-  const name = entityType === "natural_person" ? (body.full_name ?? "").trim() : (body.business_name ?? "").trim();
+  const personName = composeFullName(body.first_name, body.last_name) || (body.full_name ?? "").trim();
+  const name = entityType === "natural_person" ? personName : (body.business_name ?? "").trim();
   if (!name) return NextResponse.json({ message: "Client / entity name is required" }, { status: 400 });
 
   const { data: client, error: clientErr } = await admin
     .from("clients")
     .insert({
       entity_type: entityType,
+      first_name: entityType === "natural_person" ? body.first_name?.trim() || null : null,
+      last_name: entityType === "natural_person" ? body.last_name?.trim() || null : null,
       full_name: entityType === "natural_person" ? name : null,
       business_name: entityType !== "natural_person" ? name : null,
       registration_no: entityType !== "natural_person" ? (body.registration_no || null) : null,
@@ -191,9 +214,6 @@ export async function POST(request: Request) {
     .single();
   if (clientErr) return NextResponse.json({ message: clientErr.message }, { status: 400 });
 
-  const title = buildMatterTitle({
-    municipality: body.municipality, serviceCode, clientName: name, property: body.property_description,
-  });
   const { data: matter, error: matterErr } = await admin
     .from("matters")
     .insert({
@@ -201,8 +221,8 @@ export async function POST(request: Request) {
       business_partner_id: auth.partnerId,
       service_id: serviceId,
       title,
-      current_phase: "1",
-      status: "new", // partner referral awaits staff review (H1)
+      current_phase: initialPhase,
+      status: "new",
       priority: "standard",
       municipality: body.municipality || null,
       service_notes: body.notes || null,
@@ -218,12 +238,7 @@ export async function POST(request: Request) {
 
   const token = randomUUID();
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  await admin.from("onboarding_links").insert({
-    token,
-    matter_id: matter.id,
-    purpose: "onboarding",
-    expires_at: expires,
-  });
+  await admin.from("onboarding_links").insert({ token, matter_id: matter.id, purpose: "onboarding", expires_at: expires });
 
   await admin.from("matter_activities").insert({
     matter_id: matter.id,

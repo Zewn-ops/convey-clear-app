@@ -5,30 +5,28 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
+import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDownloadUrls } from "@/lib/storage";
+import { getPipeline } from "@/lib/pipelines";
 import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
-  PHASE_LABELS,
   MATTER_STATUS_LABELS,
   type Matter,
-  type MatterPhase,
   type MatterStatus,
   type MatterDocument,
   type MatterParty,
 } from "@/types";
-import { ArrowLeft, FileText, CheckCircle2 } from "lucide-react";
-
-const PHASES: MatterPhase[] = ["1", "2", "3", "4"];
+import { ArrowLeft, FileText } from "lucide-react";
 
 export default async function PartnerMatterDetail({ params }: { params: { id: string } }) {
   const supabase = await createClient();
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, status, municipality, partner_file_ref, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell)")
+    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, partner_file_ref, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code)")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -46,7 +44,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
     | null;
 
   const [{ data: docsData }, { data: actData }, { data: partiesData }] = await Promise.all([
-    supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id").eq("matter_id", params.id),
+    supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id, uploaded_by").eq("matter_id", params.id),
     // Comment-type ('post') activities are INTERNAL ONLY — partners (and clients)
     // see only lifecycle events, never staff notes. (Jukka, 2026-06-16.)
     supabase.from("matter_activities").select("id, body, activity_type, created_at").eq("matter_id", params.id).in("activity_type", ["status_change", "document_upload", "phase_transition", "poa_signed"]).order("created_at", { ascending: false }).limit(20),
@@ -66,7 +64,8 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
     .order("created_at", { ascending: false });
   const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
 
-  const currentPhaseNum = matter.current_phase ? parseInt(matter.current_phase, 10) : 0;
+  const serviceCode = (matter as unknown as { services?: { code?: string } | null }).services?.code ?? null;
+  const pipeline = getPipeline(serviceCode, matter.municipality, (matter as unknown as { service_subtype?: string | null }).service_subtype);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -90,32 +89,20 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         )}
       </div>
 
-      {/* 4-phase progress */}
-      <Card>
-        <div className="flex items-center justify-between">
-          {PHASES.map((p, i) => {
-            const n = i + 1;
-            const done = currentPhaseNum > n;
-            const active = currentPhaseNum === n;
-            return (
-              <div key={p} className="flex-1 flex flex-col items-center text-center">
-                <div
-                  className={
-                    "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold " +
-                    (done ? "bg-green-500 text-white" : active ? "bg-[#1B2E6B] text-white" : "bg-gray-200 text-gray-500")
-                  }
-                >
-                  {done ? <CheckCircle2 className="h-5 w-5" /> : n}
-                </div>
-                <p className={"mt-2 text-xs " + (active ? "font-semibold text-[#1B2E6B]" : "text-gray-500")}>{PHASE_LABELS[p]}</p>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+      {/* Pipeline progress (client-facing view) */}
+      {pipeline && (
+        <Card>
+          <PipelineProgress
+            pipeline={pipeline}
+            currentPhase={matter.current_phase}
+            currentStage={(matter as unknown as { current_stage?: string | null }).current_stage ?? null}
+            audience="client"
+          />
+        </Card>
+      )}
 
-      {/* Upload docs for the client */}
-      <PartnerDocUpload matterId={matter.id} />
+      {/* Upload docs for the client — hidden once documents have been submitted */}
+      <PartnerDocUpload matterId={matter.id} submitted={docs.length > 0} />
 
       {/* Parties (COO buyer/seller) — renders nothing for single-client matters */}
       <PartiesCard parties={parties} />
@@ -134,7 +121,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         </Card>
         )}
 
-        {/* Documents */}
+        {/* Documents — your / client uploads vs ConveyClear uploads (note 29) */}
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-900">Documents</h2>
@@ -143,20 +130,34 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
           {docs.length === 0 ? (
             <p className="text-sm text-gray-400">No documents yet.</p>
           ) : (
-            <ul className="space-y-2">
-              {docs.map((d) => (
-                <li key={d.id} className="flex items-center gap-2 text-sm">
-                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-                  <span className="flex-1 text-gray-700 truncate">{d.file_name || d.document_type}</span>
-                  {d.storage_path && signedUrls[d.storage_path] ? (
-                    <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
-                  ) : d.drive_file_id ? (
-                    <a href={`https://drive.google.com/file/d/${d.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
-                  ) : null}
-                  {d.verified && <Badge label="Verified" variant="success" />}
-                </li>
+            <div className="space-y-4">
+              {([
+                { title: "Your / client uploads", list: docs.filter((d) => ["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
+                { title: "ConveyClear uploads", list: docs.filter((d) => !["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
+              ] as const).map((grp) => (
+                <div key={grp.title}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{grp.title} ({grp.list.length})</p>
+                  {grp.list.length === 0 ? (
+                    <p className="text-sm text-gray-400">None.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {grp.list.map((d) => (
+                        <li key={d.id} className="flex items-center gap-2 text-sm">
+                          <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                          <span className="flex-1 text-gray-700 truncate">{d.file_name || d.document_type}</span>
+                          {d.storage_path && signedUrls[d.storage_path] ? (
+                            <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                          ) : d.drive_file_id ? (
+                            <a href={`https://drive.google.com/file/d/${d.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                          ) : null}
+                          {d.verified && <Badge label="Verified" variant="success" />}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </Card>
       </div>

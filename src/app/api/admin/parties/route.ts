@@ -21,6 +21,8 @@ async function requireStaff() {
 
 const EDITABLE = [
   "entity_type",
+  "first_name",
+  "last_name",
   "full_name",
   "business_name",
   "registration_no",

@@ -124,6 +124,8 @@ export interface AppUser {
   auth_user_id: string | null;
   email: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   role: UserRole;
   client_id: string | null;
   business_partner_id: string | null;
@@ -138,6 +140,8 @@ export interface Client {
   id: string;
   entity_type: EntityType;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   business_name: string | null;
   registration_no: string | null;
   id_number: string | null;
@@ -185,6 +189,8 @@ export interface MatterParty {
   role: MatterPartyRole;
   entity_type: EntityType;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   business_name: string | null;
   registration_no: string | null;
   id_number: string | null;
@@ -252,6 +258,7 @@ export const ENQUIRY_STATUS_LABELS: Record<EnquiryStatus, string> = {
 export interface BusinessPartner {
   id: string;
   name: string;
+  abbreviation: string | null;
   partner_type: "attorney" | "conveyancer" | "law_firm" | "estate_agent" | "other";
   primary_email: string | null;
   primary_cell: string | null;
@@ -260,11 +267,31 @@ export interface BusinessPartner {
   updated_at: string;
 }
 
+// Join first + surname into a single name (write side — full_name is kept in
+// sync for backward-compat + business/trust display).
+export function composeFullName(first?: string | null, last?: string | null): string {
+  return [first, last].map((s) => (s ?? "").trim()).filter(Boolean).join(" ");
+}
+
+// A natural-person display name, preferring the split first/surname columns and
+// falling back to the legacy full_name.
+export function personName(
+  p?: { first_name?: string | null; last_name?: string | null; full_name?: string | null } | null
+): string {
+  if (!p) return "—";
+  return composeFullName(p.first_name, p.last_name) || (p.full_name ?? "").trim() || "—";
+}
+
 export function clientDisplayName(
-  c?: { full_name?: string | null; business_name?: string | null } | null
+  c?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    full_name?: string | null;
+    business_name?: string | null;
+  } | null
 ): string {
   if (!c) return "—";
-  return c.business_name || c.full_name || "—";
+  return c.business_name || composeFullName(c.first_name, c.last_name) || c.full_name || "—";
 }
 
 // A council/municipal point-of-contact — the internal-only contact book of

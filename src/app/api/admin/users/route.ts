@@ -63,6 +63,8 @@ export async function POST(request: Request) {
   let body: {
     email?: string;
     full_name?: string;
+    first_name?: string;
+    last_name?: string;
     role?: UserRole;
     password?: string;
     entity_type?: "natural_person" | "business" | "trust";
@@ -78,6 +80,8 @@ export async function POST(request: Request) {
 
   const email = (body.email ?? "").trim().toLowerCase();
   const fullName = (body.full_name ?? "").trim();
+  const firstName = (body.first_name ?? "").trim();
+  const lastName = (body.last_name ?? "").trim();
   const role = (body.role ?? "client") as UserRole;
 
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -137,6 +141,8 @@ export async function POST(request: Request) {
       .from("clients")
       .insert({
         entity_type: entityType,
+        first_name: entityType === "natural_person" ? firstName || null : null,
+        last_name: entityType === "natural_person" ? lastName || null : null,
         full_name: entityType === "natural_person" ? fullName || null : null,
         business_name: entityType !== "natural_person" ? body.business_name || fullName || null : null,
         primary_email: email,
@@ -157,6 +163,8 @@ export async function POST(request: Request) {
   const patch: Record<string, unknown> = {
     role,
     full_name: fullName || null,
+    first_name: firstName || null,
+    last_name: lastName || null,
     client_id: role === "client" ? clientId : null,
     business_partner_id: role === "business_partner" ? body.business_partner_id ?? null : null,
     active: true,

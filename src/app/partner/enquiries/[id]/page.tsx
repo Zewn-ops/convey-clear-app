@@ -55,7 +55,7 @@ export default async function PartnerEnquiryDetail({ params }: { params: { id: s
             href={telHref(CONVEYCLEAR_PHONE)}
             className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
           >
-            <Phone className="h-3.5 w-3.5" /> Call ConveyClear
+            <Phone className="h-3.5 w-3.5" /> Call ConveyClear · {CONVEYCLEAR_PHONE}
           </a>
         </div>
       </div>

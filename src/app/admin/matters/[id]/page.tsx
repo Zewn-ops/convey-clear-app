@@ -5,40 +5,41 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate, formatDateTime, municipalityLabel } from "@/lib/utils";
 import {
   isStaffRole,
   clientDisplayName,
   MATTER_STATUS_LABELS,
-  PHASE_LABELS,
   PRIORITY_LABELS,
   type Matter,
   type MatterDocument,
   type MatterParty,
-  type MatterPhase,
   type MatterPriority,
   type MatterStatus,
   type CouncilPoc,
 } from "@/types";
-import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings } from "lucide-react";
+import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterPocsCard from "@/components/matters/MatterPocsCard";
+import PipelineProgress from "@/components/matters/PipelineProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import Celebrate from "@/components/matters/Celebrate";
-import { notifyMatterParties } from "@/lib/notify";
+import { notifyMatterParties, notifyStaff } from "@/lib/notify";
+import {
+  getPipeline,
+  phaseLabel,
+  stageLabel,
+  phaseSteps,
+  findStage,
+  isStageClientVisible,
+  skippedStageNames,
+} from "@/lib/pipelines";
 import StorageUpload from "@/components/matters/StorageUpload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDownloadUrls } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-interface Stage {
-  code: string;
-  name: string;
-  owner_role: string;
-  phase: number;
-}
 
 interface ActivityItem {
   id: string;
@@ -75,8 +76,6 @@ function ActivityIcon({ type }: { type: string }) {
   return <>{icons[type] ?? <MessageSquare className="h-4 w-4 text-gray-400" />}</>;
 }
 
-const phases: MatterPhase[] = ["1", "2", "3", "4"];
-
 export default async function AdminMatterDetailPage({
   params,
 }: {
@@ -88,30 +87,41 @@ export default async function AdminMatterDetailPage({
 
   const authorId = session.profile?.id ?? null;
 
+  // Resolve a matter's pipeline + current status/stage (server-action helper).
+  async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, matterId: string) {
+    const { data } = await supabase
+      .from("matters")
+      .select("status, current_stage, municipality, service_subtype, services(code)")
+      .eq("id", matterId)
+      .maybeSingle();
+    const code = (data as { services?: { code?: string } | null } | null)?.services?.code ?? null;
+    const pl = getPipeline(code, data?.municipality, (data as { service_subtype?: string | null } | null)?.service_subtype);
+    return { row: data, pl };
+  }
+
   async function advancePhase(formData: FormData) {
     "use server";
     const supabase = await createClient();
     const newPhase = formData.get("phase") as string;
     const matterId = formData.get("matter_id") as string;
     const userId = formData.get("author_id") as string;
+    if (!newPhase?.trim()) return;
 
-    await supabase
-      .from("matters")
-      .update({ current_phase: newPhase })
-      .eq("id", matterId);
+    const { row, pl } = await matterCtx(supabase, matterId);
+    const label = phaseLabel(pl, newPhase);
+    // Note 2026-06-22: first staff progression flips New → Open automatically.
+    const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
 
+    await supabase.from("matters").update({ current_phase: newPhase, ...statusPatch }).eq("id", matterId);
     await supabase.from("matter_activities").insert({
-      matter_id: matterId,
-      author_id: userId || null,
-      activity_type: "phase_transition",
-      body: `Matter advanced to Phase ${newPhase}: ${PHASE_LABELS[newPhase as MatterPhase]}`,
+      matter_id: matterId, author_id: userId || null, activity_type: "phase_transition",
+      body: `Phase: ${label}`,
     });
-    await notifyMatterParties(
-      matterId,
-      { type: "phase", title: `Advanced to Phase ${newPhase}: ${PHASE_LABELS[newPhase as MatterPhase]}` },
-      { excludeUserId: userId || null }
-    );
-
+    // Client/partner are only pinged for phases they can see (avoid overload).
+    const phaseClientVisible = pl ? (phaseSteps(pl).some((s) => s.key === newPhase) && newPhase !== pl.prePhase.key) : true;
+    if (phaseClientVisible) {
+      await notifyMatterParties(matterId, { type: "phase", title: `Moved to ${label}` }, { excludeUserId: userId || null });
+    }
     revalidatePath(`/admin/matters/${matterId}`);
   }
 
@@ -121,21 +131,65 @@ export default async function AdminMatterDetailPage({
     const newStage = formData.get("stage") as string;
     const matterId = formData.get("matter_id") as string;
     const userId = formData.get("author_id") as string;
-
     if (!newStage?.trim()) return;
 
-    await supabase
-      .from("matters")
-      .update({ current_stage: newStage })
-      .eq("id", matterId);
+    const { row, pl } = await matterCtx(supabase, matterId);
+    const label = stageLabel(pl, newStage);
+    const prevStage = (row as { current_stage?: string | null } | null)?.current_stage ?? null;
+    const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
 
+    await supabase.from("matters").update({ current_stage: newStage, ...statusPatch }).eq("id", matterId);
     await supabase.from("matter_activities").insert({
-      matter_id: matterId,
-      author_id: userId || null,
-      activity_type: "status_change",
-      body: `Stage updated to: ${newStage}`,
+      matter_id: matterId, author_id: userId || null, activity_type: "status_change",
+      body: `Stage: ${label}`,
     });
+    // General Note: when stages are skipped (e.g. 1 → 4), list them on the feed.
+    const skipped = pl ? skippedStageNames(pl, prevStage, newStage) : [];
+    if (skipped.length > 0) {
+      await supabase.from("matter_activities").insert({
+        matter_id: matterId, author_id: userId || null, activity_type: "system",
+        body: `Skipped: ${skipped.join(", ")}`,
+      });
+    }
+    // Only notify the client/partner for client-visible stages (orange).
+    const clientVisible = pl ? isStageClientVisible(pl, newStage) : true;
+    if (clientVisible) {
+      await notifyMatterParties(matterId, { type: "stage", title: `Update: ${label}` }, { excludeUserId: userId || null });
+    }
+    revalidatePath(`/admin/matters/${matterId}`);
+  }
 
+  // Record a branching decision (RCF/RCC: Approved / Delayed / Rejected + reason).
+  // The control posts one "<outcome>:<reason>" value; we store both in service_data.
+  async function setOutcome(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const combined = (formData.get("outcomeReason") as string) ?? "";
+    const matterId = formData.get("matter_id") as string;
+    const userId = formData.get("author_id") as string;
+    if (!combined.trim()) return;
+    const [outcomeKey, reasonKey = ""] = combined.split(":");
+
+    const { row, pl } = await matterCtx(supabase, matterId);
+    const stageDef = pl ? findStage(pl, (row as { current_stage?: string | null } | null)?.current_stage)?.stage : null;
+    const outcomeDef = stageDef?.outcomes?.find((o) => o.key === outcomeKey);
+    const reasonDef = outcomeDef?.reasons?.find((r) => r.key === reasonKey);
+    const label = `${outcomeDef?.label ?? outcomeKey}${reasonDef ? ` — ${reasonDef.label}` : ""}`;
+
+    const { data: cur } = await supabase.from("matters").select("service_data").eq("id", matterId).maybeSingle();
+    const service_data = {
+      ...(((cur as { service_data?: Record<string, unknown> } | null)?.service_data) ?? {}),
+      stage_outcome: outcomeKey,
+      stage_reason: reasonKey || null,
+    };
+    await supabase.from("matters").update({ service_data }).eq("id", matterId);
+    await supabase.from("matter_activities").insert({
+      matter_id: matterId, author_id: userId || null, activity_type: "status_change",
+      body: `Outcome: ${label}`,
+    });
+    if (outcomeDef?.clientVisible) {
+      await notifyMatterParties(matterId, { type: "outcome", title: `Outcome: ${label}` }, { excludeUserId: userId || null });
+    }
     revalidatePath(`/admin/matters/${matterId}`);
   }
 
@@ -178,6 +232,16 @@ export default async function AdminMatterDetailPage({
       body: body.trim(),
     });
 
+    // Internal notes notify ConveyClear staff (note 11) — never the client/partner.
+    const { data: m } = await supabase.from("matters").select("title").eq("id", matterId).maybeSingle();
+    await notifyStaff({
+      type: "note",
+      title: `Internal note · ${m?.title ?? "matter"}`,
+      body: body.trim().slice(0, 140),
+      link: `/admin/matters/${matterId}`,
+      matter_id: matterId,
+    });
+
     revalidatePath(`/admin/matters/${matterId}`);
   }
 
@@ -187,13 +251,13 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(id, code, name, config)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), business_partners(name, abbreviation), services(id, code, name, config)"
       )
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, created_at")
+      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at")
       .eq("matter_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -244,17 +308,83 @@ export default async function AdminMatterDetailPage({
   const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
   const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
 
-  const serviceConfig = (matter as any).services?.config;
+  const svc = (matter as { services?: { code?: string; name?: string } | null }).services;
+  const firm = (matter as { business_partners?: { name?: string | null; abbreviation?: string | null } | null }).business_partners;
   // COO has no FICA — its document button + onboarding link say "documents" (A7).
-  const isCoo = ((matter as any).services?.code ?? "").toUpperCase() === "COO";
-  const allStages: Stage[] = serviceConfig?.stages ?? [];
-  const currentPhaseNum = matter.current_phase ? Number(matter.current_phase) : null;
-  const stagesForCurrentPhase = currentPhaseNum
-    ? allStages.filter((s) => s.phase === currentPhaseNum)
-    : [];
+  const isCoo = (svc?.code ?? "").toUpperCase() === "COO";
+  const pipeline = getPipeline(svc?.code, matter.municipality, (matter as { service_subtype?: string | null }).service_subtype);
+  const curPhaseDef = pipeline?.phases.find((p) => p.key === matter.current_phase) ?? null;
+  const curPhaseStages = curPhaseDef?.stages ?? [];
+
+  // Decision stage (RCF/RCC outcome) controls, when the current stage branches.
+  const decisionStage = pipeline ? findStage(pipeline, matter.current_stage)?.stage ?? null : null;
+  const decisionOptions: { value: string; label: string }[] = [];
+  for (const o of decisionStage?.outcomes ?? []) {
+    if (o.reasons?.length) {
+      for (const r of o.reasons) decisionOptions.push({ value: `${o.key}:${r.key}`, label: `${o.label} — ${r.label}` });
+    } else {
+      decisionOptions.push({ value: o.key, label: o.label });
+    }
+  }
+  const sd = ((matter as { service_data?: Record<string, unknown> | null }).service_data ?? {}) as Record<string, unknown>;
+  const currentOutcomeValue = sd.stage_outcome ? `${sd.stage_outcome}${sd.stage_reason ? `:${sd.stage_reason}` : ""}` : "";
+  const currentOutcomeLabel = (() => {
+    const o = decisionStage?.outcomes?.find((x) => x.key === sd.stage_outcome);
+    if (!o) return null;
+    const r = o.reasons?.find((x) => x.key === sd.stage_reason);
+    return `${o.label}${r ? ` — ${r.label}` : ""}`;
+  })();
 
   const clientName = matter.clients ? clientDisplayName(matter.clients) : null;
   const displayName = clientName || matter.title || "Matter";
+
+  // Documents split: client/business-partner uploads vs ConveyClear uploads (note 29).
+  const isClientUpload = (d: MatterDocument) =>
+    ["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "");
+  const clientPartnerDocs = documents.filter(isClientUpload);
+  const ccDocs = documents.filter((d) => !isClientUpload(d));
+
+  const docRow = (doc: MatterDocument) => (
+    <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
+      <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">{doc.file_name || doc.document_type}</p>
+        <p className="text-xs text-gray-400">
+          {doc.document_type} · {formatDate(doc.created_at)}
+          {doc.matter_party_id && partyById.get(doc.matter_party_id) ? ` · ${partyById.get(doc.matter_party_id)!.role}` : ""}
+        </p>
+      </div>
+      {doc.storage_path && signedUrls[doc.storage_path] ? (
+        <div className="flex items-center gap-3 shrink-0">
+          <a href={signedUrls[doc.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline">View</a>
+          <a href={`${signedUrls[doc.storage_path]}&download=${encodeURIComponent(doc.file_name ?? "document")}`} className="text-xs font-medium text-[#E8521A] hover:underline">Download</a>
+        </div>
+      ) : doc.drive_file_id ? (
+        <div className="flex items-center gap-3 shrink-0">
+          <a href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline">View</a>
+          <a href={`https://drive.google.com/uc?export=download&id=${doc.drive_file_id}`} className="text-xs font-medium text-[#E8521A] hover:underline">Download</a>
+        </div>
+      ) : (
+        <span className="text-xs text-gray-300 shrink-0">No file</span>
+      )}
+      <DocRenameButton documentId={doc.id} current={doc.file_name || doc.document_type} />
+      {doc.verified && <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>}
+      {doc.document_status && doc.document_status !== "uploaded" && (
+        <span className="text-xs text-amber-600 font-medium shrink-0">{doc.document_status}</span>
+      )}
+    </li>
+  );
+
+  const docGroup = (title: string, list: MatterDocument[]) => (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{title} ({list.length})</p>
+      {list.length > 0 ? (
+        <Card padding="none"><ul className="divide-y divide-gray-100">{list.map(docRow)}</ul></Card>
+      ) : (
+        <Card className="text-center py-5"><p className="text-sm text-gray-400">None</p></Card>
+      )}
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -269,8 +399,8 @@ export default async function AdminMatterDetailPage({
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               {displayName}
-              {matter.municipality ? ` · ${matter.municipality}` : ""}
-              {(matter as any).services?.name ? ` · ${(matter as any).services.name}` : ""}
+              {matter.municipality ? ` · ${municipalityLabel(matter.municipality)}` : ""}
+              {svc?.name ? ` · ${svc.name}` : ""}
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -284,92 +414,70 @@ export default async function AdminMatterDetailPage({
         </div>
       </div>
 
-      {/* 4-phase pipeline */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pipeline Progress</p>
-          <span className="text-xs text-gray-400">
-            {matter.current_stage ? `Current stage: ${matter.current_stage}` : "Stage not set"}
-          </span>
-        </div>
-        <div className="flex gap-3">
-          {phases.map((p) => {
-            const active = matter.current_phase === p;
-            const done = currentPhaseNum !== null && Number(p) < currentPhaseNum;
-            return (
-              <div key={p} className="flex-1">
-                <div className={`h-2 rounded-full ${active ? "bg-[#E8521A]" : done ? "bg-[#1B2E6B]" : "bg-gray-200"}`} />
-                <p className={`mt-2 text-[11px] font-medium ${active ? "text-[#E8521A]" : done ? "text-[#1B2E6B]" : "text-gray-400"}`}>
-                  {PHASE_LABELS[p]}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Phase advance controls */}
-        <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2 flex-wrap">
-          {phases.map((p) => (
-            <form key={p} action={advancePhase}>
-              <input type="hidden" name="phase" value={p} />
+      {/* Pipeline (config-driven) */}
+      {pipeline ? (
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pipeline · {pipeline.label}</p>
+            <span className="text-xs text-gray-400">
+              {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
+            </span>
+          </div>
+          <PipelineProgress pipeline={pipeline} currentPhase={matter.current_phase} currentStage={matter.current_stage} audience="staff" />
+          <div className="pt-3 border-t border-gray-100 grid gap-3 sm:grid-cols-2">
+            <form action={advancePhase} className="flex items-end gap-2">
               <input type="hidden" name="matter_id" value={id} />
               <input type="hidden" name="author_id" value={authorId ?? ""} />
-              <button
-                type="submit"
-                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                  matter.current_phase === p
-                    ? "bg-[#E8521A] border-[#E8521A] text-white cursor-default"
-                    : "border-gray-200 text-gray-600 hover:border-[#1B2E6B] hover:text-[#1B2E6B]"
-                }`}
-                disabled={matter.current_phase === p}
-              >
-                Set Phase {p}
-              </button>
+              <label className="flex-1 text-xs font-medium text-gray-500">
+                Phase
+                <select name="phase" defaultValue={matter.current_phase ?? ""} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                  {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
+                </select>
+              </label>
+              <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set</button>
             </form>
-          ))}
-        </div>
-      </Card>
-
-      {/* Service pipeline stages for current phase */}
-      {stagesForCurrentPhase.length > 0 && (
-        <Card>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Phase {matter.current_phase} Stages
-          </p>
-          <div className="flex gap-2 flex-wrap mb-4">
-            {stagesForCurrentPhase.map((stage) => (
-              <span
-                key={stage.code}
-                className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
-                  matter.current_stage === stage.code
-                    ? "bg-[#1B2E6B] text-white border-[#1B2E6B]"
-                    : "border-gray-200 text-gray-600"
-                }`}
-              >
-                {stage.name}
-              </span>
-            ))}
+            <form action={setStage} className="flex items-end gap-2">
+              <input type="hidden" name="matter_id" value={id} />
+              <input type="hidden" name="author_id" value={authorId ?? ""} />
+              <label className="flex-1 text-xs font-medium text-gray-500">
+                Stage{curPhaseDef ? ` · ${curPhaseDef.internalName}` : ""}
+                <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-gray-50 disabled:text-gray-400">
+                  <option value="">— Select stage —</option>
+                  {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
+                </select>
+              </label>
+              <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90">Update</button>
+            </form>
           </div>
-          <form action={setStage} className="flex gap-2">
-            <input type="hidden" name="matter_id" value={id} />
-            <input type="hidden" name="author_id" value={authorId ?? ""} />
-            <select
-              name="stage"
-              defaultValue={matter.current_stage ?? ""}
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
-            >
-              <option value="">— Select stage —</option>
-              {stagesForCurrentPhase.map((s) => (
-                <option key={s.code} value={s.code}>{s.name}</option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 transition-colors"
-            >
-              Update stage
-            </button>
-          </form>
+
+          {/* Decision outcome (RCF/RCC: Approved / Delayed / Rejected + reason) */}
+          {decisionOptions.length > 0 && (
+            <div className="pt-3 border-t border-gray-100">
+              {currentOutcomeLabel && (
+                <p className="text-xs text-gray-500 mb-2">Current outcome: <span className="font-medium text-gray-900">{currentOutcomeLabel}</span></p>
+              )}
+              <form action={setOutcome} className="flex items-end gap-2">
+                <input type="hidden" name="matter_id" value={id} />
+                <input type="hidden" name="author_id" value={authorId ?? ""} />
+                <label className="flex-1 text-xs font-medium text-gray-500">
+                  {decisionStage?.name} outcome
+                  <select name="outcomeReason" defaultValue={currentOutcomeValue} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                    <option value="">— Select outcome —</option>
+                    {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                  </select>
+                </label>
+                <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set outcome</button>
+              </form>
+            </div>
+          )}
+        </Card>
+      ) : (
+        <Card>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Pipeline</p>
+          <p className="text-sm text-gray-500">
+            No pipeline configured for {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"} yet.
+            {" "}Phase: {matter.current_phase ?? "—"} · Stage: {matter.current_stage ?? "—"}.
+          </p>
         </Card>
       )}
 
@@ -385,27 +493,30 @@ export default async function AdminMatterDetailPage({
             <dd className="text-gray-800 mt-0.5">{matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Deadline</dt>
+            <dt className="text-xs text-gray-400">Estimated closing time</dt>
             <dd className="text-gray-800 mt-0.5">{matter.deadline ? formatDate(matter.deadline) : "—"}</dd>
           </div>
           <div>
             <dt className="text-xs text-gray-400">Opened</dt>
             <dd className="text-gray-800 mt-0.5">{formatDate(matter.created_at)}</dd>
           </div>
-          {matter.deal_value && (
+          {(matter as { service_subtype?: string | null }).service_subtype && (
             <div>
-              <dt className="text-xs text-gray-400">Deal Value</dt>
-              <dd className="text-gray-800 mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
+              <dt className="text-xs text-gray-400">Clearance type</dt>
+              <dd className="text-gray-800 mt-0.5">{(matter as { service_subtype?: string | null }).service_subtype}</dd>
             </div>
           )}
-          {(matter as any).partner_file_ref && (
-            <div>
-              <dt className="text-xs text-gray-400">Partner file ref</dt>
-              <dd className="text-gray-800 mt-0.5">{(matter as any).partner_file_ref}</dd>
-            </div>
-          )}
+          {/* Service-specific referral fields (PRC account no / utilities / query ref) merged in. */}
+          {Object.entries(((matter as { service_data?: Record<string, unknown> | null }).service_data ?? {}))
+            .filter(([k, v]) => v && !["stage_outcome", "stage_reason"].includes(k))
+            .map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-xs text-gray-400 capitalize">{k.replace(/_/g, " ")}</dt>
+                <dd className="text-gray-800 mt-0.5">{String(v)}</dd>
+              </div>
+            ))}
           {matter.service_notes && (
-            <div className="col-span-2">
+            <div className="col-span-2 sm:col-span-3">
               <dt className="text-xs text-gray-400">Service Notes</dt>
               <dd className="text-gray-800 mt-0.5">{matter.service_notes}</dd>
             </div>
@@ -436,25 +547,36 @@ export default async function AdminMatterDetailPage({
         </form>
       </Card>
 
-      {/* Service-specific referral details (e.g. PRC: account no., query ref, seller) */}
-      {((matter as any).service_subtype ||
-        Object.keys(((matter as any).service_data ?? {}) as Record<string, unknown>).length > 0) && (
-        <Card>
-          <h2 className="font-semibold text-gray-900 mb-3">
-            Service details{(matter as any).service_subtype ? ` · ${(matter as any).service_subtype}` : ""}
-          </h2>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            {Object.entries(((matter as any).service_data ?? {}) as Record<string, unknown>)
-              .filter(([, v]) => v)
-              .map(([k, v]) => (
-                <div key={k}>
-                  <dt className="text-xs text-gray-400 capitalize">{k.replace(/_/g, " ")}</dt>
-                  <dd className="text-gray-800 mt-0.5">{String(v)}</dd>
-                </div>
-              ))}
-          </dl>
-        </Card>
-      )}
+      {/* ConveyClear internal — staff-only container (note 2026-06-22). */}
+      <Card className="border-[#1B2E6B]/20 bg-[#1B2E6B]/5">
+        <div className="flex items-center gap-1.5 mb-3">
+          <Lock className="h-3.5 w-3.5 text-[#1B2E6B]" />
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-[#1B2E6B]">ConveyClear internal</h2>
+        </div>
+        <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          {firm?.name && (
+            <div>
+              <dt className="text-xs text-gray-400">Referring firm</dt>
+              <dd className="text-gray-800 mt-0.5">{firm.name}{firm.abbreviation ? ` (${firm.abbreviation})` : ""}</dd>
+            </div>
+          )}
+          {matter.partner_file_ref && (
+            <div>
+              <dt className="text-xs text-gray-400">Internal file ref</dt>
+              <dd className="text-gray-800 mt-0.5">{matter.partner_file_ref}</dd>
+            </div>
+          )}
+          {matter.deal_value && (
+            <div>
+              <dt className="text-xs text-gray-400">Deal value</dt>
+              <dd className="text-gray-800 mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
+            </div>
+          )}
+          {!firm?.name && !matter.partner_file_ref && !matter.deal_value && (
+            <p className="text-sm text-gray-400 col-span-3">No internal details captured yet.</p>
+          )}
+        </dl>
+      </Card>
 
       {/* Celebration when the matter is won/closed (H2) */}
       <Celebrate active={matter.status === "won"} matterId={matter.id} />
@@ -515,85 +637,17 @@ export default async function AdminMatterDetailPage({
       {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
       <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
 
-      {/* Documents */}
-      <div>
-        <div className="flex items-center justify-between gap-3 mb-3">
+      {/* Documents — split client/partner uploads vs ConveyClear uploads (note 29) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="font-semibold text-gray-900">Documents ({documents.length})</h2>
           <div className="flex items-center gap-3">
             <StorageUpload matterId={id} />
             <CollectFicaButton matterId={id} fica={!isCoo} />
           </div>
         </div>
-        {documents.length > 0 ? (
-          <Card padding="none">
-            <ul className="divide-y divide-gray-100">
-              {documents.map((doc) => (
-                <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
-                      {doc.file_name || doc.document_type}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {doc.document_type} · {formatDate(doc.created_at)}
-                      {doc.matter_party_id && partyById.get(doc.matter_party_id)
-                        ? ` · ${partyById.get(doc.matter_party_id)!.role}`
-                        : ""}
-                    </p>
-                  </div>
-                  {doc.storage_path && signedUrls[doc.storage_path] ? (
-                    <div className="flex items-center gap-3 shrink-0">
-                      <a
-                        href={signedUrls[doc.storage_path]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-medium text-[#1B2E6B] hover:underline"
-                      >
-                        View
-                      </a>
-                      <a
-                        href={`${signedUrls[doc.storage_path]}&download=${encodeURIComponent(doc.file_name ?? "document")}`}
-                        className="text-xs font-medium text-[#E8521A] hover:underline"
-                      >
-                        Download
-                      </a>
-                    </div>
-                  ) : doc.drive_file_id ? (
-                    <div className="flex items-center gap-3 shrink-0">
-                      <a
-                        href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-medium text-[#1B2E6B] hover:underline"
-                      >
-                        View
-                      </a>
-                      <a
-                        href={`https://drive.google.com/uc?export=download&id=${doc.drive_file_id}`}
-                        className="text-xs font-medium text-[#E8521A] hover:underline"
-                      >
-                        Download
-                      </a>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-300 shrink-0">No file</span>
-                  )}
-                  <DocRenameButton documentId={doc.id} current={doc.file_name || doc.document_type} />
-                  {doc.verified && (
-                    <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>
-                  )}
-                  {doc.document_status && doc.document_status !== "uploaded" && (
-                    <span className="text-xs text-amber-600 font-medium shrink-0">{doc.document_status}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : (
-          <Card className="text-center py-8">
-            <p className="text-sm text-gray-400">No documents yet</p>
-          </Card>
-        )}
+        {docGroup("Client / business-partner uploads", clientPartnerDocs)}
+        {docGroup("ConveyClear uploads", ccDocs)}
       </div>
 
       {/* Activity feed */}

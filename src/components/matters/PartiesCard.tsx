@@ -1,5 +1,5 @@
 import Card from "@/components/ui/Card";
-import type { MatterParty } from "@/types";
+import { composeFullName, type MatterParty } from "@/types";
 import { partyRoleOrder } from "@/lib/coo-docs";
 import CreatePartyAccount from "@/components/matters/CreatePartyAccount";
 import EditPartyButton from "@/components/matters/EditPartyButton";
@@ -35,8 +35,8 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
       <h2 className="font-semibold text-gray-900 mb-3">Parties ({parties.length})</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {ordered.map((p) => {
-          const name = p.entity_type === "natural_person" ? p.full_name : p.business_name;
           const isEntity = p.entity_type !== "natural_person";
+          const name = isEntity ? p.business_name : composeFullName(p.first_name, p.last_name) || p.full_name;
           return (
             <Card key={p.id} className="space-y-3">
               <div className="flex items-center justify-between">
@@ -48,16 +48,19 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
               <p className="font-medium text-gray-900">{name || "—"}</p>
               <dl className="space-y-1.5 text-sm">
                 <Row k="Reg / IT no." v={p.registration_no} />
-                <Row k="ID number" v={p.id_number} />
+                {/* Natural person → ID here. Business/trust → ID lives with the
+                    contact person below (note 2026-06-22). */}
+                {!isEntity && <Row k="ID number" v={p.id_number} />}
                 <Row k="Email" v={p.email} />
                 <Row k="Cell" v={p.cell} />
                 <Row k="Address" v={p.physical_address} />
               </dl>
-              {isEntity && (p.contact_name || p.contact_email || p.contact_cell) && (
+              {isEntity && (p.contact_name || p.contact_email || p.contact_cell || p.id_number) && (
                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm space-y-1.5">
                   <p className="text-xs font-medium text-gray-600">Contact person</p>
                   <dl className="space-y-1.5">
                     <Row k="Name" v={p.contact_name} />
+                    <Row k="ID number" v={p.id_number} />
                     <Row k="Email" v={p.contact_email} />
                     <Row k="Cell" v={p.contact_cell} />
                   </dl>

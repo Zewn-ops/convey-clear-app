@@ -5,19 +5,32 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { Plus } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   isStaffRole,
   clientDisplayName,
+  composeFullName,
   MATTER_STATUS_LABELS,
-  PHASE_LABELS,
   PRIORITY_LABELS,
   type Matter,
-  type MatterPhase,
   type MatterPriority,
   type MatterStatus,
 } from "@/types";
+import { getPipeline, phaseLabel, stageLabel } from "@/lib/pipelines";
 import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
+
+// Row party (subset embedded on the list query).
+type ListParty = { role: string; entity_type: string; first_name: string | null; last_name: string | null; business_name: string | null };
+function partyDisplay(p?: ListParty | null): string {
+  if (!p) return "";
+  return (p.entity_type === "natural_person" ? composeFullName(p.first_name, p.last_name) : p.business_name) || "";
+}
+type MatterRow = Matter & {
+  service_subtype?: string | null;
+  business_partners?: { name: string | null } | null;
+  services?: { code: string | null } | null;
+  matter_parties?: ListParty[] | null;
+};
 import MatterFilters from "@/components/matters/MatterFilters";
 import MatterPagination from "@/components/matters/MatterPagination";
 
@@ -51,13 +64,13 @@ export default async function AdminMattersPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, municipality, created_at, clients(full_name, business_name)",
+        "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, clients(full_name, business_name, first_name, last_name), business_partners(name), services(code), matter_parties(role, entity_type, first_name, last_name, business_name)",
         { count: "exact" }
       ),
     filters
   );
 
-  const matters = (data as Matter[] | null) ?? [];
+  const matters = (data as MatterRow[] | null) ?? [];
   const total = count ?? 0;
 
   return (
@@ -82,7 +95,8 @@ export default async function AdminMattersPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Client / Matter</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Firm</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Phase</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Stage</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Priority</th>
@@ -92,28 +106,35 @@ export default async function AdminMattersPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {matters.map((m) => (
+              {matters.map((m) => {
+                const seller = partyDisplay(m.matter_parties?.find((p) => p.role === "seller"));
+                const buyer = partyDisplay(m.matter_parties?.find((p) => p.role === "buyer"));
+                const pipeline = getPipeline(m.services?.code, m.municipality, m.service_subtype);
+                return (
                 <tr key={m.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3">
-                    <p className="font-medium text-gray-900">{m.title || clientDisplayName(m.clients) || "Untitled"}</p>
-                    {m.clients && m.title && (
-                      <p className="text-xs text-gray-400 mt-0.5">{clientDisplayName(m.clients)}</p>
-                    )}
-                    {m.municipality && (
-                      <p className="text-xs text-gray-400 mt-0.5">{m.municipality}</p>
-                    )}
+                    <Link href={`/admin/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
+                      {m.title || clientDisplayName(m.clients) || "Untitled"}
+                    </Link>
+                    <div className="text-xs text-gray-400 mt-0.5 space-y-0.5">
+                      {seller && <p>Seller: {seller}</p>}
+                      {buyer && <p>Buyer: {buyer}</p>}
+                      {!seller && !buyer && m.clients && <p>Client: {clientDisplayName(m.clients)}</p>}
+                      {m.municipality && <p>Council: {municipalityLabel(m.municipality)}</p>}
+                    </div>
                   </td>
+                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{m.business_partners?.name ?? "—"}</td>
                   <td className="px-5 py-3">
                     {m.current_phase ? (
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#1B2E6B]/10 text-[#1B2E6B] whitespace-nowrap">
-                        Phase {m.current_phase}
+                        {pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase}
                       </span>
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell max-w-[140px] truncate">
-                    {m.current_stage || "—"}
+                    {pipeline ? (m.current_stage ? stageLabel(pipeline, m.current_stage) : "—") : (m.current_stage || "—")}
                   </td>
                   <td className="px-5 py-3 hidden md:table-cell">
                     {m.priority && (
@@ -140,10 +161,11 @@ export default async function AdminMattersPage({
                     </Link>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {matters.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td>
+                  <td colSpan={8} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td>
                 </tr>
               )}
             </tbody>

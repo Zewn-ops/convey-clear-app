@@ -9,8 +9,12 @@ import { Upload, ExternalLink } from "lucide-react";
 // Lets a partner complete FICA / upload documents on behalf of a referred client
 // via the proven /onboard flow. We mint (or reuse) an onboarding link server-side
 // — ownership is verified there — then open the secure form.
-export default function PartnerDocUpload({ matterId }: { matterId: string }) {
+export default function PartnerDocUpload({ matterId, submitted = false }: { matterId: string; submitted?: boolean }) {
   const [loading, setLoading] = useState(false);
+
+  // Once the onboarding form has been submitted for this matter the prompt is
+  // removed (note 2026-06-22) — further uploads use the Documents card.
+  if (submitted) return null;
 
   const openOnboarding = async () => {
     setLoading(true);

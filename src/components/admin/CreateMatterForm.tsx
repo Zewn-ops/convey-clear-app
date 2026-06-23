@@ -31,6 +31,8 @@ export default function CreateMatterForm({
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const [entityType, setEntityType] = useState<"natural_person" | "business" | "trust">("natural_person");
   const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [cell, setCell] = useState("");
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
@@ -43,7 +45,7 @@ export default function CreateMatterForm({
   const svcCode = services.find((s) => s.id === serviceId)?.code ?? "";
   const clientName =
     mode === "new"
-      ? name
+      ? (entityType === "natural_person" ? `${firstName} ${lastName}`.trim() : name)
       : (() => {
           const c = clients.find((x) => x.id === clientId);
           return c?.business_name || c?.full_name || "";
@@ -51,7 +53,7 @@ export default function CreateMatterForm({
   const previewTitle = buildMatterTitle({ municipality, serviceCode: svcCode, clientName, property });
 
   const submit = async () => {
-    if (mode === "new" && !name.trim()) return toast.error("Client name required");
+    if (mode === "new" && !clientName.trim()) return toast.error("Client name required");
     if (mode === "existing" && !clientId) return toast.error("Pick a client");
     setLoading(true);
     const res = await fetch("/api/admin/matters", {
@@ -60,7 +62,8 @@ export default function CreateMatterForm({
       body: JSON.stringify({
         client_id: mode === "existing" ? clientId : undefined,
         entity_type: entityType,
-        full_name: entityType === "natural_person" ? name : undefined,
+        first_name: entityType === "natural_person" ? firstName : undefined,
+        last_name: entityType === "natural_person" ? lastName : undefined,
         business_name: entityType !== "natural_person" ? name : undefined,
         email, cell, service_id: serviceId, municipality, property_description: property, priority,
       }),
@@ -135,7 +138,14 @@ export default function CreateMatterForm({
               { value: "trust", label: "Trust" },
             ]}
           />
-          <Input label={entityType === "natural_person" ? "Full name" : "Business / Trust name"} value={name} onChange={(e) => setName(e.target.value)} />
+          {entityType === "natural_person" ? (
+            <>
+              <Input label="First name(s)" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <Input label="Surname" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            </>
+          ) : (
+            <Input label="Business / Trust name" value={name} onChange={(e) => setName(e.target.value)} />
+          )}
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input label="Cell" value={cell} onChange={(e) => setCell(e.target.value)} />
         </div>

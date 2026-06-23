@@ -5,12 +5,11 @@ import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
-  PHASE_LABELS,
   MATTER_STATUS_LABELS,
   type Matter,
-  type MatterPhase,
   type MatterStatus,
 } from "@/types";
+import { getPipeline, phaseLabel } from "@/lib/pipelines";
 import { Briefcase, Users, Clock, ArrowRight, PlusCircle, Phone, Mail, MessageSquare } from "lucide-react";
 import { CONVEYCLEAR_PHONE, CONVEYCLEAR_EMAIL, telHref } from "@/lib/contact";
 
@@ -31,17 +30,22 @@ export default async function PartnerOverview() {
       supabase.from("clients").select("id", { count: "exact", head: true }),
       supabase
         .from("matters")
-        .select("id, title, current_phase, status, created_at, clients(full_name, business_name)")
+        .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code)")
         .in("status", ["open", "on_hold"])
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
 
-  const matters = (recent as Matter[] | null) ?? [];
+  type PartnerMatterRow = Matter & {
+    municipality?: string | null;
+    service_subtype?: string | null;
+    services?: { code?: string | null } | null;
+  };
+  const matters = (recent as PartnerMatterRow[] | null) ?? [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Your matters</h1>
           <p className="text-sm text-gray-500 mt-1">Matters ConveyClear is handling for your clients.</p>
@@ -57,7 +61,7 @@ export default async function PartnerOverview() {
             href={telHref(CONVEYCLEAR_PHONE)}
             className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
           >
-            <Phone className="h-4 w-4" /> Call ConveyClear
+            <Phone className="h-4 w-4" /> Call ConveyClear · {CONVEYCLEAR_PHONE}
           </a>
           <Link
             href="/partner/enquiries"
@@ -109,11 +113,17 @@ export default async function PartnerOverview() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {matters.map((m) => (
+                {matters.map((m) => {
+                  const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
+                  return (
                   <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-gray-900">{m.title || clientDisplayName(m.clients) || "—"}</td>
+                    <td className="px-5 py-3 font-medium text-gray-900">
+                      <Link href={`/partner/matters/${m.id}`} className="hover:text-[#E8521A] hover:underline">
+                        {m.title || clientDisplayName(m.clients) || "—"}
+                      </Link>
+                    </td>
                     <td className="px-5 py-3 text-gray-600">
-                      {m.current_phase ? `Phase ${m.current_phase}: ${PHASE_LABELS[m.current_phase as MatterPhase]}` : "—"}
+                      {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
                     </td>
                     <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(m.created_at)}</td>
                     <td className="px-5 py-3">{m.status && <Badge label={MATTER_STATUS_LABELS[m.status as MatterStatus]} variant={statusVariant(m.status)} />}</td>
@@ -121,7 +131,8 @@ export default async function PartnerOverview() {
                       <Link href={`/partner/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">View</Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {matters.length === 0 && (
                   <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters yet — refer your first client.</td></tr>
                 )}

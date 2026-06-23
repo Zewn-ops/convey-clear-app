@@ -62,7 +62,7 @@ export async function notifyMatterParties(
   const { data: subs } = await admin.from("matter_subscribers").select("user_id").eq("matter_id", matterId);
   (subs ?? []).forEach((s: { user_id: string | null }) => s.user_id && ids.add(s.user_id));
 
-  const { data: m } = await admin.from("matters").select("client_id, business_partner_id").eq("id", matterId).maybeSingle();
+  const { data: m } = await admin.from("matters").select("client_id, business_partner_id, title").eq("id", matterId).maybeSingle();
   if (m?.client_id) {
     const { data: cu } = await admin.from("users").select("id").eq("client_id", m.client_id);
     (cu ?? []).forEach((u: { id: string }) => ids.add(u.id));
@@ -72,5 +72,8 @@ export async function notifyMatterParties(
     (pu ?? []).forEach((u: { id: string }) => ids.add(u.id));
   }
   if (opts?.excludeUserId) ids.delete(opts.excludeUserId);
-  await notifyUsers(Array.from(ids), { ...p, matter_id: matterId });
+  // Every matter notification names its matter so the bell reads
+  // "<event> · <matter>" rather than a bare "<event>" (note 2026-06-22).
+  const title = m?.title ? `${p.title} · ${m.title}` : p.title;
+  await notifyUsers(Array.from(ids), { ...p, title, matter_id: matterId });
 }

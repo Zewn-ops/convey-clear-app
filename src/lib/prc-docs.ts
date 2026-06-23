@@ -11,12 +11,7 @@ export interface PrcSubtype {
 
 export const PRC_SUBTYPES: PrcSubtype[] = [
   { code: "RCF", label: "RCF — Rates Clearance Figures", inPortal: true },
-  {
-    code: "RCC",
-    label: "RCC — Rates Clearance Certificate",
-    inPortal: false,
-    notice: "RCC referrals are coming soon. For now, please contact ConveyClear directly to proceed with a Rates Clearance Certificate.",
-  },
+  { code: "RCC", label: "RCC — Rates Clearance Certificate", inPortal: true },
   {
     code: "RCA",
     label: "RCA — Rates Clearance Application",

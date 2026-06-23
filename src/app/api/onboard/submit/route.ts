@@ -126,6 +126,9 @@ export async function POST(request: Request) {
       patch.business_name = d.business_name || null;
       patch.registration_no = d.registration_no || null;
     } else {
+      // FICA form's "full_name" field holds first name(s); surname is separate.
+      patch.first_name = d.full_name?.trim() || null;
+      patch.last_name = d.surname?.trim() || null;
       patch.full_name = `${d.full_name ?? ""} ${d.surname ?? ""}`.trim() || null;
     }
     try {

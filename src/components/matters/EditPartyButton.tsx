@@ -7,7 +7,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import { Pencil } from "lucide-react";
-import type { MatterParty } from "@/types";
+import { composeFullName, type MatterParty } from "@/types";
 
 // Inline edit of a captured party's details after matter creation (staff only,
 // shown on the manage view of PartiesCard). PATCHes /api/admin/parties.
@@ -17,7 +17,8 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     entity_type: party.entity_type,
-    full_name: party.full_name ?? "",
+    first_name: party.first_name ?? "",
+    last_name: party.last_name ?? "",
     business_name: party.business_name ?? "",
     registration_no: party.registration_no ?? "",
     id_number: party.id_number ?? "",
@@ -38,7 +39,11 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
       const res = await fetch("/api/admin/parties", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ party_id: party.id, ...form }),
+        body: JSON.stringify({
+          party_id: party.id,
+          ...form,
+          full_name: isPerson ? composeFullName(form.first_name, form.last_name) || null : null,
+        }),
       });
       const json = await res.json();
       if (!res.ok) return toast.error(json.message ?? "Could not update party");
@@ -75,14 +80,17 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
           ]}
         />
         {isPerson ? (
-          <Input label="Full name" value={form.full_name} onChange={(e) => set({ full_name: e.target.value })} />
+          <>
+            <Input label="First name(s)" value={form.first_name} onChange={(e) => set({ first_name: e.target.value })} />
+            <Input label="Surname" value={form.last_name} onChange={(e) => set({ last_name: e.target.value })} />
+            <Input label="ID number" value={form.id_number} onChange={(e) => set({ id_number: e.target.value })} />
+          </>
         ) : (
-          <Input label="Business / Trust name" value={form.business_name} onChange={(e) => set({ business_name: e.target.value })} />
+          <>
+            <Input label="Business / Trust name" value={form.business_name} onChange={(e) => set({ business_name: e.target.value })} />
+            <Input label="Registration / IT no." value={form.registration_no} onChange={(e) => set({ registration_no: e.target.value })} />
+          </>
         )}
-        {!isPerson && (
-          <Input label="Registration / IT no." value={form.registration_no} onChange={(e) => set({ registration_no: e.target.value })} />
-        )}
-        <Input label="ID number" value={form.id_number} onChange={(e) => set({ id_number: e.target.value })} />
         <Input label="Email" type="email" value={form.email} onChange={(e) => set({ email: e.target.value })} />
         <Input label="Cell" value={form.cell} onChange={(e) => set({ cell: e.target.value })} />
       </div>
@@ -92,6 +100,7 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
           <p className="text-xs font-medium text-gray-600">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Name" value={form.contact_name} onChange={(e) => set({ contact_name: e.target.value })} />
+            <Input label="ID number" value={form.id_number} onChange={(e) => set({ id_number: e.target.value })} />
             <Input label="Email" type="email" value={form.contact_email} onChange={(e) => set({ contact_email: e.target.value })} />
             <Input label="Cell" value={form.contact_cell} onChange={(e) => set({ contact_cell: e.target.value })} />
           </div>

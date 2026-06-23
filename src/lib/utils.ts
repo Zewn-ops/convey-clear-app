@@ -30,6 +30,18 @@ export function formatDateTime(dateString: string): string {
   });
 }
 
+// Spell out a municipality code for display (note 2026-06-22 — no abbreviations
+// in the matters subtext). Unknown codes pass through unchanged.
+const MUNICIPALITY_NAMES: Record<string, string> = {
+  COT: "City of Tshwane",
+  COJ: "City of Johannesburg",
+  COE: "City of Ekurhuleni",
+};
+export function municipalityLabel(code?: string | null): string {
+  if (!code) return "—";
+  return MUNICIPALITY_NAMES[code.toUpperCase()] ?? code;
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")

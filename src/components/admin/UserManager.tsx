@@ -13,6 +13,7 @@ import {
   ASSIGNABLE_ROLES_BY_ADMIN,
   ASSIGNABLE_ROLES_BY_SUPER,
   ROLE_LABELS,
+  composeFullName,
   isSuperAdmin,
   type AppUser,
   type BusinessPartner,
@@ -51,7 +52,8 @@ export default function UserManager({
 
   // --- create user form state ---
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<UserRole>("client");
   const [entityType, setEntityType] = useState<"natural_person" | "business" | "trust">("natural_person");
   const [businessName, setBusinessName] = useState("");
@@ -92,7 +94,7 @@ export default function UserManager({
   const [firmLoading, setFirmLoading] = useState(false);
 
   const resetForm = () => {
-    setEmail(""); setFullName(""); setRole("client");
+    setEmail(""); setFirstName(""); setLastName(""); setRole("client");
     setEntityType("natural_person"); setBusinessName(""); setCell(""); setPartnerId("");
   };
 
@@ -105,7 +107,7 @@ export default function UserManager({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email, full_name: fullName, role,
+        email, full_name: composeFullName(firstName, lastName), first_name: firstName, last_name: lastName, role,
         entity_type: entityType,
         business_name: businessName,
         primary_cell: cell,
@@ -257,7 +259,8 @@ export default function UserManager({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Smith" />
+          <Input label="First name(s)" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" />
+          <Input label="Surname" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Smith" />
           <Input label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@example.co.za" />
           <Select
             label="Role"

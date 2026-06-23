@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildMatterTitle } from "@/lib/matter-naming";
+import { getPipeline } from "@/lib/pipelines";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
-import { isStaffRole, type UserRole } from "@/types";
+import { isStaffRole, composeFullName, type UserRole } from "@/types";
 import { firePortalIntake } from "@/lib/n8n";
 import { randomUUID } from "crypto";
 
@@ -28,6 +29,8 @@ export async function POST(request: Request) {
   let body: {
     client_id?: string;
     entity_type?: "natural_person" | "business" | "trust";
+    first_name?: string;
+    last_name?: string;
     full_name?: string;
     business_name?: string;
     email?: string;
@@ -50,10 +53,13 @@ export async function POST(request: Request) {
     clientName = c?.business_name || c?.full_name || "";
   } else {
     const entityType = body.entity_type ?? "natural_person";
-    clientName = entityType === "natural_person" ? (body.full_name ?? "").trim() : (body.business_name ?? "").trim();
+    const personName = composeFullName(body.first_name, body.last_name) || (body.full_name ?? "").trim();
+    clientName = entityType === "natural_person" ? personName : (body.business_name ?? "").trim();
     if (!clientName) return NextResponse.json({ message: "Client name is required" }, { status: 400 });
     const { data: newClient, error: cErr } = await admin.from("clients").insert({
       entity_type: entityType,
+      first_name: entityType === "natural_person" ? body.first_name?.trim() || null : null,
+      last_name: entityType === "natural_person" ? body.last_name?.trim() || null : null,
       full_name: entityType === "natural_person" ? clientName : null,
       business_name: entityType !== "natural_person" ? clientName : null,
       primary_email: (body.email || "").toLowerCase() || null,
@@ -73,13 +79,14 @@ export async function POST(request: Request) {
   const title = buildMatterTitle({
     municipality: body.municipality, serviceCode, clientName, property: body.property_description,
   });
+  const pipeline = getPipeline(serviceCode, body.municipality);
 
   const { data: matter, error: mErr } = await admin.from("matters").insert({
     client_id: clientId,
     service_id: body.service_id || null,
     title,
-    current_phase: "1",
-    status: "open",
+    current_phase: pipeline?.prePhase.key ?? null,
+    status: "new",
     priority: body.priority || "standard",
     municipality: body.municipality || null,
     service_notes: body.notes || null,

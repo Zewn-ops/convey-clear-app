@@ -45,7 +45,7 @@ export const DOC_META: Record<string, { label: string; hint: string }> = {
   cqi_screenshot: { label: "Screenshot of Clearance Query Issue (CQI)", hint: "The lodged clearance query" },
   water_meter_reading: { label: "Water Meter Reading", hint: "Optional — current water meter reading" },
   electricity_meter_reading: { label: "Electricity Meter Reading", hint: "Optional — current electricity meter reading" },
-  council_account_statement: { label: "Council Existing Account Statement", hint: "Current municipal account statement" },
+  council_account_statement: { label: "City of Tshwane Account Statement", hint: "Current municipal account statement" },
   transfer_letter: { label: "Transfer Confirmation Letter", hint: "From the conveyancing attorney" },
   deed_search: { label: "Deed Search", hint: "Recent deed search for the property" },
   clearance_figures: { label: "Clearance Figures", hint: "Municipal rates clearance figures" },

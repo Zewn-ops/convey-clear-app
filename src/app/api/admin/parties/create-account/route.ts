@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   const { data: party } = await admin
     .from("matter_parties")
-    .select("id, matter_id, entity_type, full_name, business_name, registration_no, id_number, email, cell, physical_address, contact_email")
+    .select("id, matter_id, entity_type, first_name, last_name, full_name, business_name, registration_no, id_number, email, cell, physical_address, contact_email")
     .eq("id", partyId)
     .maybeSingle();
   if (!party) return NextResponse.json({ message: "Party not found" }, { status: 404 });
@@ -67,6 +67,8 @@ export async function POST(request: Request) {
 
   const clientPayload = {
     entity_type: party.entity_type,
+    first_name: isPerson ? party.first_name || null : null,
+    last_name: isPerson ? party.last_name || null : null,
     full_name: isPerson ? party.full_name || null : null,
     business_name: !isPerson ? party.business_name || null : null,
     registration_no: party.registration_no || null,
