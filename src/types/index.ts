@@ -204,9 +204,27 @@ export interface MatterParty {
   contact_name: string | null;
   contact_email: string | null;
   contact_cell: string | null;
+  // Link to a known client record → resolves this party's reusable vault docs
+  // (migration 025). Set when a login/contact is created from the party.
+  client_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// A reusable, client-scoped FICA document (the vault — migration 025). Attached
+// to matters by reference (documents.client_document_id) without re-uploading.
+export interface ClientDocument {
+  id: string;
+  client_id: string;
+  document_type: string;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_bucket: string | null;
+  storage_path: string | null;
+  uploaded_by: string | null;
+  created_at: string;
 }
 
 export interface MatterDocument {
@@ -222,6 +240,9 @@ export interface MatterDocument {
   mime_type: string | null;
   size_bytes: number | null;
   not_available_reason: string | null;
+  // Set when this row is a REUSED client-vault doc (migration 025); its storage
+  // lives in the client-documents bucket rather than the matter's.
+  client_document_id: string | null;
   uploaded_at: string | null;
   verified: boolean | null;
   created_at: string;

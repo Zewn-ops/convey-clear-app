@@ -83,6 +83,8 @@ export async function POST(request: Request) {
   if (mode === "contact") {
     const { data: client, error } = await admin.from("clients").insert(clientPayload).select("id").single();
     if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+    // Link the party → client so the client's reusable vault docs resolve here.
+    await admin.from("matter_parties").update({ client_id: client.id }).eq("id", partyId);
     return NextResponse.json({ ok: true, mode: "contact", client_id: client.id, name });
   }
 
@@ -126,6 +128,8 @@ export async function POST(request: Request) {
 
   // Let the new login see THIS matter (RLS can_access_matter checks subscribers).
   await admin.from("matter_subscribers").insert({ matter_id: party.matter_id, user_id: profileRow?.id }).select();
+  // Link the party → client so the client's reusable vault docs resolve here.
+  if (clientId) await admin.from("matter_parties").update({ client_id: clientId }).eq("id", partyId);
 
   return NextResponse.json({ ok: true, mode: "login", client_id: clientId, email, temp_password: tempPassword, name });
 }
