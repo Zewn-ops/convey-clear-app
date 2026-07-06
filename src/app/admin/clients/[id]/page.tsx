@@ -11,11 +11,15 @@ import {
   MATTER_STATUS_LABELS,
   PHASE_LABELS,
   type Client,
+  type ClientDocument,
   type Matter,
   type MatterPhase,
   type MatterStatus,
 } from "@/types";
 import { ArrowLeft, Briefcase } from "lucide-react";
+import ClientVault from "@/components/clients/ClientVault";
+import { signedDocUrls } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Client Details — ConveyClear Admin" };
 
@@ -43,11 +47,16 @@ export default async function AdminClientDetailPage({
 
   const supabase = await createClient();
 
-  const [{ data: clientData }, { data: mattersData }] = await Promise.all([
+  const [{ data: clientData }, { data: mattersData }, { data: vaultData }] = await Promise.all([
     supabase.from("clients").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("matters")
       .select("id, title, current_phase, current_stage, status, priority, deadline, municipality, created_at")
+      .eq("client_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("client_documents")
+      .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at")
       .eq("client_id", id)
       .order("created_at", { ascending: false }),
   ]);
@@ -56,6 +65,11 @@ export default async function AdminClientDetailPage({
   if (!client) notFound();
 
   const matters = (mattersData as Matter[] | null) ?? [];
+
+  // FICA vault docs + short-lived signed URLs (signed server-side via admin).
+  const vaultDocs = (vaultData as ClientDocument[] | null) ?? [];
+  const vaultUrls = vaultDocs.length > 0 ? await signedDocUrls(createAdminClient(), vaultDocs) : {};
+  const vaultWithUrls = vaultDocs.map((d) => ({ ...d, url: d.storage_path ? vaultUrls[d.storage_path] : undefined }));
 
   const displayName = clientDisplayName(client);
 
@@ -122,6 +136,9 @@ export default async function AdminClientDetailPage({
           )}
         </dl>
       </Card>
+
+      {/* Reusable FICA document vault (migration 025) */}
+      <ClientVault clientId={id} docs={vaultWithUrls} />
 
       <div>
         <h2 className="font-semibold text-gray-900 mb-3">
