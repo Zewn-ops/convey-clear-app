@@ -1,9 +1,10 @@
 import Card from "@/components/ui/Card";
 import StorageUpload from "@/components/matters/StorageUpload";
+import ReuseVaultDoc from "@/components/matters/ReuseVaultDoc";
 import { cooSharedDocs, cooPartyDocs, partyRoleOrder, type CooEntity, type CooDocRule } from "@/lib/coo-docs";
 import { prcRcfDocs, docLabel } from "@/lib/prc-docs";
 import { toggleDocUnavailable } from "@/lib/actions/intake";
-import { composeFullName, type MatterParty, type MatterDocument } from "@/types";
+import { composeFullName, type MatterParty, type MatterDocument, type ClientDocument } from "@/types";
 import { CheckCircle2, Circle, Ban, FileText } from "lucide-react";
 
 // In-place intake (foundation): capture a matter's required documents directly
@@ -36,6 +37,7 @@ interface Group {
   subtitle?: string;
   partyId: string | null;
   slots: CooDocRule[];
+  vaultDocs: ClientDocument[]; // this group's client's reusable vault docs
 }
 
 export default function InPlaceIntake({
@@ -46,6 +48,8 @@ export default function InPlaceIntake({
   municipality,
   unavailable,
   canManage,
+  vaultByClient = {},
+  matterClientId = null,
 }: {
   matterId: string;
   serviceCode: string | null;
@@ -54,9 +58,12 @@ export default function InPlaceIntake({
   municipality: string | null;
   unavailable: string[];
   canManage: boolean;
+  vaultByClient?: Record<string, ClientDocument[]>;
+  matterClientId?: string | null;
 }) {
   const code = (serviceCode ?? "").toUpperCase();
   const sorted = [...parties].sort((a, b) => partyRoleOrder(a.role) - partyRoleOrder(b.role));
+  const vaultFor = (clientId: string | null | undefined) => (clientId ? vaultByClient[clientId] ?? [] : []);
   const groups: Group[] = [];
 
   if (code === "COO") {
@@ -66,6 +73,7 @@ export default function InPlaceIntake({
       subtitle: "Collected once for the transfer",
       partyId: null,
       slots: cooSharedDocs(),
+      vaultDocs: vaultFor(matterClientId),
     });
     for (const p of sorted) {
       groups.push({
@@ -74,6 +82,7 @@ export default function InPlaceIntake({
         subtitle: ROLE_LABELS[p.role] ?? p.role,
         partyId: p.id,
         slots: cooPartyDocs(p.role, toCooEntity(p.entity_type), municipality),
+        vaultDocs: vaultFor(p.client_id),
       });
     }
   } else if (code === "RCF") {
@@ -84,6 +93,7 @@ export default function InPlaceIntake({
       subtitle: seller ? ROLE_LABELS[seller.role] ?? seller.role : "Seller / applicant",
       partyId: seller?.id ?? null,
       slots: prcRcfDocs(seller?.entity_type ?? "natural_person"),
+      vaultDocs: vaultFor(seller?.client_id ?? matterClientId),
     });
   } else {
     // The spine covers COO + PRC (RCF). Other services fall back to the generic
@@ -137,6 +147,9 @@ export default function InPlaceIntake({
               const doc = docFor(g.partyId, s.docType);
               const key = keyFor(g.partyId, s.docType);
               const isUnavailable = !doc && unavailable.includes(key);
+              const reuseOpts = g.vaultDocs
+                .filter((v) => v.document_type === s.docType)
+                .map((v) => ({ id: v.id, file_name: v.file_name }));
               return (
                 <li key={s.docType} className="flex items-center gap-3 px-4 py-2.5">
                   {doc ? (
@@ -174,6 +187,9 @@ export default function InPlaceIntake({
                       )
                     ) : (
                       <div className="flex items-center gap-2">
+                        {reuseOpts.length > 0 && (
+                          <ReuseVaultDoc matterId={matterId} matterPartyId={g.partyId} options={reuseOpts} />
+                        )}
                         <StorageUpload
                           matterId={matterId}
                           documentType={s.docType}

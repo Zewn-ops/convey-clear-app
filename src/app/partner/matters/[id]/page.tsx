@@ -10,7 +10,7 @@ import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { signedDownloadUrls } from "@/lib/storage";
+import { signedDocUrls } from "@/lib/storage";
 import { getPipeline } from "@/lib/pipelines";
 import { formatDate } from "@/lib/utils";
 import {
@@ -20,6 +20,7 @@ import {
   type MatterStatus,
   type MatterDocument,
   type MatterParty,
+  type ClientDocument,
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
 
@@ -65,8 +66,24 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   ]);
   const docs = (docsData as MatterDocument[] | null) ?? [];
   const parties = (partiesData as MatterParty[] | null) ?? [];
-  const storagePaths = docs.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
-  const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
+  const signedUrls = docs.length > 0 ? await signedDocUrls(createAdminClient(), docs) : {};
+
+  // FICA vault (migration 025): reusable docs for the matter's client + each
+  // party's linked client, so the intake can offer "Reuse".
+  const matterClientId = (matter as unknown as { clients?: { id?: string | null } | null }).clients?.id ?? null;
+  const vaultClientIds = Array.from(
+    new Set([matterClientId, ...parties.map((p) => p.client_id)].filter((x): x is string => Boolean(x)))
+  );
+  const vaultByClient: Record<string, ClientDocument[]> = {};
+  if (vaultClientIds.length > 0) {
+    const { data: vaultRows } = await supabase
+      .from("client_documents")
+      .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at")
+      .in("client_id", vaultClientIds);
+    for (const r of (vaultRows as ClientDocument[] | null) ?? []) {
+      (vaultByClient[r.client_id] ??= []).push(r);
+    }
+  }
   const activities = (actData as { id: string; body: string; activity_type: string; created_at: string }[] | null) ?? [];
 
   // Enquiries linked to this matter (C2 — partners view them from the matter page).
@@ -164,6 +181,8 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         municipality={matter.municipality}
         unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
         canManage={false}
+        vaultByClient={vaultByClient}
+        matterClientId={matterClientId}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

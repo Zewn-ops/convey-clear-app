@@ -17,7 +17,7 @@ import {
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
 import ClientDocUpload from "@/components/dashboard/ClientDocUpload";
-import { signedDownloadUrls } from "@/lib/storage";
+import { signedDocUrls } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function MatterDetailPage({
@@ -47,9 +47,9 @@ export default async function MatterDetailPage({
     .eq("matter_id", id)
     .order("created_at", { ascending: false });
   const documents = (docsData as MatterDocument[] | null) ?? [];
-  // Signed, short-lived URLs so the client can view/download their own documents.
-  const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
-  const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
+  // Signed, short-lived URLs so the client can view/download their own documents
+  // (bucket-aware — a reused FICA-vault doc lives in the client-documents bucket).
+  const signedUrls = documents.length > 0 ? await signedDocUrls(createAdminClient(), documents) : {};
 
   const phases: MatterPhase[] = ["1", "2", "3", "4"];
   const isClient = session.profile?.role === "client";

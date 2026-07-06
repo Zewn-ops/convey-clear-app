@@ -14,6 +14,7 @@ import {
   type Matter,
   type MatterDocument,
   type MatterParty,
+  type ClientDocument,
   type MatterPriority,
   type MatterStatus,
   type CouncilPoc,
@@ -41,7 +42,7 @@ import {
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { signedDownloadUrls } from "@/lib/storage";
+import { signedDocUrls } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -383,8 +384,24 @@ export default async function AdminMatterDetailPage({
   const allPocs = (allPocData as CouncilPoc[] | null) ?? [];
 
   // Short-lived signed URLs for docs stored in Supabase Storage (private bucket).
-  const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
-  const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
+  const signedUrls = documents.length > 0 ? await signedDocUrls(createAdminClient(), documents) : {};
+
+  // FICA vault (migration 025): reusable docs for the matter's client + each
+  // party's linked client, so the in-place intake can offer "Reuse".
+  const matterClientId = (matter as { clients?: { id?: string | null } | null }).clients?.id ?? null;
+  const vaultClientIds = Array.from(
+    new Set([matterClientId, ...parties.map((p) => p.client_id)].filter((x): x is string => Boolean(x)))
+  );
+  const vaultByClient: Record<string, ClientDocument[]> = {};
+  if (vaultClientIds.length > 0) {
+    const { data: vaultRows } = await supabase
+      .from("client_documents")
+      .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at")
+      .in("client_id", vaultClientIds);
+    for (const r of (vaultRows as ClientDocument[] | null) ?? []) {
+      (vaultByClient[r.client_id] ??= []).push(r);
+    }
+  }
 
   const svc = (matter as { services?: { code?: string; name?: string } | null }).services;
   const firm = (matter as { business_partners?: { name?: string | null; abbreviation?: string | null } | null }).business_partners;
@@ -741,6 +758,8 @@ export default async function AdminMatterDetailPage({
         municipality={matter.municipality}
         unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
         canManage
+        vaultByClient={vaultByClient}
+        matterClientId={matterClientId}
       />
 
       {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
