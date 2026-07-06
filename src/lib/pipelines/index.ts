@@ -83,6 +83,21 @@ export function isStageClientVisible(p: Pipeline, stageKey: string): boolean {
   return findStage(p, stageKey)?.stage.clientVisible ?? false;
 }
 
+// The decision stage whose outcomes include the given outcome key. Used to work
+// out where in the pipeline a stored service_data.stage_outcome "belongs", so we
+// can tell when a matter has been reverted to before it (see clearOutcomeIfReverted).
+export function decisionStageForOutcome(p: Pipeline, outcomeKey?: string | null): FlatStage | null {
+  if (!outcomeKey) return null;
+  return flattenStages(p).find((f) => f.stage.outcomes?.some((o) => o.key === outcomeKey)) ?? null;
+}
+
+// Ordinal position of a phase across pre → phases → terminal (-1 if unknown).
+// Lets us compare a matter's new phase against a decision stage's phase on revert.
+export function phaseOrder(p: Pipeline, phaseKey?: string | null): number {
+  if (!phaseKey) return -1;
+  return phaseSteps(p).findIndex((s) => s.key === phaseKey);
+}
+
 // Human label for a phase key (pre-phase / phase / terminal). client=true uses
 // the client-facing phase name.
 export function phaseLabel(p: Pipeline | null, key?: string | null, client = false): string {

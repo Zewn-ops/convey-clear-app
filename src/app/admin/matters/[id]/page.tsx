@@ -34,6 +34,9 @@ import {
   findStage,
   isStageClientVisible,
   skippedStageNames,
+  decisionStageForOutcome,
+  phaseOrder,
+  type Pipeline,
 } from "@/lib/pipelines";
 import StorageUpload from "@/components/matters/StorageUpload";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -91,6 +94,44 @@ async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, mat
   return { row: data, pl };
 }
 
+// Bug fix (A&A demo #1): when a matter is reverted to *before* the decision stage
+// that produced its stored outcome, clear service_data.stage_outcome/stage_reason
+// so a stale COT decision doesn't linger. The admin view keys the decision off
+// current_stage (so it lingers on a phase revert, which leaves current_stage
+// untouched); the partner view resolves it from stage_outcome across every stage
+// (so it lingers on any revert). Clearing the stored outcome fixes both surfaces.
+// MODULE-SCOPE on purpose — referenced by "use server" actions (see matterCtx note).
+// No-op when there is no outcome or the move is not a backward revert past it.
+async function clearOutcomeIfReverted(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matterId: string,
+  pl: Pipeline | null,
+  target: { stageKey?: string | null; phaseKey?: string | null },
+  userId: string | null
+) {
+  if (!pl) return;
+  const { data: cur } = await supabase.from("matters").select("service_data").eq("id", matterId).maybeSingle();
+  const sd = ((cur as { service_data?: Record<string, unknown> } | null)?.service_data) ?? {};
+  const outcomeKey = typeof sd.stage_outcome === "string" ? sd.stage_outcome : null;
+  if (!outcomeKey) return;
+  const decision = decisionStageForOutcome(pl, outcomeKey);
+  if (!decision) return;
+  const newStageIndex = target.stageKey ? findStage(pl, target.stageKey)?.absoluteIndex ?? null : null;
+  const newPhaseIndex = target.phaseKey ? phaseOrder(pl, target.phaseKey) : null;
+  const reverted =
+    (newStageIndex != null && newStageIndex < decision.absoluteIndex) ||
+    (newPhaseIndex != null && newPhaseIndex < phaseOrder(pl, decision.phase.key));
+  if (!reverted) return;
+  const rest = { ...sd };
+  delete rest.stage_outcome;
+  delete rest.stage_reason;
+  await supabase.from("matters").update({ service_data: rest }).eq("id", matterId);
+  await supabase.from("matter_activities").insert({
+    matter_id: matterId, author_id: userId || null, activity_type: "system",
+    body: `Council decision cleared (matter reverted before ${decision.stage.name})`,
+  });
+}
+
 export default async function AdminMatterDetailPage({
   params,
 }: {
@@ -116,6 +157,8 @@ export default async function AdminMatterDetailPage({
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
 
     await supabase.from("matters").update({ current_phase: newPhase, ...statusPatch }).eq("id", matterId);
+    // Reverting to an earlier phase clears any stale council decision (see helper).
+    await clearOutcomeIfReverted(supabase, matterId, pl, { phaseKey: newPhase }, userId || null);
     await supabase.from("matter_activities").insert({
       matter_id: matterId, author_id: userId || null, activity_type: "phase_transition",
       body: `Phase: ${label}`,
@@ -142,6 +185,8 @@ export default async function AdminMatterDetailPage({
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
 
     await supabase.from("matters").update({ current_stage: newStage, ...statusPatch }).eq("id", matterId);
+    // Reverting to an earlier stage clears any stale council decision (see helper).
+    await clearOutcomeIfReverted(supabase, matterId, pl, { stageKey: newStage }, userId || null);
     await supabase.from("matter_activities").insert({
       matter_id: matterId, author_id: userId || null, activity_type: "status_change",
       body: `Stage: ${label}`,
