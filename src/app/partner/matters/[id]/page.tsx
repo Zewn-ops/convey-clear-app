@@ -8,6 +8,7 @@ import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
+import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDownloadUrls } from "@/lib/storage";
 import { getPipeline } from "@/lib/pipelines";
@@ -143,6 +144,19 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       {/* Parties (COO buyer/seller) — renders nothing for single-client matters */}
       <PartiesCard parties={parties} />
+
+      {/* In-place intake — service-aware required-document checklist + upload.
+          Partners can upload on the client's behalf; the "not available" toggle
+          is staff-only (canManage=false). Renders null for non-COO/PRC. */}
+      <InPlaceIntake
+        matterId={matter.id}
+        serviceCode={serviceCode}
+        parties={parties}
+        documents={docs}
+        municipality={matter.municipality}
+        unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
+        canManage={false}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Client (single-client matters only) */}
