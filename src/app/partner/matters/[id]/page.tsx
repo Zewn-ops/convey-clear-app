@@ -139,6 +139,14 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         </Card>
       )}
 
+      {/* Council rates account number (read-only for partners) */}
+      {typeof sd.rates_account_no === "string" && sd.rates_account_no && (
+        <Card>
+          <p className="text-xs text-gray-400">Rates account number</p>
+          <p className="mt-0.5 text-sm font-medium text-gray-900">{sd.rates_account_no}</p>
+        </Card>
+      )}
+
       {/* Upload docs for the client — hidden once documents have been submitted */}
       <PartnerDocUpload matterId={matter.id} submitted={docs.length > 0} />
 

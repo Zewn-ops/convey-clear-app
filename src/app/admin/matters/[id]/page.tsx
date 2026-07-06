@@ -265,6 +265,25 @@ export default async function AdminMatterDetailPage({
     revalidatePath(`/admin/matters/${matterId}`);
   }
 
+  // Council rates account number — the council's primary key for a clearance
+  // matter (proof / application / certificate all reference it). Stored on
+  // service_data (no migration); shown + editable here, read-only for partners.
+  async function setRatesAccount(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const matterId = formData.get("matter_id") as string;
+    const value = ((formData.get("rates_account_no") as string) ?? "").trim();
+    if (!matterId) return;
+    const { data: cur } = await supabase.from("matters").select("service_data").eq("id", matterId).maybeSingle();
+    const sd = ((cur as { service_data?: Record<string, unknown> } | null)?.service_data) ?? {};
+    await supabase.from("matters").update({ service_data: { ...sd, rates_account_no: value || null } }).eq("id", matterId);
+    await supabase.from("matter_activities").insert({
+      matter_id: matterId, author_id: authorId || null, activity_type: "system",
+      body: value ? `Rates account number set: ${value}` : "Rates account number cleared",
+    });
+    revalidatePath(`/admin/matters/${matterId}`);
+  }
+
   async function postNote(formData: FormData) {
     "use server";
     const supabase = await createClient();
@@ -539,6 +558,25 @@ export default async function AdminMatterDetailPage({
           </p>
         </Card>
       )}
+
+      {/* Council rates account number — the council's primary key for a
+          clearance matter (proof / application / certificate reference it). */}
+      <Card>
+        <form action={setRatesAccount} className="flex items-end gap-2">
+          <input type="hidden" name="matter_id" value={id} />
+          <label className="flex-1 text-xs font-medium text-gray-500">
+            Rates account number
+            <input
+              type="text"
+              name="rates_account_no"
+              defaultValue={typeof sd.rates_account_no === "string" ? sd.rates_account_no : ""}
+              placeholder="Council rates account no."
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            />
+          </label>
+          <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Save</button>
+        </form>
+      </Card>
 
       {/* Matter facts */}
       <Card>
