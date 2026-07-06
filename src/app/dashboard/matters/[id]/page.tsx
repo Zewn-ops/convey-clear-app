@@ -17,6 +17,8 @@ import {
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
 import ClientDocUpload from "@/components/dashboard/ClientDocUpload";
+import { signedDownloadUrls } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function MatterDetailPage({
   params,
@@ -41,10 +43,13 @@ export default async function MatterDetailPage({
 
   const { data: docsData } = await supabase
     .from("documents")
-    .select("id, matter_id, document_type, document_status, file_name, verified, created_at")
+    .select("id, matter_id, document_type, document_status, file_name, verified, created_at, storage_bucket, storage_path, drive_file_id")
     .eq("matter_id", id)
     .order("created_at", { ascending: false });
   const documents = (docsData as MatterDocument[] | null) ?? [];
+  // Signed, short-lived URLs so the client can view/download their own documents.
+  const storagePaths = documents.map((d) => d.storage_path).filter((p): p is string => Boolean(p));
+  const signedUrls = storagePaths.length > 0 ? await signedDownloadUrls(createAdminClient(), storagePaths) : {};
 
   const phases: MatterPhase[] = ["1", "2", "3", "4"];
   const isClient = session.profile?.role === "client";
@@ -124,8 +129,13 @@ export default async function MatterDetailPage({
                     </p>
                   </div>
                   {doc.verified && (
-                    <span className="text-xs text-green-600 font-medium">Verified</span>
+                    <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>
                   )}
+                  {doc.storage_path && signedUrls[doc.storage_path] ? (
+                    <a href={signedUrls[doc.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                  ) : doc.drive_file_id ? (
+                    <a href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                  ) : null}
                 </li>
               ))}
             </ul>
