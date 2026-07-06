@@ -29,8 +29,9 @@ type Party = {
   email: string;
   cell: string;
   physical_address: string;
-  // Contact person — for business / trust parties.
-  contact_name: string;
+  // Contact person — for business / trust parties (first name + surname, #6).
+  contact_first_name: string;
+  contact_last_name: string;
   contact_email: string;
   contact_cell: string;
 };
@@ -45,7 +46,8 @@ const emptyParty = (): Party => ({
   email: "",
   cell: "",
   physical_address: "",
-  contact_name: "",
+  contact_first_name: "",
+  contact_last_name: "",
   contact_email: "",
   contact_cell: "",
 });
@@ -105,7 +107,8 @@ function PartySection({
         <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-3">
           <p className="text-xs font-medium text-gray-600">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Name" value={party.contact_name} onChange={(e) => onChange({ contact_name: e.target.value })} placeholder="Authorised representative" />
+            <Input label="First name" value={party.contact_first_name} onChange={(e) => onChange({ contact_first_name: e.target.value })} placeholder="Authorised representative" />
+            <Input label="Surname" value={party.contact_last_name} onChange={(e) => onChange({ contact_last_name: e.target.value })} placeholder="Surname" />
             <Input label="ID number" value={party.id_number} onChange={(e) => onChange({ id_number: e.target.value })} placeholder="Contact's ID / passport" />
             <Input label="Email" type="email" value={party.contact_email} onChange={(e) => onChange({ contact_email: e.target.value })} placeholder="contact@example.co.za" />
             <Input label="Cell" value={party.contact_cell} onChange={(e) => onChange({ contact_cell: e.target.value })} placeholder="+27 82 000 0000" />
@@ -127,7 +130,8 @@ const partyPayload = (p: Party, role: "buyer" | "seller") => ({
   email: p.email,
   cell: p.cell,
   physical_address: p.physical_address,
-  contact_name: p.entity_type !== "natural_person" ? p.contact_name : undefined,
+  contact_first_name: p.entity_type !== "natural_person" ? p.contact_first_name : undefined,
+  contact_last_name: p.entity_type !== "natural_person" ? p.contact_last_name : undefined,
   contact_email: p.entity_type !== "natural_person" ? p.contact_email : undefined,
   contact_cell: p.entity_type !== "natural_person" ? p.contact_cell : undefined,
 });

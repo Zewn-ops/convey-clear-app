@@ -25,8 +25,9 @@ interface PartyInput {
   email?: string;
   cell?: string;
   physical_address?: string;
-  // contact person — business / trust parties (A1)
-  contact_name?: string;
+  // contact person — business / trust parties (A1); split first/surname (#6)
+  contact_first_name?: string;
+  contact_last_name?: string;
   contact_email?: string;
   contact_cell?: string;
 }
@@ -161,7 +162,8 @@ export async function POST(request: Request) {
         email: p.email?.trim().toLowerCase() || null,
         cell: p.cell?.trim() || null,
         physical_address: p.physical_address?.trim() || null,
-        contact_name: et !== "natural_person" ? p.contact_name?.trim() || null : null,
+        contact_first_name: et !== "natural_person" ? p.contact_first_name?.trim() || null : null,
+        contact_last_name: et !== "natural_person" ? p.contact_last_name?.trim() || null : null,
         contact_email: et !== "natural_person" ? p.contact_email?.trim().toLowerCase() || null : null,
         contact_cell: et !== "natural_person" ? p.contact_cell?.trim() || null : null,
       };

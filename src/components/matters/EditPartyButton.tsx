@@ -25,7 +25,8 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
     email: party.email ?? "",
     cell: party.cell ?? "",
     physical_address: party.physical_address ?? "",
-    contact_name: party.contact_name ?? "",
+    contact_first_name: party.contact_first_name ?? "",
+    contact_last_name: party.contact_last_name ?? "",
     contact_email: party.contact_email ?? "",
     contact_cell: party.contact_cell ?? "",
   });
@@ -99,7 +100,8 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
         <div className="rounded-lg border border-gray-100 bg-white p-3 space-y-3">
           <p className="text-xs font-medium text-gray-600">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Name" value={form.contact_name} onChange={(e) => set({ contact_name: e.target.value })} />
+            <Input label="First name" value={form.contact_first_name} onChange={(e) => set({ contact_first_name: e.target.value })} />
+            <Input label="Surname" value={form.contact_last_name} onChange={(e) => set({ contact_last_name: e.target.value })} />
             <Input label="ID number" value={form.id_number} onChange={(e) => set({ id_number: e.target.value })} />
             <Input label="Email" type="email" value={form.contact_email} onChange={(e) => set({ contact_email: e.target.value })} />
             <Input label="Cell" value={form.contact_cell} onChange={(e) => set({ contact_cell: e.target.value })} />

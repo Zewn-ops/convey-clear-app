@@ -1,5 +1,5 @@
 import Card from "@/components/ui/Card";
-import { composeFullName, type MatterParty } from "@/types";
+import { composeFullName, contactPersonName, type MatterParty } from "@/types";
 import { partyRoleOrder } from "@/lib/coo-docs";
 import CreatePartyAccount from "@/components/matters/CreatePartyAccount";
 import EditPartyButton from "@/components/matters/EditPartyButton";
@@ -55,11 +55,11 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                 <Row k="Cell" v={p.cell} />
                 <Row k="Address" v={p.physical_address} />
               </dl>
-              {isEntity && (p.contact_name || p.contact_email || p.contact_cell || p.id_number) && (
+              {isEntity && (contactPersonName(p) || p.contact_email || p.contact_cell || p.id_number) && (
                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm space-y-1.5">
                   <p className="text-xs font-medium text-gray-600">Contact person</p>
                   <dl className="space-y-1.5">
-                    <Row k="Name" v={p.contact_name} />
+                    <Row k="Name" v={contactPersonName(p) || null} />
                     <Row k="ID number" v={p.id_number} />
                     <Row k="Email" v={p.contact_email} />
                     <Row k="Cell" v={p.contact_cell} />

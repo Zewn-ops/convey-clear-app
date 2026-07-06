@@ -197,7 +197,10 @@ export interface MatterParty {
   email: string | null;
   cell: string | null;
   physical_address: string | null;
-  // Contact person for a business/trust party (A1).
+  // Contact person for a business/trust party (A1). Split into first/surname in
+  // migration 024 (#6); contact_name retained (deprecated) as a legacy fallback.
+  contact_first_name: string | null;
+  contact_last_name: string | null;
   contact_name: string | null;
   contact_email: string | null;
   contact_cell: string | null;
@@ -271,6 +274,17 @@ export interface BusinessPartner {
 // sync for backward-compat + business/trust display).
 export function composeFullName(first?: string | null, last?: string | null): string {
   return [first, last].map((s) => (s ?? "").trim()).filter(Boolean).join(" ");
+}
+
+// Contact-person display name for a business/trust party — prefers the split
+// first/surname columns (migration 024, #6), falling back to the legacy
+// contact_name for rows not yet backfilled.
+export function contactPersonName(p: {
+  contact_first_name?: string | null;
+  contact_last_name?: string | null;
+  contact_name?: string | null;
+}): string {
+  return composeFullName(p.contact_first_name, p.contact_last_name) || (p.contact_name ?? "").trim();
 }
 
 // A natural-person display name, preferring the split first/surname columns and
