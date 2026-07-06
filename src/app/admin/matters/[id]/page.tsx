@@ -39,6 +39,7 @@ import {
   type Pipeline,
 } from "@/lib/pipelines";
 import StorageUpload from "@/components/matters/StorageUpload";
+import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDownloadUrls } from "@/lib/storage";
 
@@ -691,6 +692,18 @@ export default async function AdminMatterDetailPage({
 
       {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
       <PartiesCard parties={parties} manage />
+
+      {/* In-place intake — service-aware required-document checklist + upload
+          (the primary capture method; renders null for non-COO/PRC services) */}
+      <InPlaceIntake
+        matterId={id}
+        serviceCode={svc?.code ?? null}
+        parties={parties}
+        documents={documents}
+        municipality={matter.municipality}
+        unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
+        canManage
+      />
 
       {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
       <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />

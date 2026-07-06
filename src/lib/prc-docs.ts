@@ -1,6 +1,7 @@
 // Property Rates Clearance (PRC) — sub-divisions + the RCF per-municipality
 // document matrix (Jukka 2026-06-16). The PRC service is code 'RCF'; within it
 // the partner picks a sub-division. Only RCF is built in-portal for now.
+import { COO_DOC_LABELS } from "./coo-docs";
 
 export interface PrcSubtype {
   code: "RCF" | "RCC" | "RCA";
@@ -49,4 +50,26 @@ export function prcRcfDocs(sellerEntityType?: string | null): PrcDocRule[] {
 // Whether COJ-style "Query Reference Number" applies to the referral form.
 export function prcNeedsQueryRef(municipality: string | null): boolean {
   return (municipality ?? "").toUpperCase() === "COJ";
+}
+
+// Server-safe labels for the PRC document types (the client-only DOC_META in
+// OnboardForm can't be imported into server components — see the coo-docs note).
+export const PRC_DOC_LABELS: Record<string, string> = {
+  id_certified: "Certified ID",
+  cipc_docs: "CIPC Documents",
+  id_certified_representative: "Representative's Certified ID",
+  letter_of_authority: "Letter of Authority",
+  id_certified_trustee: "Trustee's Certified ID",
+  proof_of_application: "Proof of Application",
+  proof_of_payment_figures: "Proof of Payment (Figures)",
+};
+
+// One label lookup across COO + PRC doc types, with a humanised fallback. Safe
+// in server components (no client-only imports).
+export function docLabel(docType: string): string {
+  return (
+    COO_DOC_LABELS[docType] ??
+    PRC_DOC_LABELS[docType] ??
+    docType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
 }
