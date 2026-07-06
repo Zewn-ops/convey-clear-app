@@ -58,12 +58,17 @@ export async function resolveOnboardingMatter(
   return link.matter_id as string;
 }
 
+// Why a token failed to validate — lets the /onboard page tailor the message +
+// recovery path (a genuinely expired link vs a flaky-network reload look very
+// different to a client). "ok" accompanies a successful validation.
+export type OnboardTokenReason = "missing" | "invalid" | "used" | "expired" | "no_matter" | "ok";
+
 // Full validation → TokenData for rendering the form.
 export async function validateOnboardingToken(
   admin: SupabaseClient,
   token: string
-): Promise<{ data: TokenData | null; error: string | null }> {
-  if (!token) return { data: null, error: "No onboarding link was provided." };
+): Promise<{ data: TokenData | null; error: string | null; reason: OnboardTokenReason }> {
+  if (!token) return { data: null, error: "No onboarding link was provided.", reason: "missing" };
 
   const { data: link } = await admin
     .from("onboarding_links")
@@ -71,10 +76,10 @@ export async function validateOnboardingToken(
     .eq("token", token)
     .maybeSingle();
 
-  if (!link) return { data: null, error: "This link is invalid." };
-  if (link.used_at) return { data: null, error: "This link has already been used." };
+  if (!link) return { data: null, error: "This link is invalid.", reason: "invalid" };
+  if (link.used_at) return { data: null, error: "This link has already been used.", reason: "used" };
   if (link.expires_at && new Date(link.expires_at) < new Date()) {
-    return { data: null, error: "This onboarding link has expired." };
+    return { data: null, error: "This onboarding link has expired.", reason: "expired" };
   }
 
   const { data: m } = await admin
@@ -85,7 +90,7 @@ export async function validateOnboardingToken(
     .eq("id", link.matter_id)
     .maybeSingle();
 
-  if (!m) return { data: null, error: "Matter not found for this link." };
+  if (!m) return { data: null, error: "Matter not found for this link.", reason: "no_matter" };
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const svc = (m as any).services ?? null;
@@ -142,5 +147,22 @@ export async function validateOnboardingToken(
   /* eslint-enable @typescript-eslint/no-explicit-any */
   if (parties.length > 0) data.parties = parties;
 
-  return { data, error: null };
+  return { data, error: null, reason: "ok" };
+}
+
+// Resolve the matter behind a token even when the link is used/expired (but not
+// for a genuinely invalid/absent token). Lets the /onboard error screen route a
+// "request a fresh link" to the right matter's staff. Returns null when the
+// token doesn't match any link row.
+export async function resolveMatterForFreshLink(
+  admin: SupabaseClient,
+  token: string
+): Promise<string | null> {
+  if (!token) return null;
+  const { data: link } = await admin
+    .from("onboarding_links")
+    .select("matter_id")
+    .eq("token", token)
+    .maybeSingle();
+  return (link?.matter_id as string | undefined) ?? null;
 }
