@@ -252,6 +252,11 @@ export interface MatterDocument {
 
 export type EnquiryStatus = "open" | "assigned" | "resolved" | "closed";
 
+// Who a matter enquiry is shared with (migration 027).
+//   partner = staff + the owning firm (the default, and every pre-027 row)
+//   shared  = staff + the owning firm + the matter's CLIENT
+export type EnquiryVisibility = "partner" | "shared";
+
 export interface Enquiry {
   id: string;
   business_partner_id: string | null;
@@ -260,6 +265,7 @@ export interface Enquiry {
   subject: string;
   message: string;
   status: EnquiryStatus;
+  visibility: EnquiryVisibility;
   assigned_to: string | null;
   created_at: string;
   updated_at: string;

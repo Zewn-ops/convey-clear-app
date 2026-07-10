@@ -17,6 +17,8 @@ import {
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
 import ClientDocUpload from "@/components/dashboard/ClientDocUpload";
+import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
+import { getMatterEnquiries } from "@/lib/enquiries";
 import { signedDocUrls } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -50,6 +52,10 @@ export default async function MatterDetailPage({
   // Signed, short-lived URLs so the client can view/download their own documents
   // (bucket-aware — a reused FICA-vault doc lives in the client-documents bucket).
   const signedUrls = documents.length > 0 ? await signedDocUrls(createAdminClient(), documents) : {};
+
+  // The shared enquiry thread (#3). RLS hands a client only the 'shared' threads
+  // on this matter — never the firm's own channel with ConveyClear.
+  const enquiryThreads = await getMatterEnquiries(supabase, id);
 
   const phases: MatterPhase[] = ["1", "2", "3", "4"];
   const isClient = session.profile?.role === "client";
@@ -107,6 +113,9 @@ export default async function MatterDetailPage({
           {matter.service_notes && <Fact label="Notes" value={matter.service_notes} />}
         </dl>
       </Card>
+
+      {/* Enquiries — the client's direct line to ConveyClear on this matter (#3). */}
+      <MatterEnquiries matterId={id} threads={enquiryThreads} audience="client" />
 
       {/* Upload (client only) */}
       {isClient && <ClientDocUpload matterId={matter.id} />}

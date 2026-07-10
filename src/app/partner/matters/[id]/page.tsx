@@ -7,6 +7,8 @@ import Badge from "@/components/ui/Badge";
 import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
+import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
+import { getMatterEnquiries } from "@/lib/enquiries";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
@@ -87,13 +89,9 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   }
   const activities = (actData as { id: string; body: string; activity_type: string; created_at: string }[] | null) ?? [];
 
-  // Enquiries linked to this matter (C2 — partners view them from the matter page).
-  const { data: enqData } = await supabase
-    .from("enquiries")
-    .select("id, subject, status, created_at")
-    .eq("matter_id", params.id)
-    .order("created_at", { ascending: false });
-  const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
+  // The shared enquiry thread on this matter (#3). RLS gives the firm its own
+  // threads plus every 'shared' one on a matter it can access.
+  const enquiryThreads = await getMatterEnquiries(supabase, params.id);
 
   const serviceCode = (matter as unknown as { services?: { code?: string } | null }).services?.code ?? null;
   const pipeline = getPipeline(serviceCode, matter.municipality, (matter as unknown as { service_subtype?: string | null }).service_subtype);
@@ -268,22 +266,8 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         )}
       </Card>
 
-      {/* Related enquiries (C2) */}
-      {relatedEnquiries.length > 0 && (
-        <Card>
-          <h2 className="font-semibold text-gray-900 mb-3">Enquiries ({relatedEnquiries.length})</h2>
-          <ul className="divide-y divide-gray-100">
-            {relatedEnquiries.map((e) => (
-              <li key={e.id} className="py-2">
-                <Link href={`/partner/enquiries/${e.id}`} className="flex items-center justify-between gap-3 text-sm hover:text-[#1B2E6B]">
-                  <span className="text-gray-800 truncate">{e.subject}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{e.status} · {formatDate(e.created_at)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      {/* Enquiries — the shared thread with ConveyClear and the client (#3). */}
+      <MatterEnquiries matterId={params.id} threads={enquiryThreads} audience="partner" />
     </div>
   );
 }

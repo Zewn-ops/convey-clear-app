@@ -27,6 +27,8 @@ import MatterPocsCard from "@/components/matters/MatterPocsCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import Celebrate from "@/components/matters/Celebrate";
+import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
+import { getMatterEnquiries } from "@/lib/enquiries";
 import { notifyMatterParties, notifyStaff } from "@/lib/notify";
 import {
   getPipeline,
@@ -366,13 +368,9 @@ export default async function AdminMatterDetailPage({
   const parties = (partiesData as MatterParty[] | null) ?? [];
   const partyById = new Map(parties.map((p) => [p.id, p]));
 
-  // Enquiries linked to this matter (C2 — view enquiries from the matter page).
-  const { data: enqData } = await supabase
-    .from("enquiries")
-    .select("id, subject, status, created_at")
-    .eq("matter_id", id)
-    .order("created_at", { ascending: false });
-  const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
+  // The shared enquiry thread on this matter (#3). RLS scopes it; staff see
+  // every thread including the firm-only ones.
+  const enquiryThreads = await getMatterEnquiries(supabase, id);
 
   // Property transfers this matter could be attached to (migration 026).
   const { data: transferOptData } = await supabase
@@ -723,22 +721,9 @@ export default async function AdminMatterDetailPage({
       {/* Celebration when the matter is won/closed (H2) */}
       <Celebrate active={matter.status === "won"} matterId={matter.id} />
 
-      {/* Related enquiries (C2) */}
-      {relatedEnquiries.length > 0 && (
-        <Card>
-          <h2 className="font-semibold text-gray-900 mb-3">Related enquiries ({relatedEnquiries.length})</h2>
-          <ul className="divide-y divide-gray-100">
-            {relatedEnquiries.map((e) => (
-              <li key={e.id} className="py-2">
-                <Link href={`/admin/enquiries/${e.id}`} className="flex items-center justify-between gap-3 text-sm hover:text-[#1B2E6B]">
-                  <span className="text-gray-800 truncate">{e.subject}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{e.status} · {formatDate(e.created_at)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      {/* Enquiries — the shared client/partner/CC thread (A&A #3). Read + post
+          in place; the activity feed below stays internal. */}
+      <MatterEnquiries matterId={id} threads={enquiryThreads} audience="staff" />
 
       {/* Client info */}
       {matter.clients && (
