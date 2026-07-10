@@ -287,13 +287,33 @@ export const ENQUIRY_STATUS_LABELS: Record<EnquiryStatus, string> = {
   closed: "Closed",
 };
 
+export type PartnerType = "attorney" | "conveyancer" | "law_firm" | "estate_agent" | "other";
+
+export const PARTNER_TYPES: PartnerType[] = [
+  "attorney",
+  "conveyancer",
+  "law_firm",
+  "estate_agent",
+  "other",
+];
+
+export const PARTNER_TYPE_LABELS: Record<PartnerType, string> = {
+  attorney: "Attorney",
+  conveyancer: "Conveyancer",
+  law_firm: "Law firm",
+  estate_agent: "Estate agent",
+  other: "Other",
+};
+
 export interface BusinessPartner {
   id: string;
   name: string;
   abbreviation: string | null;
-  partner_type: "attorney" | "conveyancer" | "law_firm" | "estate_agent" | "other";
+  partner_type: PartnerType;
   primary_email: string | null;
   primary_cell: string | null;
+  physical_address: string | null;
+  notes: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;

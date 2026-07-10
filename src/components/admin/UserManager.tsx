@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Card from "@/components/ui/Card";
@@ -316,9 +317,14 @@ export default function UserManager({
             <Building2 className="h-5 w-5 text-[#1B2E6B]" />
             <h2 className="font-semibold text-gray-900">Partner firms</h2>
           </div>
-          <Button size="sm" variant="ghost" onClick={() => setShowPartnerForm((s) => !s)}>
-            {showPartnerForm ? "Cancel" : "+ Add firm"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/firms" className="text-xs font-medium text-[#E8521A] hover:underline">
+              Manage firms
+            </Link>
+            <Button size="sm" variant="ghost" onClick={() => setShowPartnerForm((s) => !s)}>
+              {showPartnerForm ? "Cancel" : "+ Add firm"}
+            </Button>
+          </div>
         </div>
 
         {showPartnerForm && (

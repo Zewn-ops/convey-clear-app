@@ -14,6 +14,7 @@ import {
   MessageSquare,
   UserCog,
   Landmark,
+  Scale,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const baseNav = [
   { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
   { href: "/admin/property-transfers", label: "Property Transfers", icon: Building2, exact: false },
   { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
+  { href: "/admin/firms", label: "Partner Firms", icon: Scale, exact: false },
   { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
 ];
