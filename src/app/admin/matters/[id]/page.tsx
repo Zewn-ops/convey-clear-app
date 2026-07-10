@@ -22,6 +22,7 @@ import {
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
+import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
 import MatterPocsCard from "@/components/matters/MatterPocsCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
@@ -330,7 +331,7 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, created_at, updated_at, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), business_partners(name, abbreviation), services(id, code, name, config)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, transfer_id, created_at, updated_at, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), business_partners(name, abbreviation), services(id, code, name, config), property_transfers(id, reference, status)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -352,7 +353,12 @@ export default async function AdminMatterDetailPage({
       .order("role", { ascending: true }),
   ]);
 
-  const matter = matterData as (Matter & { services?: { id: string; code: string; name: string; config: any } | null }) | null;
+  const matter = matterData as
+    | (Matter & {
+        services?: { id: string; code: string; name: string; config: any } | null;
+        property_transfers?: LinkedTransfer | null;
+      })
+    | null;
   if (!matter) notFound();
 
   const documents = (docsData as MatterDocument[] | null) ?? [];
@@ -367,6 +373,19 @@ export default async function AdminMatterDetailPage({
     .eq("matter_id", id)
     .order("created_at", { ascending: false });
   const relatedEnquiries = (enqData ?? []) as { id: string; subject: string; status: string; created_at: string }[];
+
+  // Property transfers this matter could be attached to (migration 026).
+  const { data: transferOptData } = await supabase
+    .from("property_transfers")
+    .select("id, reference, property_description")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const transferOptions = (
+    (transferOptData as { id: string; reference: string; property_description: string | null }[] | null) ?? []
+  ).map((t) => ({
+    id: t.id,
+    label: t.property_description ? `${t.reference} — ${t.property_description}` : t.reference,
+  }));
 
   // Council POCs (B5 / Theme G) — POCs linked to this matter + the full
   // directory for the assign dropdown. Staff-only (admin portal).
@@ -508,6 +527,15 @@ export default async function AdminMatterDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Parent property transfer — the transaction this matter belongs to. */}
+      <MatterTransferCard
+        matterId={id}
+        transfer={matter.property_transfers ?? null}
+        options={transferOptions}
+        manage
+        basePath="/admin/property-transfers"
+      />
 
       {/* Pipeline (config-driven) */}
       {pipeline ? (

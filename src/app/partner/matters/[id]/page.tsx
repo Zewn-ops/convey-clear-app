@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
+import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
@@ -29,12 +30,12 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code)")
+    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
     .eq("id", params.id)
     .maybeSingle();
 
   if (!matterData) notFound();
-  const matter = matterData as unknown as Matter;
+  const matter = matterData as unknown as Matter & { property_transfers?: LinkedTransfer | null };
 
   // Opening a matter clears its unread notification dot for this user.
   const meId = (await getSessionProfile())?.profile?.id ?? null;
@@ -135,6 +136,13 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
           />
         )}
       </div>
+
+      {/* Parent property transfer, when this matter belongs to one (read-only). */}
+      <MatterTransferCard
+        matterId={params.id}
+        transfer={matter.property_transfers ?? null}
+        basePath="/partner/transfers"
+      />
 
       {/* Pipeline progress (client-facing view) */}
       {pipeline && (

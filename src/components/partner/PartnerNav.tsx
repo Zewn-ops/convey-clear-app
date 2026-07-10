@@ -9,6 +9,7 @@ import { useNotifyDots } from "@/lib/use-notify-dots";
 import {
   LayoutDashboard,
   Briefcase,
+  Building2,
   Users,
   PlusCircle,
   MessageSquare,
@@ -23,6 +24,7 @@ import toast from "react-hot-toast";
 const navItems = [
   { href: "/partner", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/partner/matters", label: "Matters", icon: Briefcase },
+  { href: "/partner/transfers", label: "Property Transfers", icon: Building2 },
   { href: "/partner/clients", label: "Clients", icon: Users },
   { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },
   { href: "/partner/refer", label: "Refer a matter", icon: PlusCircle },

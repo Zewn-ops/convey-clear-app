@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Users,
   Briefcase,
+  Building2,
   MessageSquare,
   UserCog,
   Landmark,
@@ -21,6 +22,7 @@ import toast from "react-hot-toast";
 const baseNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
+  { href: "/admin/property-transfers", label: "Property Transfers", icon: Building2, exact: false },
   { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
   { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },

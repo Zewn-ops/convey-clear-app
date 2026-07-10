@@ -159,6 +159,8 @@ export interface Matter {
   business_partner_id: string | null;
   service_id: string | null;
   property_id: string | null;
+  // Optional parent property transfer (migration 026). NULL = standalone matter.
+  transfer_id: string | null;
   title: string | null;
   service_notes: string | null;
   current_stage: string | null;
@@ -287,6 +289,36 @@ export interface BusinessPartner {
   primary_email: string | null;
   primary_cell: string | null;
   active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- Property Transfers (migration 026) ------------------------------------
+// One property transaction, grouping the several matters it spawns (PRC → COO →
+// refund → …). Firm-scoped: business_partner_id is the owning attorney firm and
+// the partner RLS predicate. Not visible to clients (it spans both sides of the
+// deal, so a client would see their counterparty).
+export type TransferStatus = "open" | "registered" | "cancelled" | "on_hold";
+
+export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
+  open: "Open",
+  registered: "Registered",
+  cancelled: "Cancelled",
+  on_hold: "On Hold",
+};
+
+export interface PropertyTransfer {
+  id: string;
+  reference: string;
+  property_description: string | null;
+  municipality: string | null;
+  status: TransferStatus;
+  business_partner_id: string | null;
+  estate_agent_partner_id: string | null;
+  seller_client_id: string | null;
+  buyer_client_id: string | null;
+  notes: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
