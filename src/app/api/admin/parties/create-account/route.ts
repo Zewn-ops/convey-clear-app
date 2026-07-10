@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { STAFF_ROLES, type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { sendEmail } from "@/lib/email";
+import { credentialsEmail } from "@/lib/email-templates";
 
 export const runtime = "nodejs";
 
@@ -131,5 +133,13 @@ export async function POST(request: Request) {
   // Link the party → client so the client's reusable vault docs resolve here.
   if (clientId) await admin.from("matter_parties").update({ client_id: clientId }).eq("id", partyId);
 
-  return NextResponse.json({ ok: true, mode: "login", client_id: clientId, email, temp_password: tempPassword, name });
+  // Auto client-login: deliver the credentials by email once the channel exists.
+  // Until then emailed=false and the temp password is still returned for staff to
+  // relay by hand — which is why the account is NOT created silently. Creating a
+  // login whose password can neither be emailed nor read would orphan it.
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://convey-clear-app.vercel.app";
+  const { subject, html } = credentialsEmail({ loginUrl: `${base}/auth/login`, email, tempPassword });
+  const emailed = await sendEmail({ to: email, subject, html });
+
+  return NextResponse.json({ ok: true, mode: "login", client_id: clientId, email, temp_password: tempPassword, name, emailed });
 }

@@ -10,7 +10,7 @@ import { UserPlus, Copy, Check } from "lucide-react";
 export default function CreatePartyAccount({ partyId, partyName }: { partyId: string; partyName: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState<"contact" | "login" | null>(null);
-  const [cred, setCred] = useState<{ email: string; password: string } | null>(null);
+  const [cred, setCred] = useState<{ email: string; password: string; emailed: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function create(mode: "contact" | "login") {
@@ -24,8 +24,8 @@ export default function CreatePartyAccount({ partyId, partyName }: { partyId: st
       const json = await res.json();
       if (!res.ok) return toast.error(json.message ?? "Could not create the account");
       if (mode === "login") {
-        setCred({ email: json.email, password: json.temp_password });
-        toast.success("Login created");
+        setCred({ email: json.email, password: json.temp_password, emailed: Boolean(json.emailed) });
+        toast.success(json.emailed ? "Login created and emailed" : "Login created");
       } else {
         toast.success(`Contact created for ${partyName}`);
       }
@@ -38,7 +38,11 @@ export default function CreatePartyAccount({ partyId, partyName }: { partyId: st
   if (cred) {
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm space-y-1.5">
-        <p className="text-xs font-semibold text-green-800">Login created — hand these to {partyName}</p>
+        <p className="text-xs font-semibold text-green-800">
+          {cred.emailed
+            ? `Login created — credentials emailed to ${partyName}`
+            : `Login created — hand these to ${partyName}`}
+        </p>
         <p className="text-gray-700"><span className="text-gray-400">Email:</span> {cred.email}</p>
         <div className="flex items-center gap-2">
           <p className="text-gray-700"><span className="text-gray-400">Temp password:</span> <code className="font-mono">{cred.password}</code></p>

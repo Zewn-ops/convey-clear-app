@@ -1,4 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { emailEnabled, sendEmail, unsubscribeUrl } from "@/lib/email";
+import { phaseChangeEmail } from "@/lib/email-templates";
 import { STAFF_ROLES } from "@/types";
 
 // In-portal notifications (Theme I). Producers call these from API routes /
@@ -9,6 +11,11 @@ import { STAFF_ROLES } from "@/types";
 // CONTRACT: these are best-effort and MUST NEVER THROW — a notification failure
 // (e.g. a missing service-role key) must never break the core action that
 // triggered it (phase change, referral, upload …). Every path is wrapped.
+//
+// EMAIL (#5): phase changes ALSO go out by email, but only when the Resend env
+// vars are set. Until then emailEnabled() is false and behaviour is identical to
+// before — in-portal only. Stage changes are deliberately never emailed: they
+// fire many times per matter and would train recipients to ignore the mail.
 
 export interface NotifyPayload {
   type: string;
@@ -46,8 +53,51 @@ export async function notifyUsers(userIds: (string | null | undefined)[], p: Not
         enquiry_id: p.enquiry_id ?? null,
       }))
     );
+
+    // #5 — mirror PHASE changes to email. `title` is already "<matter>: <event>".
+    if (p.type === "phase" && p.matter_id) await emailPhaseChange(ids, p.matter_id, p.title);
   } catch (e) {
     console.error("[notify] notifyUsers failed:", e);
+  }
+}
+
+// Email the phase change to each recipient who still wants matter email. Inert
+// until Resend is configured. Best-effort: one bad address never blocks another,
+// and nothing here can throw into the caller.
+async function emailPhaseChange(userIds: string[], matterId: string, phaseTitle: string): Promise<void> {
+  if (!emailEnabled()) return;
+  try {
+    const admin = createAdminClient();
+
+    const [{ data: recipients }, { data: matter }] = await Promise.all([
+      admin
+        .from("users")
+        .select("id, email, notify_email, unsubscribe_token")
+        .in("id", userIds)
+        .eq("notify_email", true),
+      admin.from("matters").select("title").eq("id", matterId).maybeSingle(),
+    ]);
+
+    const matterTitle = (matter as { title: string | null } | null)?.title ?? "Your matter";
+    const base = process.env.NEXT_PUBLIC_APP_URL || "https://convey-clear-app.vercel.app";
+    const matterUrl = `${base}/dashboard/matters/${matterId}`;
+
+    await Promise.all(
+      ((recipients as { email: string | null; unsubscribe_token: string }[] | null) ?? [])
+        .filter((u) => u.email)
+        .map((u) => {
+          const unsub = unsubscribeUrl(u.unsubscribe_token);
+          const { subject, html } = phaseChangeEmail({
+            matterTitle,
+            phaseLabel: phaseTitle,
+            matterUrl,
+            unsubscribeUrl: unsub,
+          });
+          return sendEmail({ to: u.email as string, subject, html, unsubscribeUrl: unsub });
+        })
+    );
+  } catch (e) {
+    console.error("[notify] emailPhaseChange failed:", e);
   }
 }
 

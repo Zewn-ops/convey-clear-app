@@ -23,12 +23,18 @@ export default async function AccountPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: me } = user
-    ? await supabase.from("users").select("phone, notify_sound, notify_enquiries").eq("auth_user_id", user.id).maybeSingle()
+    ? await supabase.from("users").select("phone, notify_sound, notify_enquiries, notify_email").eq("auth_user_id", user.id).maybeSingle()
     : { data: null };
-  const meRow = me as { phone: string | null; notify_sound: boolean | null; notify_enquiries: boolean | null } | null;
+  const meRow = me as {
+    phone: string | null;
+    notify_sound: boolean | null;
+    notify_enquiries: boolean | null;
+    notify_email: boolean | null;
+  } | null;
   const phone = meRow?.phone ?? "";
   const notifySound = meRow?.notify_sound !== false;
   const notifyEnquiries = meRow?.notify_enquiries !== false;
+  const notifyEmail = meRow?.notify_email !== false;
 
   async function savePhone(formData: FormData) {
     "use server";
@@ -51,6 +57,7 @@ export default async function AccountPage() {
       .update({
         notify_sound: formData.get("notify_sound") === "on",
         notify_enquiries: formData.get("notify_enquiries") === "on",
+        notify_email: formData.get("notify_email") === "on",
       })
       .eq("auth_user_id", user.id);
     revalidatePath("/account");
@@ -96,6 +103,13 @@ export default async function AccountPage() {
             <label className="flex items-center gap-3 text-sm text-gray-700">
               <input type="checkbox" name="notify_sound" defaultChecked={notifySound} className="h-4 w-4 accent-[#1B2E6B]" />
               Play a sound for new notifications
+            </label>
+            <label className="flex items-start gap-3 text-sm text-gray-700">
+              <input type="checkbox" name="notify_email" defaultChecked={notifyEmail} className="h-4 w-4 mt-0.5 accent-[#1B2E6B]" />
+              <span>
+                Email me when a matter changes phase
+                <span className="block text-xs text-gray-400">Phase changes only — not every stage update.</span>
+              </span>
             </label>
             {isStaffRole(profile?.role) && (
               <label className="flex items-center gap-3 text-sm text-gray-700">
