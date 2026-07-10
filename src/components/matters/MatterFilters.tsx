@@ -42,7 +42,7 @@ export default function MatterFilters() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search matters…"
+          placeholder="Search title, ref, firm…"
           className="w-full rounded-lg border border-gray-300 pl-8 pr-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
         />
       </form>

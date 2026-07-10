@@ -56,7 +56,12 @@ export function applyMatterFilters(query: any, f: MatterFilters): any {
   if (f.status === "active") q = q.in("status", ACTIVE_STATUSES);
   if (f.scope === "month") q = q.gte("created_at", startOfMonthISO());
   const s = sanitize(f.q);
-  if (s) q = q.or(`title.ilike.%${s}%,municipality.ilike.%${s}%,partner_file_ref.ilike.%${s}%`);
+  // firm_name / firm_abbrev are a trigger-maintained denorm cache (migration
+  // 029) — the firm lives in an embedded table PostgREST can't .or() across.
+  if (s)
+    q = q.or(
+      `title.ilike.%${s}%,municipality.ilike.%${s}%,partner_file_ref.ilike.%${s}%,firm_name.ilike.%${s}%,firm_abbrev.ilike.%${s}%`
+    );
   const from = (f.page - 1) * MATTER_PAGE_SIZE;
   return q.order("created_at", { ascending: false }).range(from, from + MATTER_PAGE_SIZE - 1);
 }
