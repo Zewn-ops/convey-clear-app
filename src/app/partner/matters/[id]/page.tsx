@@ -178,8 +178,10 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <PartiesCard parties={parties} />
 
       {/* In-place intake — service-aware required-document checklist + upload.
-          Partners can upload on the client's behalf; the "not available" toggle
-          is staff-only (canManage=false). Renders null for non-COO/PRC. */}
+          Partners upload on the client's behalf and may mark an optional document
+          "not available"; without that, partner-side intake progress could never
+          reach complete. toggleDocUnavailable authorises the firm itself.
+          Renders null for non-COO/PRC. */}
       <InPlaceIntake
         matterId={matter.id}
         serviceCode={serviceCode}
@@ -187,7 +189,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         documents={docs}
         municipality={matter.municipality}
         unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
-        canManage={false}
+        canManage
         vaultByClient={vaultByClient}
         matterClientId={matterClientId}
       />
