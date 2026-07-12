@@ -10,6 +10,9 @@ const STAFF_ROLES = [
 ];
 const ADMIN_ROLES = ["super_admin", "admin"];
 
+// Forced staff 2FA — off until the security gate. See the guard below.
+const FORCE_STAFF_MFA = process.env.FORCE_STAFF_MFA === "true";
+
 function homeForRole(role?: string | null): string {
   if (role && STAFF_ROLES.includes(role)) return "/admin";
   if (role === "business_partner") return "/partner";
@@ -93,10 +96,9 @@ export async function middleware(request: NextRequest) {
 
   // Still on the temporary password a staff member generated, saw on screen and
   // emailed (migration 031) → hold here until they set their own. Runs BEFORE the
-  // area guards, so it can't be stepped around by going somewhere else.
-  // /auth/mfa is left reachable: an account with a factor must clear step-up
-  // first, or it has no usable session to change anything with.
-  if (mustChangePassword && isProtected && !pathname.startsWith("/auth/mfa")) {
+  // area guards, so it can't be stepped around by going somewhere else. Only
+  // protected areas are gated, so /auth/* (login, MFA, this page) stays reachable.
+  if (mustChangePassword && isProtected) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/auth/change-password";
     return NextResponse.redirect(redirectUrl);
@@ -116,13 +118,36 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // MFA is OPTIONAL for the demo (opt-in per user via /account). Forced staff
-  // enrolment/step-up is disabled here so it can't break the Adams & Adams demo.
-  // Opt-in step-up still works: LoginForm + the OAuth callback send a user WITH a
-  // verified factor to /auth/mfa; users without a factor pass straight through.
-  // TODO (post-demo): re-enable forced MFA for staff_services + staff_ops by
-  // restoring the AAL guard below (sent staff w/o factor → /auth/mfa-setup, and
-  // AAL1 staff → /auth/mfa). Keep TOTP enabled at project level so it stays usable.
+  // Two-factor for staff. Ships dark: OFF unless FORCE_STAFF_MFA=true, because
+  // switching it on mid-QA would send every staff tester to enrolment before they
+  // could get at what they were testing. Zewn flips it in Vercel for the security
+  // gate (roadmap §8 "MFA on"); until then behaviour is unchanged — opt-in per
+  // user via /account, and LoginForm + the OAuth callback still step up anyone who
+  // HAS a verified factor.
+  //
+  // Restored from f42978d, which the demo disabled. A staff user with no verified
+  // factor goes to enrol; one who hasn't stepped up this session goes to the
+  // challenge. Clients/partners are exempt. /auth/mfa + /auth/mfa-setup are not
+  // protected paths, so they stay reachable and there is no redirect loop. If AAL
+  // can't be read we do NOT force — better than locking staff out.
+  //
+  // Runs after the temp-password gate above, so a new staff account sets its own
+  // password first and only then enrols.
+  if (FORCE_STAFF_MFA && isProtected && role && STAFF_ROLES.includes(role)) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal) {
+      if (aal.nextLevel !== "aal2") {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/auth/mfa-setup";
+        return NextResponse.redirect(redirectUrl);
+      }
+      if (aal.currentLevel !== "aal2") {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/auth/mfa";
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+  }
 
   // /admin → staff only (incl. super_admin). Non-staff bounced to their home.
   if (pathname.startsWith("/admin")) {

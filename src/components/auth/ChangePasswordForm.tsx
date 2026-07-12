@@ -42,8 +42,9 @@ export default function ChangePasswordForm({ forced = false }: { forced?: boolea
     setConfirm("");
 
     if (forced) {
-      // The gate is now clear; the middleware routes them to their own home.
-      router.replace("/dashboard");
+      // The gate is clear — go to the portal this role actually belongs in
+      // (the route resolves it; /dashboard is the client one).
+      router.replace(json.home || "/dashboard");
     }
     router.refresh();
   };

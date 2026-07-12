@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { homePathForRole } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -64,11 +65,16 @@ export async function POST(request: Request) {
   if (pwErr) return NextResponse.json({ message: pwErr.message }, { status: 400 });
 
   // Only now — the password really did change.
-  const { error: flagErr } = await admin
+  const { data: profile, error: flagErr } = await admin
     .from("users")
     .update({ must_change_password: false, updated_at: new Date().toISOString() })
-    .eq("auth_user_id", user.id);
+    .eq("auth_user_id", user.id)
+    .select("role")
+    .maybeSingle();
   if (flagErr) return NextResponse.json({ message: flagErr.message }, { status: 400 });
 
-  return NextResponse.json({ ok: true });
+  // Tell the caller where they actually live — /dashboard is the CLIENT portal,
+  // so a staff member sent there would land in the wrong one (middleware guards
+  // /admin and /partner, but lets anyone into /dashboard).
+  return NextResponse.json({ ok: true, home: homePathForRole(profile?.role ?? null) });
 }
