@@ -341,6 +341,9 @@ export default async function AdminMatterDetailPage({
       .from("documents")
       .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at")
       .eq("matter_id", id)
+      // Superseded = replaced by a newer upload in the same slot (migration 030).
+      // Kept in the table for audit, never shown as a matter document.
+      .neq("document_status", "superseded")
       .order("created_at", { ascending: false }),
     supabase
       .from("matter_activities")

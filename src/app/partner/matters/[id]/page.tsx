@@ -61,7 +61,8 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
     | null;
 
   const [{ data: docsData }, { data: actData }, { data: partiesData }] = await Promise.all([
-    supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id, uploaded_by").eq("matter_id", params.id),
+    // .neq: hide documents replaced by a newer upload in the same slot (migration 030).
+    supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id, uploaded_by").eq("matter_id", params.id).neq("document_status", "superseded"),
     // Comment-type ('post') activities are INTERNAL ONLY — partners (and clients)
     // see only lifecycle events, never staff notes. (Jukka, 2026-06-16.)
     supabase.from("matter_activities").select("id, body, activity_type, created_at").eq("matter_id", params.id).in("activity_type", ["status_change", "document_upload", "phase_transition", "poa_signed"]).order("created_at", { ascending: false }).limit(20),

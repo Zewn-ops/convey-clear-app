@@ -47,6 +47,8 @@ export default async function MatterDetailPage({
     .from("documents")
     .select("id, matter_id, document_type, document_status, file_name, verified, created_at, storage_bucket, storage_path, drive_file_id")
     .eq("matter_id", id)
+    // Hide documents replaced by a newer upload in the same slot (migration 030).
+    .neq("document_status", "superseded")
     .order("created_at", { ascending: false });
   const documents = (docsData as MatterDocument[] | null) ?? [];
   // Signed, short-lived URLs so the client can view/download their own documents

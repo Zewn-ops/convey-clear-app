@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { supersedeSlot } from "@/lib/documents";
 
 export const runtime = "nodejs";
 
@@ -57,12 +58,22 @@ export async function POST(request: Request) {
   const uploadedBy =
     me?.role === "business_partner" ? "attorney" : me?.role === "client" ? "client" : "staff";
 
+  // A DIFFERENT document may already occupy this slot (the check above only
+  // catches re-attaching the SAME vault doc). Reusing supersedes it.
+  const documentType = cdoc.document_type || "other";
+  let replaced: string[];
+  try {
+    replaced = await supersedeSlot(admin, { matterId: matter_id, matterPartyId, documentType });
+  } catch (e) {
+    return NextResponse.json({ message: (e as Error).message }, { status: 400 });
+  }
+
   const { data: doc, error } = await admin
     .from("documents")
     .insert({
       matter_id,
       matter_party_id: matterPartyId,
-      document_type: cdoc.document_type || "other",
+      document_type: documentType,
       document_status: "provided",
       storage_bucket: cdoc.storage_bucket,
       storage_path: cdoc.storage_path,
@@ -76,12 +87,15 @@ export async function POST(request: Request) {
     .single();
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
+  const label = cdoc.file_name || documentType || "file";
   await admin.from("matter_activities").insert({
     matter_id,
     author_id: me?.id ?? null,
     activity_type: "document_upload",
-    body: `Reused client document: ${cdoc.file_name || cdoc.document_type || "file"}`,
+    body: replaced.length
+      ? `Reused client document (replaced the previous one): ${label}`
+      : `Reused client document: ${label}`,
   });
 
-  return NextResponse.json({ ok: true, document_id: doc.id });
+  return NextResponse.json({ ok: true, document_id: doc.id, replaced: replaced.length });
 }

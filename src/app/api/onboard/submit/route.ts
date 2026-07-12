@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
 import { notifyStaff } from "@/lib/notify";
+import { dedupeSlotBatch, supersedeSlot } from "@/lib/documents";
 
 export const runtime = "nodejs";
 
@@ -178,7 +179,12 @@ export async function POST(request: Request) {
     (d) => d.storage_path && d.storage_path.startsWith(`${matterId}/`)
   );
   if (docs.length) {
-    const { error: docErr } = await admin.from("documents").insert(
+    // One document per (party, type) slot — migration 030. Two guards are needed:
+    // in-batch, because the unique index rejects the WHOLE insert on the first
+    // collision (a client attaching two files to one slot would lose the entire
+    // submission to a raw 23505); and against rows already on the matter, since
+    // a re-issued onboarding link means this form can be submitted twice.
+    const rows = dedupeSlotBatch(
       docs.map((d) => ({
         matter_id: matterId,
         document_type: d.document_type || "other",
@@ -192,6 +198,20 @@ export async function POST(request: Request) {
         uploaded_by: "client",
       }))
     );
+
+    try {
+      for (const r of rows) {
+        await supersedeSlot(admin, {
+          matterId,
+          matterPartyId: r.matter_party_id,
+          documentType: r.document_type,
+        });
+      }
+    } catch (e) {
+      return NextResponse.json({ message: `Could not record documents: ${(e as Error).message}` }, { status: 400 });
+    }
+
+    const { error: docErr } = await admin.from("documents").insert(rows);
     if (docErr) {
       return NextResponse.json({ message: `Could not record documents: ${docErr.message}` }, { status: 400 });
     }
