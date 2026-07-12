@@ -168,6 +168,10 @@ export async function POST(request: Request) {
     client_id: role === "client" ? clientId : null,
     business_partner_id: role === "business_partner" ? body.business_partner_id ?? null : null,
     active: true,
+    // This account's first password was chosen (or generated) by a staff member,
+    // who saw it on screen — hold the user at /auth/change-password until they
+    // replace it (migration 031).
+    must_change_password: true,
     updated_at: new Date().toISOString(),
   };
   const { error: updErr } = await admin
@@ -287,6 +291,9 @@ export async function PATCH(request: Request) {
     const { error: pwErr } = await admin.auth.admin.updateUserById(target.auth_user_id, { password: newPw });
     if (pwErr) return NextResponse.json({ message: pwErr.message }, { status: 400 });
     if (body.generate_password) tempPassword = newPw; // only echo generated ones
+    // Staff set this password, so staff knows it — generated or typed in. The
+    // user is held at /auth/change-password until they replace it (031).
+    patch.must_change_password = true;
   }
 
   const { error } = await admin.from("users").update(patch).eq("id", body.user_id);

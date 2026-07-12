@@ -48,7 +48,8 @@ export async function middleware(request: NextRequest) {
   const isProtected =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/partner");
+    pathname.startsWith("/partner") ||
+    pathname.startsWith("/account");
 
   // Unauthenticated → bounce off any protected area to login.
   if (!user && isProtected) {
@@ -59,22 +60,57 @@ export async function middleware(request: NextRequest) {
 
   if (!user) return supabaseResponse;
 
-  // Resolve role once (only when it matters — auth pages or area guards).
+  // Resolve the profile once (only when it matters — auth pages or area guards).
   const needsRole =
     isProtected || pathname.startsWith("/auth");
   let role: string | null = null;
+  let mustChangePassword = false;
   if (needsRole) {
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from("users")
-      .select("role")
+      .select("role, must_change_password")
       .eq("auth_user_id", user.id)
       .maybeSingle();
-    role = profile?.role ?? null;
+
+    if (error) {
+      // must_change_password only exists once migration 031 is applied. Without
+      // this fallback, deploying ahead of the migration would 400 the select,
+      // leave role null, and bounce EVERY staff user to /dashboard — i.e. break
+      // sign-in for the whole app. Degrade to role-only instead.
+      const { data: roleOnly } = await supabase
+        .from("users")
+        .select("role")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      role = roleOnly?.role ?? null;
+    } else {
+      role = profile?.role ?? null;
+      mustChangePassword = Boolean(profile?.must_change_password);
+    }
+  }
+
+  const isChangePassword = pathname.startsWith("/auth/change-password");
+
+  // Still on the temporary password a staff member generated, saw on screen and
+  // emailed (migration 031) → hold here until they set their own. Runs BEFORE the
+  // area guards, so it can't be stepped around by going somewhere else.
+  // /auth/mfa is left reachable: an account with a factor must clear step-up
+  // first, or it has no usable session to change anything with.
+  if (mustChangePassword && isProtected && !pathname.startsWith("/auth/mfa")) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/auth/change-password";
+    return NextResponse.redirect(redirectUrl);
   }
 
   // Authenticated user on an auth page → send to their home. EXCEPT the MFA
-  // step-up challenge, which an authenticated (AAL1) user must be able to reach.
-  if (pathname.startsWith("/auth") && !pathname.startsWith("/auth/mfa")) {
+  // step-up challenge, which an authenticated (AAL1) user must be able to reach,
+  // and the forced change-password gate while it actually applies (without this
+  // exception the rule below would bounce a held user straight back out of it).
+  if (
+    pathname.startsWith("/auth") &&
+    !pathname.startsWith("/auth/mfa") &&
+    !(isChangePassword && mustChangePassword)
+  ) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = homeForRole(role);
     return NextResponse.redirect(redirectUrl);

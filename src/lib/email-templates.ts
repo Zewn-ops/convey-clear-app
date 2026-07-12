@@ -79,7 +79,7 @@ export function credentialsEmail(args: {
        </table>
        ${button(args.loginUrl, "Sign in")}
        <p style="margin:0;padding:10px 14px;background:#fff8f4;border:1px solid #ffd9c6;border-radius:6px;color:#8a4b28;font-size:13px;">
-         Please change this password immediately after signing in. ConveyClear staff will never ask you for it.
+         This password is temporary — you will be asked to choose your own the first time you sign in. ConveyClear staff will never ask you for your password.
        </p>`,
       // No unsubscribe: this is a transactional account email, not marketing.
       `ConveyClear · Johannesburg, South Africa<br/>

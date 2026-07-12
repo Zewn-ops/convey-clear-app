@@ -128,6 +128,13 @@ export async function POST(request: Request) {
     if (profileRow) await admin.from("users").update({ client_id: clientId }).eq("id", profileRow.id);
   }
 
+  // The temp password is generated here, shown to staff, and emailed in plaintext
+  // — so the account is held at /auth/change-password until the client sets their
+  // own (migration 031).
+  if (profileRow) {
+    await admin.from("users").update({ must_change_password: true }).eq("id", profileRow.id);
+  }
+
   // Let the new login see THIS matter (RLS can_access_matter checks subscribers).
   await admin.from("matter_subscribers").insert({ matter_id: party.matter_id, user_id: profileRow?.id }).select();
   // Link the party → client so the client's reusable vault docs resolve here.

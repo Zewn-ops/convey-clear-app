@@ -54,6 +54,7 @@ export default function CreatePartyAccount({ partyId, partyName }: { partyId: st
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
         </div>
+        <p className="text-xs text-gray-500 pt-1">They will be asked to choose their own password when they first sign in.</p>
         <button onClick={() => setCred(null)} className="text-xs text-green-700 hover:underline pt-1">Dismiss</button>
       </div>
     );
