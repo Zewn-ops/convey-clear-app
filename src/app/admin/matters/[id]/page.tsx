@@ -47,7 +47,7 @@ import {
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
-import { toDirectors, type ConsentEvent } from "@/lib/fica";
+import { buildFicaSubjects } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 
@@ -343,7 +343,7 @@ export default async function AdminMatterDetailPage({
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at")
+      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at, client_document_id, transfer_document_id")
       .eq("matter_id", id)
       // Superseded = replaced by a newer upload in the same slot (migration 030).
       // Kept in the table for audit, never shown as a matter document.
@@ -443,23 +443,10 @@ export default async function AdminMatterDetailPage({
     : { data: null };
   const transferDocs = (transferDocData as TransferDocument[] | null) ?? [];
 
-  // In-place FICA (migration 033): the client details + consent that only the
-  // /onboard link used to be able to collect.
-  const [{ data: ficaClient }, { data: ficaConsents }, { data: ficaDirectors }] = matterClientId
-    ? await Promise.all([
-        supabase.from("clients").select("*").eq("id", matterClientId).maybeSingle(),
-        supabase
-          .from("consent_events")
-          .select("id, consent_type, granted, source, captured_by, capture_method, note, created_at")
-          .eq("client_id", matterClientId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("contacts")
-          .select("name, email, cell, work_number, designation")
-          .eq("client_id", matterClientId)
-          .eq("is_director", true),
-      ])
-    : [{ data: null }, { data: null }, { data: null }];
+  // In-place FICA (033) — details + consent, PER SUBJECT. A COO matter is
+  // party-centric: buyer and seller are separate entities with separate details,
+  // consent and directors, and the matter itself often carries no client at all.
+  const ficaSubjects = await buildFicaSubjects(supabase, matterClientId, parties);
 
   const svc = (matter as { services?: { code?: string; name?: string } | null }).services;
   const firm = (matter as { business_partners?: { name?: string | null; abbreviation?: string | null } | null }).business_partners;
@@ -805,13 +792,7 @@ export default async function AdminMatterDetailPage({
       {/* In-place FICA — client details + consent. Together with the document
           checklist below, this is what makes /onboard optional rather than the
           only way to actually finish a matter (migration 033). */}
-      <InPlaceFica
-        matterId={id}
-        client={ficaClient as Client | null}
-        consents={(ficaConsents as ConsentEvent[] | null) ?? []}
-        directors={toDirectors(ficaDirectors)}
-        isStaff
-      />
+      <InPlaceFica matterId={id} subjects={ficaSubjects} isStaff />
 
       {/* In-place intake — service-aware required-document checklist + upload
           (the primary capture method; renders null for non-COO/PRC services) */}

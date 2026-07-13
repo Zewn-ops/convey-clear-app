@@ -12,7 +12,7 @@ import {
   type ClientDocument,
   type TransferDocument,
 } from "@/types";
-import { CheckCircle2, Circle, Ban, FileText } from "lucide-react";
+import { CheckCircle2, Circle, Ban, FileText, Link2 } from "lucide-react";
 
 // In-place intake (foundation): capture a matter's required documents directly
 // on the matter detail, service-aware, per party — the primary method (the
@@ -105,9 +105,11 @@ export default function InPlaceIntake({
       slots: prcRcfDocs(seller?.entity_type ?? "natural_person"),
       vaultDocs: vaultFor(seller?.client_id ?? matterClientId),
     });
-  } else {
-    // The spine covers COO + PRC (RCF). Other services fall back to the generic
-    // uploader elsewhere on the page.
+  } else if (transferDocs.length === 0) {
+    // The slot matrix covers COO + PRC (RCF) only; other services fall back to the
+    // generic uploader elsewhere on the page. But a matter of ANY service can be
+    // linked to a property transfer, and its documents must still be reachable —
+    // so we only bail out when there is nothing at all to show.
     return null;
   }
 
@@ -137,14 +139,57 @@ export default function InPlaceIntake({
             Upload each required document straight onto the matter — no need to send a link first.
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-            complete ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          {done}/{required} required
-        </span>
+        {required > 0 && (
+          <span
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+              complete ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {done}/{required} required
+          </span>
+        )}
       </div>
+
+      {/* Everything held at the property-transfer level, reusable on this matter.
+          This panel exists because matching transfer docs to slots is NOT enough:
+          the RCF matrix has no deed_search slot at all, so a transfer's deed search
+          would be stranded with no way to attach it. Here every transfer document
+          is reachable regardless of what the service's slot matrix happens to
+          contain — attached at matter level (no party). */}
+      {transferDocs.length > 0 && (
+        <div className="rounded-lg border border-[#E8521A]/30 bg-[#E8521A]/[0.03] p-3">
+          <div className="mb-2 flex items-center gap-1.5">
+            <Link2 className="h-3.5 w-3.5 text-[#E8521A]" />
+            <h3 className="text-xs font-semibold text-gray-900">From this property transfer</h3>
+          </div>
+          <p className="mb-2.5 text-xs text-gray-500">
+            Held once for the property and reusable on every matter in the transfer — no need to fetch them again.
+          </p>
+          <ul className="space-y-1.5">
+            {transferDocs.map((t) => {
+              const attached = documents.some((d) => d.transfer_document_id === t.id);
+              return (
+                <li key={t.id} className="flex items-center gap-2.5">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-gray-800">{docLabel(t.document_type)}</p>
+                    <p className="truncate text-[11px] text-gray-400">{t.file_name || "—"}</p>
+                  </div>
+                  {attached ? (
+                    <span className="shrink-0 text-xs font-medium text-green-600">On this matter</span>
+                  ) : (
+                    <ReuseTransferDoc
+                      matterId={matterId}
+                      matterPartyId={null}
+                      options={[{ id: t.id, file_name: t.file_name }]}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {groups.map((g) => (
         <div key={g.key} className="rounded-lg border border-gray-100">
@@ -160,16 +205,16 @@ export default function InPlaceIntake({
               const reuseOpts = g.vaultDocs
                 .filter((v) => v.document_type === s.docType)
                 .map((v) => ({ id: v.id, file_name: v.file_name }));
-              // Transfer-level docs (deed search, transfer letter, clearance
-              // figures) describe the PROPERTY, so they only offer against the
-              // SHARED slots. A party-level doc like a certified ID belongs to a
-              // person, not to the transaction — offering it there is nonsense.
-              const transferOpts =
-                g.partyId === null
-                  ? transferDocs
-                      .filter((t) => t.document_type === s.docType)
-                      .map((t) => ({ id: t.id, file_name: t.file_name }))
-                  : [];
+              // Match on document TYPE alone. The type already encodes
+              // property-vs-person — a deed search is never a party's document, and
+              // a certified ID is never a transfer's. Gating this on "shared slots
+              // only" was over-thinking it, and it broke PRC/RCF outright: that
+              // service has NO shared group, so every slot is party-scoped and the
+              // button could never appear. It also hid the electrical COC, which
+              // sits on the seller's slot but describes the property.
+              const transferOpts = transferDocs
+                .filter((t) => t.document_type === s.docType)
+                .map((t) => ({ id: t.id, file_name: t.file_name }));
               return (
                 <li key={s.docType} className="flex items-center gap-3 px-4 py-2.5">
                   {doc ? (

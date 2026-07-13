@@ -19,6 +19,7 @@ import {
 } from "@/types";
 import { ArrowLeft, Briefcase } from "lucide-react";
 import ClientVault from "@/components/clients/ClientVault";
+import ClientDetailsForm from "@/components/clients/ClientDetailsForm";
 import { signedDocUrls } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -99,49 +100,9 @@ export default async function AdminClientDetailPage({
         </div>
       </div>
 
-      <Card>
-        <h2 className="font-semibold text-gray-900 mb-4">Details</h2>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          {client.full_name && (
-            <div>
-              <dt className="text-gray-400 text-xs">Full Name</dt>
-              <dd className="font-medium mt-0.5">{client.full_name}</dd>
-            </div>
-          )}
-          {client.business_name && (
-            <div>
-              <dt className="text-gray-400 text-xs">Business Name</dt>
-              <dd className="font-medium mt-0.5">{client.business_name}</dd>
-            </div>
-          )}
-          {client.registration_no && (
-            <div>
-              <dt className="text-gray-400 text-xs">Registration No.</dt>
-              <dd className="font-medium mt-0.5">{client.registration_no}</dd>
-            </div>
-          )}
-          {client.id_number && (
-            <div>
-              <dt className="text-gray-400 text-xs">ID Number</dt>
-              <dd className="font-medium mt-0.5">{client.id_number}</dd>
-            </div>
-          )}
-          <div>
-            <dt className="text-gray-400 text-xs">Email</dt>
-            <dd className="font-medium mt-0.5">{client.primary_email ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-400 text-xs">Cell</dt>
-            <dd className="font-medium mt-0.5">{client.primary_cell ?? "—"}</dd>
-          </div>
-          {client.physical_address && (
-            <div className="col-span-2">
-              <dt className="text-gray-400 text-xs">Address</dt>
-              <dd className="font-medium mt-0.5">{client.physical_address}</dd>
-            </div>
-          )}
-        </dl>
-      </Card>
+      {/* Details — read-only until Edit. The field set is shared with the matter's
+          in-place FICA form (lib/fica.ts), so the two can't ask for different things. */}
+      <ClientDetailsForm client={client} />
 
       {/* Reusable FICA document vault (migration 025, extended by 032) */}
       <ClientVault

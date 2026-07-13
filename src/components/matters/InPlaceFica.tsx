@@ -25,23 +25,70 @@ interface Director {
   designation: string;
 }
 
-// In-place FICA capture — the client details and consent that, until now, only the
-// /onboard link could collect. With this, staff or the attorney firm can complete
-// a matter end to end without sending a link; /onboard becomes the self-serve
-// option rather than the only path that actually finishes a matter.
-export default function InPlaceFica({
-  matterId,
-  client,
-  consents,
-  directors: initialDirectors,
-  isStaff,
-}: {
-  matterId: string;
+// One FICA "subject" on a matter. A single-client matter has one (the matter's own
+// client). A COO matter has one PER PARTY — buyer and seller are separate entities
+// with separate details, consent and directors.
+export interface FicaSubject {
+  /** The party this subject came from, or null for the matter's own client. */
+  partyId: string | null;
+  label: string;
+  /** null when the party has no clients record yet — nothing to capture against. */
   client: Client | null;
   consents: ConsentEvent[];
   directors: Director[];
+  /** Entity type from the PARTY, so we can name what's missing before a client exists. */
+  partyEntity?: string | null;
+}
+
+// In-place FICA capture — the client details and consent that, until now, only the
+// /onboard link could collect.
+//
+// ⚠️ This renders PER SUBJECT, not per matter. The first cut keyed off the matter's
+// own client, which is wrong for the service that matters most: a COO matter is
+// party-centric — the buyer and the seller are the entities, and the matter itself
+// often has no client row at all (16 of 28 in production). The intake sitting right
+// below this is already party-aware; this now matches it.
+export default function InPlaceFica({
+  matterId,
+  subjects,
+  isStaff,
+}: {
+  matterId: string;
+  subjects: FicaSubject[];
   isStaff: boolean;
 }) {
+  if (subjects.length === 0) return null;
+
+  return (
+    <Card>
+      <div className="mb-1 flex items-center gap-2">
+        <ClipboardCheck className="h-4 w-4 text-[#1B2E6B]" />
+        <h2 className="font-semibold text-gray-900">Client details &amp; consent</h2>
+      </div>
+      <p className="mb-3 text-xs text-gray-500">
+        The details and consent the onboarding link used to collect. Capture them here to complete the matter without
+        sending one.
+      </p>
+
+      <div className="divide-y divide-gray-100">
+        {subjects.map((s) => (
+          <SubjectSection key={s.partyId ?? "matter-client"} matterId={matterId} subject={s} isStaff={isStaff} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function SubjectSection({
+  matterId,
+  subject,
+  isStaff,
+}: {
+  matterId: string;
+  subject: FicaSubject;
+  isStaff: boolean;
+}) {
+  const { client, consents, directors: initialDirectors, label } = subject;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,7 +123,24 @@ export default function InPlaceFica({
     terms !== Boolean(consent.latest.terms?.granted) ||
     marketing !== Boolean(consent.latest.marketing?.granted);
 
-  if (!client) return null;
+  // No clients record for this party yet — so there is nothing to hang details,
+  // consent, directors or reusable documents on. Say so plainly and point at the
+  // one button that fixes it, rather than rendering nothing and looking broken.
+  // (In production, 0 of 28 parties were linked to a client — this was invisible.)
+  if (!client) {
+    const e = subject.partyEntity ?? "natural_person";
+    const needsDirectors = e === "business" || e === "trust";
+    return (
+      <div className="flex items-start gap-2 py-3 text-xs">
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+        <p className="text-gray-600">
+          <b className="text-gray-900">{label}</b> has no client record yet, so their details
+          {needsDirectors ? ", directors" : ""} and consent can&apos;t be captured — and their FICA documents can&apos;t
+          be reused across matters. Create one with <b>Contact</b> on the party above, then come back.
+        </p>
+      </div>
+    );
+  }
 
   async function save() {
     if (consentChanged && (popia || terms || marketing) && !method) {
@@ -90,6 +154,9 @@ export default function InPlaceFica({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matter_id: matterId,
+          // Target THIS subject's client — on a COO matter the buyer and the seller
+          // are different clients, and the matter itself may have none.
+          client_id: client!.id,
           details: form,
           directors: isEntity ? directors : undefined,
           consents: consentChanged
@@ -110,11 +177,13 @@ export default function InPlaceFica({
   }
 
   return (
-    <Card>
+    <div className="py-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-[#1B2E6B]" />
-          <h2 className="font-semibold text-gray-900">Client details &amp; consent</h2>
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-semibold text-gray-900">{label}</h3>
+          <p className="text-[11px] uppercase tracking-wide text-gray-400">
+            {entity === "business" ? "Business" : entity === "trust" ? "Trust" : "Individual"}
+          </p>
         </div>
         <button
           type="button"
@@ -314,7 +383,7 @@ export default function InPlaceFica({
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

@@ -5,8 +5,13 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 
 // Filter bar for matters lists. Writes filter state into the URL searchParams
-// (server component re-queries). Default values (active / this month) map to NO
-// param, so a clean URL = the default view. Any change resets pagination.
+// (server component re-queries). The DEFAULTS (active / all time) map to NO param,
+// so a clean URL = the default view. Any change resets pagination.
+//
+// These mappings must mirror parseMatterFilters() exactly. They didn't, briefly:
+// the period default flipped to all-time on the server while this still treated
+// "no param" as this-month, so the dropdown read "This month" while the list showed
+// everything. Keep the two in step.
 export default function MatterFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -14,7 +19,7 @@ export default function MatterFilters() {
   const [q, setQ] = useState(sp.get("q") ?? "");
 
   const status = sp.get("status") === "all" ? "all" : "active";
-  const scope = sp.get("scope") === "all" ? "all" : "month";
+  const scope = sp.get("scope") === "month" ? "month" : "all";
 
   function update(next: Record<string, string | undefined>) {
     const params = new URLSearchParams(sp.toString());
@@ -57,12 +62,12 @@ export default function MatterFilters() {
       </select>
       <select
         value={scope}
-        onChange={(e) => update({ scope: e.target.value === "all" ? "all" : undefined })}
+        onChange={(e) => update({ scope: e.target.value === "month" ? "month" : undefined })}
         className={selCls}
         aria-label="Period filter"
       >
-        <option value="month">This month</option>
         <option value="all">All time</option>
+        <option value="month">This month</option>
       </select>
     </div>
   );

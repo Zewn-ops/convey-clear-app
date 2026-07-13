@@ -4,8 +4,11 @@ import type { MatterStatus } from "@/types";
 // client matters pages so all three behave identically. RLS already scopes rows
 // per role — these are *additional* user-facing filters on top of that.
 //
-// Default view = ACTIVE matters from the CURRENT MONTH (status active + scope
-// month), page 1. "View more" widens via the status/period toggles + Next page.
+// Default view = ACTIVE matters, ALL TIME (page 1). The month filter is still
+// available as a toggle, but it is NOT the default: a conveyancing matter runs for
+// months, so scoping the default to the current calendar month meant the list
+// emptied itself every 1st and staff quietly lost sight of live files. A matter
+// opened in June that is still open is active work and belongs in the default view.
 
 export const MATTER_PAGE_SIZE = 25;
 
@@ -32,7 +35,8 @@ export function parseMatterFilters(sp: SP | undefined): MatterFilters {
   };
   return {
     status: get("status") === "all" ? "all" : "active",
-    scope: get("scope") === "all" ? "all" : "month",
+    // Opt IN to the month view; all-time is the default (see the note above).
+    scope: get("scope") === "month" ? "month" : "all",
     q: (get("q") ?? "").trim().slice(0, 100),
     page: Math.max(1, parseInt(get("page") ?? "1", 10) || 1),
   };

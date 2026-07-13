@@ -101,6 +101,110 @@ export function detailsStatus(client: Client | null, entity: string | null | und
 }
 
 /* -------------------------------------------------------------------------- */
+/*                            subjects on a matter                            */
+/* -------------------------------------------------------------------------- */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { MatterParty } from "@/types";
+import { composeFullName } from "@/types";
+
+export interface FicaSubjectData {
+  partyId: string | null;
+  label: string;
+  client: Client | null;
+  consents: ConsentEvent[];
+  directors: DirectorInput[];
+  partyEntity?: string | null;
+}
+
+/**
+ * Who are the FICA subjects on this matter?
+ *
+ * A single-client matter has one: the matter's own client. A COO matter has one
+ * PER PARTY — the buyer and the seller are separate entities, each with their own
+ * details, consent and directors, and the matter itself frequently has NO client
+ * row (16 of 28 in production). Keying FICA off `matters.client_id` alone made the
+ * capture card invisible on exactly the service it matters most for.
+ *
+ * A party with no linked `clients` record yields a subject with `client: null` —
+ * the UI turns that into "create a Contact for them first" rather than silently
+ * rendering nothing.
+ */
+export async function buildFicaSubjects(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  matterClientId: string | null,
+  parties: MatterParty[]
+): Promise<FicaSubjectData[]> {
+  const partyClientIds = parties.map((p) => p.client_id).filter((x): x is string => Boolean(x));
+  const ids = Array.from(new Set([matterClientId, ...partyClientIds].filter((x): x is string => Boolean(x))));
+
+  // Parties are the subjects when there are any; otherwise it's the matter's client.
+  const usePartySubjects = parties.length > 0;
+  if (!usePartySubjects && !matterClientId) return [];
+
+  if (ids.length === 0 && !usePartySubjects) return [];
+
+  const [{ data: clientRows }, { data: consentRows }, { data: contactRows }] =
+    ids.length > 0
+      ? await Promise.all([
+          supabase.from("clients").select("*").in("id", ids),
+          supabase
+            .from("consent_events")
+            .select("id, client_id, consent_type, granted, source, captured_by, capture_method, note, created_at")
+            .in("client_id", ids)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("contacts")
+            .select("client_id, name, email, cell, work_number, designation")
+            .in("client_id", ids)
+            .eq("is_director", true),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const clientById = new Map<string, Client>();
+  for (const c of (clientRows as Client[] | null) ?? []) clientById.set(c.id, c);
+
+  const consentsByClient = new Map<string, ConsentEvent[]>();
+  for (const e of ((consentRows as (ConsentEvent & { client_id: string })[] | null) ?? [])) {
+    const list = consentsByClient.get(e.client_id) ?? [];
+    list.push(e);
+    consentsByClient.set(e.client_id, list);
+  }
+
+  const contactsByClient = new Map<string, Parameters<typeof toDirectors>[0]>();
+  for (const c of ((contactRows as ({ client_id: string } & Record<string, string | null>)[] | null) ?? [])) {
+    const list = (contactsByClient.get(c.client_id) as unknown[]) ?? [];
+    list.push(c);
+    contactsByClient.set(c.client_id, list as Parameters<typeof toDirectors>[0]);
+  }
+
+  const build = (partyId: string | null, label: string, clientId: string | null, partyEntity?: string | null) => ({
+    partyId,
+    label,
+    client: clientId ? (clientById.get(clientId) ?? null) : null,
+    consents: clientId ? (consentsByClient.get(clientId) ?? []) : [],
+    directors: clientId ? toDirectors(contactsByClient.get(clientId)) : [],
+    partyEntity,
+  });
+
+  if (usePartySubjects) {
+    return parties.map((p) => {
+      // A business/trust party is named by its entity; an individual by their name.
+      const name =
+        p.business_name?.trim() ||
+        composeFullName(p.first_name, p.last_name) ||
+        p.full_name?.trim() ||
+        "Unnamed party";
+      const role = p.role ? `${p.role.charAt(0).toUpperCase()}${p.role.slice(1)} — ` : "";
+      return build(p.id, `${role}${name}`, p.client_id ?? null, p.entity_type);
+    });
+  }
+
+  return [build(null, clientById.get(matterClientId!)?.business_name || clientById.get(matterClientId!)?.full_name || "Client", matterClientId)];
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                 directors                                  */
 /* -------------------------------------------------------------------------- */
 

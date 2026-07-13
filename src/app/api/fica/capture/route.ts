@@ -18,6 +18,12 @@ export const runtime = "nodejs";
 
 interface Body {
   matter_id?: string;
+  /**
+   * Which entity on the matter we're capturing for. A COO matter is party-centric:
+   * buyer and seller are separate clients, and the matter itself often has no
+   * client row at all. Omit it and we fall back to the matter's own client.
+   */
+  client_id?: string;
   details?: Record<string, string | null>;
   directors?: {
     full_name?: string;
@@ -63,15 +69,43 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!matter) return NextResponse.json({ message: "Matter not found or access denied" }, { status: 403 });
 
-  const clientId = matter.client_id as string | null;
+  const admin = createAdminClient();
+
+  // Resolve WHICH client we're capturing for, and prove it belongs to this matter.
+  // 🔒 Without that proof, `client_id` would be an open door: any staff or partner
+  // user could point this at an arbitrary client and rewrite their details through
+  // a matter they happen to have access to. The client must either BE the matter's
+  // client, or be linked to one of the matter's parties.
+  let clientId: string | null = null;
+
+  if (body.client_id) {
+    if (matter.client_id === body.client_id) {
+      clientId = body.client_id;
+    } else {
+      const { data: party } = await admin
+        .from("matter_parties")
+        .select("id")
+        .eq("matter_id", matterId)
+        .eq("client_id", body.client_id)
+        .maybeSingle();
+      if (!party) {
+        return NextResponse.json(
+          { message: "That client is not a party to this matter." },
+          { status: 403 }
+        );
+      }
+      clientId = body.client_id;
+    }
+  } else {
+    clientId = (matter.client_id as string | null) ?? null;
+  }
+
   if (!clientId) {
     return NextResponse.json(
-      { message: "This matter has no client record yet — create one from the party first." },
+      { message: "This party has no client record yet — create one with “Contact” on the party first." },
       { status: 400 }
     );
   }
-
-  const admin = createAdminClient();
   const { data: client } = await admin
     .from("clients")
     .select("entity_type")

@@ -286,6 +286,9 @@ export interface MatterDocument {
   // Set when this row is a REUSED client-vault doc (migration 025); its storage
   // lives in the client-documents bucket rather than the matter's.
   client_document_id: string | null;
+  // Set when this row is a REUSED transfer-level doc (migration 034) — the deed
+  // search etc. held once for the property. Storage lives in transfer-documents.
+  transfer_document_id?: string | null;
   uploaded_at: string | null;
   verified: boolean | null;
   created_at: string;

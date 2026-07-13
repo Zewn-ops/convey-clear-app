@@ -13,7 +13,7 @@ import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
-import { toDirectors, type ConsentEvent } from "@/lib/fica";
+import { buildFicaSubjects } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { getPipeline } from "@/lib/pipelines";
@@ -66,7 +66,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const [{ data: docsData }, { data: actData }, { data: partiesData }] = await Promise.all([
     // .neq: hide documents replaced by a newer upload in the same slot (migration 030).
-    supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id, uploaded_by").eq("matter_id", params.id).neq("document_status", "superseded"),
+    supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id, uploaded_by, client_document_id, transfer_document_id").eq("matter_id", params.id).neq("document_status", "superseded"),
     // Comment-type ('post') activities are INTERNAL ONLY — partners (and clients)
     // see only lifecycle events, never staff notes. (Jukka, 2026-06-16.)
     supabase.from("matter_activities").select("id, body, activity_type, created_at").eq("matter_id", params.id).in("activity_type", ["status_change", "document_upload", "phase_transition", "poa_signed"]).order("created_at", { ascending: false }).limit(20),
@@ -113,21 +113,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   // credentials are excluded for partners (isStaff=false): they are the client's
   // own council login and the firm has no business holding them. The API enforces
   // that too — it refuses those fields from a partner, it doesn't just hide them.
-  const [{ data: ficaClient }, { data: ficaConsents }, { data: ficaDirectors }] = matterClientId
-    ? await Promise.all([
-        supabase.from("clients").select("*").eq("id", matterClientId).maybeSingle(),
-        supabase
-          .from("consent_events")
-          .select("id, consent_type, granted, source, captured_by, capture_method, note, created_at")
-          .eq("client_id", matterClientId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("contacts")
-          .select("name, email, cell, work_number, designation")
-          .eq("client_id", matterClientId)
-          .eq("is_director", true),
-      ])
-    : [{ data: null }, { data: null }, { data: null }];
+  const ficaSubjects = await buildFicaSubjects(supabase, matterClientId, parties);
 
   const activities = (actData as { id: string; body: string; activity_type: string; created_at: string }[] | null) ?? [];
 
@@ -219,13 +205,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <PartiesCard parties={parties} />
 
       {/* In-place FICA — client details + consent, without an onboarding link. */}
-      <InPlaceFica
-        matterId={params.id}
-        client={ficaClient as Client | null}
-        consents={(ficaConsents as ConsentEvent[] | null) ?? []}
-        directors={toDirectors(ficaDirectors)}
-        isStaff={false}
-      />
+      <InPlaceFica matterId={params.id} subjects={ficaSubjects} isStaff={false} />
 
       {/* In-place intake — service-aware required-document checklist + upload.
           Partners upload on the client's behalf and may mark an optional document
