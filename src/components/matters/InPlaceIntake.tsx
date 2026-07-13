@@ -1,10 +1,17 @@
 import Card from "@/components/ui/Card";
 import StorageUpload from "@/components/matters/StorageUpload";
 import ReuseVaultDoc from "@/components/matters/ReuseVaultDoc";
+import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
 import { cooSharedDocs, cooPartyDocs, partyRoleOrder, type CooEntity, type CooDocRule } from "@/lib/coo-docs";
 import { prcRcfDocs, docLabel } from "@/lib/prc-docs";
 import { toggleDocUnavailable } from "@/lib/actions/intake";
-import { composeFullName, type MatterParty, type MatterDocument, type ClientDocument } from "@/types";
+import {
+  composeFullName,
+  type MatterParty,
+  type MatterDocument,
+  type ClientDocument,
+  type TransferDocument,
+} from "@/types";
 import { CheckCircle2, Circle, Ban, FileText } from "lucide-react";
 
 // In-place intake (foundation): capture a matter's required documents directly
@@ -50,6 +57,7 @@ export default function InPlaceIntake({
   canManage,
   vaultByClient = {},
   matterClientId = null,
+  transferDocs = [],
 }: {
   matterId: string;
   serviceCode: string | null;
@@ -60,6 +68,8 @@ export default function InPlaceIntake({
   canManage: boolean;
   vaultByClient?: Record<string, ClientDocument[]>;
   matterClientId?: string | null;
+  /** Current documents held at the property-transfer level (migration 034). */
+  transferDocs?: TransferDocument[];
 }) {
   const code = (serviceCode ?? "").toUpperCase();
   const sorted = [...parties].sort((a, b) => partyRoleOrder(a.role) - partyRoleOrder(b.role));
@@ -150,6 +160,16 @@ export default function InPlaceIntake({
               const reuseOpts = g.vaultDocs
                 .filter((v) => v.document_type === s.docType)
                 .map((v) => ({ id: v.id, file_name: v.file_name }));
+              // Transfer-level docs (deed search, transfer letter, clearance
+              // figures) describe the PROPERTY, so they only offer against the
+              // SHARED slots. A party-level doc like a certified ID belongs to a
+              // person, not to the transaction — offering it there is nonsense.
+              const transferOpts =
+                g.partyId === null
+                  ? transferDocs
+                      .filter((t) => t.document_type === s.docType)
+                      .map((t) => ({ id: t.id, file_name: t.file_name }))
+                  : [];
               return (
                 <li key={s.docType} className="flex items-center gap-3 px-4 py-2.5">
                   {doc ? (
@@ -187,6 +207,9 @@ export default function InPlaceIntake({
                       )
                     ) : (
                       <div className="flex items-center gap-2">
+                        {transferOpts.length > 0 && (
+                          <ReuseTransferDoc matterId={matterId} matterPartyId={g.partyId} options={transferOpts} />
+                        )}
                         {reuseOpts.length > 0 && (
                           <ReuseVaultDoc matterId={matterId} matterPartyId={g.partyId} options={reuseOpts} />
                         )}

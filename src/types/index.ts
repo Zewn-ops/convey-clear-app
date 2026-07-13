@@ -248,6 +248,28 @@ export interface ClientDocument {
   notes?: string | null;
 }
 
+// A document that belongs to the property transaction rather than to any one
+// matter inside it — the deed search, the transfer letter, the clearance figures
+// (migration 034). Reused onto a matter the same way a client-vault doc is.
+export interface TransferDocument {
+  id: string;
+  transfer_id: string;
+  document_type: string;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_bucket: string | null;
+  storage_path: string | null;
+  status?: "current" | "superseded" | "archived" | null;
+  supersedes_id?: string | null;
+  verified?: boolean | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  notes?: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
 export interface MatterDocument {
   id: string;
   matter_id: string;

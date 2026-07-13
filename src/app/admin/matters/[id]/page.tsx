@@ -19,6 +19,7 @@ import {
   type MatterStatus,
   type CouncilPoc,
   type Client,
+  type TransferDocument,
 } from "@/types";
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
@@ -429,6 +430,19 @@ export default async function AdminMatterDetailPage({
     }
   }
 
+  // Transfer-level documents (034) — offered on the matter's SHARED slots as
+  // "From transfer", so the deed search obtained once for the property serves
+  // every matter in it. Empty for a standalone matter, which remains the norm.
+  const transferId = (matter as { transfer_id?: string | null }).transfer_id ?? null;
+  const { data: transferDocData } = transferId
+    ? await supabase
+        .from("transfer_documents")
+        .select("id, transfer_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, status, verified, uploaded_by, created_at")
+        .eq("transfer_id", transferId)
+        .eq("status", "current")
+    : { data: null };
+  const transferDocs = (transferDocData as TransferDocument[] | null) ?? [];
+
   // In-place FICA (migration 033): the client details + consent that only the
   // /onboard link used to be able to collect.
   const [{ data: ficaClient }, { data: ficaConsents }, { data: ficaDirectors }] = matterClientId
@@ -811,6 +825,7 @@ export default async function AdminMatterDetailPage({
         canManage
         vaultByClient={vaultByClient}
         matterClientId={matterClientId}
+        transferDocs={transferDocs}
       />
 
       {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}

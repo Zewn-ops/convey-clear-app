@@ -8,6 +8,10 @@ export const MATTER_DOCS_BUCKET = "matter-documents";
 // Reusable per-client FICA docs (migration 025). Path "<clientId>/<uuid>-<file>";
 // the leading client UUID is what the storage RLS scopes reads against.
 export const CLIENT_DOCS_BUCKET = "client-documents";
+// Transfer-level docs (migration 034) — one deed search / transfer letter /
+// clearance figure for the whole transaction, reused by each matter inside it.
+// Path "<transferId>/<uuid>-<file>"; scoped by can_access_transfer.
+export const TRANSFER_DOCS_BUCKET = "transfer-documents";
 
 function safeName(fileName: string): string {
   return (fileName || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
@@ -19,6 +23,10 @@ export function matterObjectPath(matterId: string, fileName: string): string {
 
 export function clientObjectPath(clientId: string, fileName: string): string {
   return `${clientId}/${randomUUID()}-${safeName(fileName)}`;
+}
+
+export function transferObjectPath(transferId: string, fileName: string): string {
+  return `${transferId}/${randomUUID()}-${safeName(fileName)}`;
 }
 
 // Short-lived signed download URL (default 5 min). Returns null if it can't sign.

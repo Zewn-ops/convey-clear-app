@@ -10,6 +10,7 @@ import { getPipeline, phaseLabel, stageLabel } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   isStaffRole,
+  isAdminRole,
   clientDisplayName,
   MATTER_STATUS_LABELS,
   TRANSFER_STATUS_LABELS,
@@ -17,7 +18,11 @@ import {
   type MatterStatus,
   type PropertyTransfer,
   type TransferStatus,
+  type TransferDocument,
 } from "@/types";
+import TransferDocuments from "@/components/transfers/TransferDocuments";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { signedDocUrls } from "@/lib/storage";
 import { ArrowLeft, Pencil } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +112,37 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const candidates = ((freeData as { id: string; title: string | null; municipality: string | null }[] | null) ?? []).map(
     (m) => ({ id: m.id, label: m.title || `Untitled matter (${municipalityLabel(m.municipality)})` })
   );
+
+  // Transfer-level documents (migration 034) + how many matters already reuse
+  // each one — that count is what tells staff a document is load-bearing before
+  // they try to delete it.
+  const { data: tdocData } = await supabase
+    .from("transfer_documents")
+    .select("*")
+    .eq("transfer_id", id)
+    .neq("status", "superseded")
+    .order("created_at", { ascending: false });
+
+  const transferDocs = (tdocData as TransferDocument[] | null) ?? [];
+  const admin = createAdminClient();
+  const tdocUrls = transferDocs.length > 0 ? await signedDocUrls(admin, transferDocs) : {};
+
+  const { data: usageRows } = transferDocs.length
+    ? await admin
+        .from("documents")
+        .select("transfer_document_id")
+        .in("transfer_document_id", transferDocs.map((d) => d.id))
+    : { data: [] };
+  const usage: Record<string, number> = {};
+  for (const r of (usageRows as { transfer_document_id: string }[] | null) ?? []) {
+    usage[r.transfer_document_id] = (usage[r.transfer_document_id] ?? 0) + 1;
+  }
+
+  const transferDocsWithUrls = transferDocs.map((d) => ({
+    ...d,
+    url: d.storage_path ? tdocUrls[d.storage_path] : undefined,
+    usedOn: usage[d.id] ?? 0,
+  }));
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -240,6 +276,15 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           <LinkMatterControl transferId={id} candidates={candidates} />
         </div>
       </Card>
+
+      {/* Documents about the property itself — reused by every matter above
+          instead of being fetched once per matter (migration 034). */}
+      <TransferDocuments
+        transferId={id}
+        docs={transferDocsWithUrls}
+        canManage
+        canDelete={isAdminRole(session.profile?.role)}
+      />
     </div>
   );
 }

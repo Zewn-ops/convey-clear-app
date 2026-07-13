@@ -22,6 +22,7 @@ import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
   type Client,
+  type TransferDocument,
   type Matter,
   type MatterStatus,
   type MatterDocument,
@@ -93,6 +94,19 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       (vaultByClient[r.client_id] ??= []).push(r);
     }
   }
+
+  // Transfer-level documents (034) — the firm reuses the property's deed search
+  // etc. on this matter's shared slots rather than re-fetching them. RLS confines
+  // this to transfers whose attorney firm is theirs.
+  const partnerTransferId = (matter as unknown as { transfer_id?: string | null }).transfer_id ?? null;
+  const { data: transferDocData } = partnerTransferId
+    ? await supabase
+        .from("transfer_documents")
+        .select("id, transfer_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, status, verified, uploaded_by, created_at")
+        .eq("transfer_id", partnerTransferId)
+        .eq("status", "current")
+    : { data: null };
+  const transferDocs = (transferDocData as TransferDocument[] | null) ?? [];
 
   // In-place FICA (033) — the firm can complete the client's details and record
   // consent without ConveyClear sending an onboarding link. Municipal-portal
@@ -228,6 +242,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         canManage
         vaultByClient={vaultByClient}
         matterClientId={matterClientId}
+        transferDocs={transferDocs}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

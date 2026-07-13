@@ -13,7 +13,11 @@ import {
   type MatterStatus,
   type PropertyTransfer,
   type TransferStatus,
+  type TransferDocument,
 } from "@/types";
+import TransferDocuments from "@/components/transfers/TransferDocuments";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { signedDocUrls } from "@/lib/storage";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +72,22 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     .order("created_at", { ascending: true });
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
+
+  // Transfer documents — the owning firm READS them (RLS: can_access_transfer)
+  // but does not author them, matching how transfers themselves work (026).
+  const { data: tdocData } = await supabase
+    .from("transfer_documents")
+    .select("*")
+    .eq("transfer_id", id)
+    .eq("status", "current")
+    .order("created_at", { ascending: false });
+
+  const transferDocs = (tdocData as TransferDocument[] | null) ?? [];
+  const tdocUrls = transferDocs.length > 0 ? await signedDocUrls(createAdminClient(), transferDocs) : {};
+  const transferDocsWithUrls = transferDocs.map((d) => ({
+    ...d,
+    url: d.storage_path ? tdocUrls[d.storage_path] : undefined,
+  }));
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -167,6 +187,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           </table>
         </div>
       </Card>
+
+      {/* Read-only: the firm sees the property's documents, staff maintain them. */}
+      <TransferDocuments transferId={id} docs={transferDocsWithUrls} canManage={false} />
     </div>
   );
 }

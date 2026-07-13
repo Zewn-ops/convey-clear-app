@@ -1,0 +1,312 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client";
+import { UploadCloud, FileText, CheckCircle2, RotateCcw, Trash2, Files } from "lucide-react";
+import Card from "@/components/ui/Card";
+import { docLabel } from "@/lib/prc-docs";
+import { formatDate } from "@/lib/utils";
+import type { TransferDocument } from "@/types";
+
+const ALLOWED = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 10 * 1024 * 1024;
+
+// The documents that belong to the PROPERTY, not to one matter: the deed search,
+// the transfer confirmation letter, the clearance figures. Uploaded once here and
+// reused by every matter in the transfer ("From transfer" on the intake), instead
+// of being fetched again for the PRC, the COO and the refund.
+const TRANSFER_DOC_TYPES = [
+  "deed_search",
+  "transfer_letter",
+  "clearance_figures",
+  "proof_of_payment_figures",
+  "coc_electrical",
+  "other",
+];
+
+type Doc = TransferDocument & { url?: string; usedOn?: number };
+
+export default function TransferDocuments({
+  transferId,
+  docs,
+  canManage,
+  canDelete = false,
+}: {
+  transferId: string;
+  docs: Doc[];
+  /** Staff. Partners of the owning firm read these but do not author them. */
+  canManage: boolean;
+  canDelete?: boolean;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [type, setType] = useState(TRANSFER_DOC_TYPES[0]);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const current = docs.filter((d) => (d.status ?? "current") === "current");
+  const archived = docs.filter((d) => d.status === "archived");
+
+  async function upload(file: File, docType: string, replacesId?: string) {
+    if (!ALLOWED.includes(file.type)) return toast.error("Only PDF, JPG, PNG or WebP files");
+    if (file.size > MAX_SIZE) return toast.error("File must be under 10 MB");
+
+    setBusy(replacesId ?? "__new");
+    try {
+      const r = await fetch("/api/transfer-documents/signed-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transfer_id: transferId, file_name: file.name }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.message ?? "Could not start the upload");
+
+      const supabase = createClient();
+      const { error: upErr } = await supabase.storage.from(j.bucket).uploadToSignedUrl(j.path, j.token, file);
+      if (upErr) throw new Error(upErr.message);
+
+      const c = await fetch("/api/transfer-documents/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transfer_id: transferId,
+          storage_path: j.path,
+          document_type: docType,
+          file_name: file.name,
+          mime_type: file.type,
+          size_bytes: file.size,
+          replaces_id: replacesId ?? null,
+        }),
+      });
+      const cj = await c.json();
+      if (!c.ok) throw new Error(cj.message ?? "Could not record the document");
+
+      toast.success(replacesId ? "Replaced — the previous version is kept" : "Added to the transfer");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function patch(id: string, body: Record<string, unknown>, msg: string) {
+    setBusy(id);
+    try {
+      const r = await fetch(`/api/transfer-documents/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.message ?? "Could not update");
+      toast.success(msg);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function remove(id: string) {
+    setBusy(id);
+    try {
+      const r = await fetch(`/api/transfer-documents/${id}`, { method: "DELETE" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.message ?? "Could not delete");
+      toast.success("Deleted");
+      router.refresh();
+    } catch (e) {
+      // A doc in use on a matter can only be archived — the API says so plainly.
+      toast.error(e instanceof Error ? e.message : "Delete failed", { duration: 6000 });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="mb-1 flex items-center gap-2">
+        <Files className="h-4 w-4 text-[#E8521A]" />
+        <h2 className="font-semibold text-gray-900">Transfer documents</h2>
+      </div>
+      <p className="mb-4 text-xs text-gray-500">
+        Documents about the <b>property</b>, not any one matter — the deed search, transfer letter and clearance
+        figures. Upload once here, then reuse on every matter in this transfer instead of fetching them again.
+      </p>
+
+      {current.length > 0 ? (
+        <ul className="mb-4 divide-y divide-gray-100">
+          {current.map((d) => (
+            <li key={d.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 ${busy === d.id ? "opacity-50" : ""}`}>
+              <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 truncate text-sm font-medium text-gray-800">
+                  {docLabel(d.document_type)}
+                  {d.verified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Verified" />}
+                </p>
+                <p className="truncate text-xs text-gray-400">
+                  {d.file_name || "—"} · {formatDate(d.created_at)}
+                  {typeof d.usedOn === "number" && d.usedOn > 0 && (
+                    <> · used on {d.usedOn} matter{d.usedOn === 1 ? "" : "s"}</>
+                  )}
+                  {d.supersedes_id ? " · replaced an earlier version" : ""}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2.5 text-xs">
+                {d.url && (
+                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#1B2E6B] hover:underline">
+                    View
+                  </a>
+                )}
+                {canManage && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busy === d.id}
+                      onClick={() => patch(d.id, { verified: !d.verified }, d.verified ? "Verification removed" : "Marked verified")}
+                      className={`font-medium hover:underline disabled:opacity-50 ${d.verified ? "text-gray-400" : "text-green-700"}`}
+                    >
+                      {d.verified ? "Unverify" : "Verify"}
+                    </button>
+                    <ReplacePick busy={busy === d.id} onPick={(f) => upload(f, d.document_type, d.id)} />
+                    <button
+                      type="button"
+                      disabled={busy === d.id}
+                      onClick={() => patch(d.id, { status: "archived" }, "Archived — matters that used it keep the file")}
+                      className="font-medium text-gray-400 hover:text-gray-600 hover:underline disabled:opacity-50"
+                    >
+                      Archive
+                    </button>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        disabled={busy === d.id}
+                        onClick={() => remove(d.id)}
+                        title="Delete permanently (only if no matter uses it)"
+                        className="text-gray-300 hover:text-red-600 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mb-4 text-sm text-gray-400">No transfer documents yet.</p>
+      )}
+
+      {canManage && (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            const f = e.dataTransfer.files?.[0];
+            if (f) upload(f, type);
+          }}
+          className={`flex items-end gap-2 rounded-lg border border-dashed p-3 transition-colors ${
+            dragging ? "border-[#E8521A] bg-[#E8521A]/5" : "border-gray-200"
+          }`}
+        >
+          <label className="flex-1 text-xs font-medium text-gray-500">
+            Document type
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
+            >
+              {TRANSFER_DOC_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {docLabel(t)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            ref={fileRef}
+            type="file"
+            className="sr-only"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) upload(f, type);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            disabled={busy === "__new"}
+            onClick={() => fileRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#E8521A] px-3 py-2 text-sm font-medium text-white hover:bg-[#E8521A]/90 disabled:opacity-50"
+          >
+            <UploadCloud className="h-4 w-4" /> {busy === "__new" ? "Uploading…" : "Upload"}
+          </button>
+        </div>
+      )}
+
+      {archived.length > 0 && canManage && (
+        <details className="mt-3 border-t border-gray-100 pt-3">
+          <summary className="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-600">
+            Archived ({archived.length})
+          </summary>
+          <ul className="mt-2 space-y-1.5">
+            {archived.map((d) => (
+              <li key={d.id} className="flex items-center gap-3 py-1 text-sm">
+                <span className="min-w-0 flex-1 truncate text-gray-400">
+                  {docLabel(d.document_type)} · {d.file_name || "—"}
+                </span>
+                <button
+                  type="button"
+                  disabled={busy === d.id}
+                  onClick={() => patch(d.id, { status: "current" }, "Restored")}
+                  className="shrink-0 text-xs font-medium text-[#1B2E6B] hover:underline disabled:opacity-50"
+                >
+                  Restore
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </Card>
+  );
+}
+
+function ReplacePick({ busy, onPick }: { busy: boolean; onPick: (f: File) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input
+        ref={ref}
+        type="file"
+        className="sr-only"
+        accept=".pdf,.jpg,.jpeg,.png,.webp"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onPick(f);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => ref.current?.click()}
+        className="inline-flex items-center gap-1 font-medium text-gray-400 hover:text-gray-700 hover:underline disabled:opacity-50"
+      >
+        <RotateCcw className="h-3.5 w-3.5" /> Replace
+      </button>
+    </>
+  );
+}
