@@ -185,7 +185,10 @@ export async function POST(request: Request) {
     }
   }
 
-  await admin.from("matter_activities").insert({
+  // Best-effort, but logged: activity_type carries a CHECK constraint, and an
+  // unchecked await swallows the 23514 whole — which is how this entry silently
+  // went missing until migration 035 legalised 'fica_capture'.
+  const { error: actErr } = await admin.from("matter_activities").insert({
     matter_id: matterId,
     author_id: session!.profile!.id,
     activity_type: "fica_capture",
@@ -193,6 +196,7 @@ export async function POST(request: Request) {
       ? "FICA details and consent recorded in place"
       : "FICA client details updated",
   });
+  if (actErr) console.error("[fica/capture] activity insert failed:", actErr.message);
 
   return NextResponse.json({ ok: true });
 }

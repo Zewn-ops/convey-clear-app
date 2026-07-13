@@ -90,5 +90,14 @@ export async function POST(request: Request) {
     await admin.from("transfer_documents").update({ status: "superseded" }).eq("id", replacesId);
   }
 
+  const label = body.file_name || body.document_type || "document";
+  const { error: actErr } = await admin.from("transfer_activities").insert({
+    transfer_id,
+    author_id: me.id,
+    activity_type: "document_upload",
+    body: replacesId ? `Replaced transfer document: ${label}` : `Added transfer document: ${label}`,
+  });
+  if (actErr) console.error("[transfer-documents/confirm] activity insert failed:", actErr.message);
+
   return NextResponse.json({ ok: true, transfer_document_id: doc.id, replaced: Boolean(replacesId) });
 }

@@ -16,6 +16,7 @@ import {
   type TransferDocument,
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
+import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { ArrowLeft } from "lucide-react";
@@ -88,6 +89,16 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     ...d,
     url: d.storage_path ? tdocUrls[d.storage_path] : undefined,
   }));
+
+  // The firm posts to the transfer feed as well as reading it — that two-way
+  // channel is precisely why transfers didn't also need an enquiry thread (035).
+  const { data: feedData } = await supabase
+    .from("transfer_activities")
+    .select("id, activity_type, body, author_label, created_at, users(full_name)")
+    .eq("transfer_id", id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const feed = (feedData as unknown as TransferActivity[] | null) ?? [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -190,6 +201,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
 
       {/* Read-only: the firm sees the property's documents, staff maintain them. */}
       <TransferDocuments transferId={id} docs={transferDocsWithUrls} canManage={false} />
+
+      {/* …but the firm DOES post to the feed — it is the shared channel. */}
+      <TransferFeed transferId={id} activities={feed} canPost />
     </div>
   );
 }

@@ -56,12 +56,17 @@ export async function toggleDocUnavailable(formData: FormData) {
   if (error) throw new Error(`Could not update the document status: ${error.message}`);
 
   // Auditable from the matter, not just inferable from the intake checklist.
-  await admin.from("matter_activities").insert({
+  // The insert is best-effort — a lost feed entry must not fail the toggle — but it
+  // is NOT silent: `activity_type` carries a CHECK constraint, and writing a value
+  // outside it fails with a 23514 that an unchecked `await` swallows whole. That is
+  // exactly how this entry went missing until migration 035 legalised the type.
+  const { error: actErr } = await admin.from("matter_activities").insert({
     matter_id: matterId,
     author_id: session?.profile?.id ?? null,
     activity_type: "document_status",
     body: make ? `Document marked not available: ${key}` : `Document no longer marked not available: ${key}`,
   });
+  if (actErr) console.error("[toggleDocUnavailable] activity insert failed:", actErr.message);
 
   revalidatePath(`/admin/matters/${matterId}`);
   revalidatePath(`/partner/matters/${matterId}`);

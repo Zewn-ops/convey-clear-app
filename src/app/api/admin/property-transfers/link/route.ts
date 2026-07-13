@@ -56,6 +56,17 @@ export async function POST(request: Request) {
     reference = t.reference as string;
   }
 
+  // The matter we're about to detach, so the OLD transfer's feed can record the
+  // departure — after the update its transfer_id is gone and we'd have nothing to
+  // attribute it to.
+  const { data: before } = await admin
+    .from("matters")
+    .select("title, transfer_id")
+    .eq("id", matterId)
+    .maybeSingle();
+  const previousTransferId = (before?.transfer_id as string | null) ?? null;
+  const matterTitle = (before?.title as string | null) || "A matter";
+
   const { error } = await admin.from("matters").update({ transfer_id: transferId }).eq("id", matterId);
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
@@ -65,6 +76,25 @@ export async function POST(request: Request) {
     activity_type: "system",
     body: reference ? `Linked to property transfer ${reference}` : "Removed from its property transfer",
   });
+
+  // Mirror it onto the transfer's own feed (035) — the transaction's history has
+  // to be readable from the transfer, not only by opening each matter in turn.
+  if (transferId) {
+    await admin.from("transfer_activities").insert({
+      transfer_id: transferId,
+      author_id: auth.callerId,
+      activity_type: "matter_linked",
+      body: `${matterTitle} was linked to this transfer`,
+    });
+  }
+  if (previousTransferId && previousTransferId !== transferId) {
+    await admin.from("transfer_activities").insert({
+      transfer_id: previousTransferId,
+      author_id: auth.callerId,
+      activity_type: "matter_unlinked",
+      body: `${matterTitle} was removed from this transfer`,
+    });
+  }
 
   return NextResponse.json({ ok: true, transfer_id: transferId });
 }
