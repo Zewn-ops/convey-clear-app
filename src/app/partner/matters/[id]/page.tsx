@@ -82,8 +82,10 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   if (vaultClientIds.length > 0) {
     const { data: vaultRows } = await supabase
       .from("client_documents")
-      .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at")
-      .in("client_id", vaultClientIds);
+      .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at, status, expiry_date, verified")
+      .in("client_id", vaultClientIds)
+      // Only CURRENT documents are reusable — not superseded or archived ones (032).
+      .eq("status", "current");
     for (const r of (vaultRows as ClientDocument[] | null) ?? []) {
       (vaultByClient[r.client_id] ??= []).push(r);
     }

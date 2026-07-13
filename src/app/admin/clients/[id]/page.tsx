@@ -7,6 +7,7 @@ import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import {
   isStaffRole,
+  isAdminRole,
   clientDisplayName,
   MATTER_STATUS_LABELS,
   PHASE_LABELS,
@@ -56,8 +57,13 @@ export default async function AdminClientDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("client_documents")
-      .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at")
+      .select(
+        "id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at, status, expiry_date, verified, verified_at, verified_by, supersedes_id, notes"
+      )
       .eq("client_id", id)
+      // Superseded versions are history — the vault shows what's live and what's
+      // been archived, not every file ever uploaded (migration 032).
+      .neq("status", "superseded")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -137,8 +143,13 @@ export default async function AdminClientDetailPage({
         </dl>
       </Card>
 
-      {/* Reusable FICA document vault (migration 025) */}
-      <ClientVault clientId={id} docs={vaultWithUrls} />
+      {/* Reusable FICA document vault (migration 025, extended by 032) */}
+      <ClientVault
+        clientId={id}
+        entityType={client.entity_type}
+        docs={vaultWithUrls}
+        canDelete={isAdminRole(session.profile?.role)}
+      />
 
       <div>
         <h2 className="font-semibold text-gray-900 mb-3">

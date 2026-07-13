@@ -38,10 +38,19 @@ export async function POST(request: Request) {
   // …and the client document (can_access_client on its owning client).
   const { data: cdoc } = await supabase
     .from("client_documents")
-    .select("id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path")
+    .select("id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, status")
     .eq("id", client_document_id)
     .maybeSingle();
   if (!cdoc) return NextResponse.json({ message: "Client document not found or access denied" }, { status: 403 });
+
+  // The UI only offers current documents, but the API must not rely on that — a
+  // superseded or archived document must never be attachable to a live matter (032).
+  if ((cdoc.status ?? "current") !== "current") {
+    return NextResponse.json(
+      { message: "That document is no longer current — reuse the latest version instead." },
+      { status: 409 }
+    );
+  }
 
   const admin = createAdminClient();
 

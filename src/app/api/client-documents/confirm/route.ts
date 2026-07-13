@@ -25,6 +25,10 @@ export async function POST(request: Request) {
     file_name?: string;
     mime_type?: string;
     size_bytes?: number;
+    // FICA vault v2 (migration 032).
+    expiry_date?: string | null;
+    /** Replacing an existing vault doc → this upload becomes its next version. */
+    replaces_id?: string | null;
   };
   try {
     body = await request.json();
@@ -45,6 +49,22 @@ export async function POST(request: Request) {
   if (!client) return NextResponse.json({ message: "Client not found or access denied" }, { status: 403 });
 
   const admin = createAdminClient();
+
+  // Replacing an existing document → the new row points back at the one it
+  // replaces, forming a version chain. Confirm the target really belongs to this
+  // client first, so a replaces_id can't be used to reach across clients.
+  const replacesId = body.replaces_id || null;
+  if (replacesId) {
+    const { data: prev } = await admin
+      .from("client_documents")
+      .select("id, client_id")
+      .eq("id", replacesId)
+      .maybeSingle();
+    if (!prev || prev.client_id !== client_id) {
+      return NextResponse.json({ message: "The document being replaced does not belong to this client" }, { status: 400 });
+    }
+  }
+
   const { data: doc, error } = await admin
     .from("client_documents")
     .insert({
@@ -55,11 +75,22 @@ export async function POST(request: Request) {
       file_name: body.file_name || null,
       mime_type: body.mime_type || null,
       size_bytes: body.size_bytes || null,
+      expiry_date: body.expiry_date || null,
+      supersedes_id: replacesId,
       uploaded_by: me.id,
     })
     .select("id")
     .single();
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
-  return NextResponse.json({ ok: true, client_document_id: doc.id });
+  // Demote the old version only once the new one is safely recorded. Its file is
+  // NOT touched — matters that already reused it still point at that object.
+  if (replacesId) {
+    await admin
+      .from("client_documents")
+      .update({ status: "superseded" })
+      .eq("id", replacesId);
+  }
+
+  return NextResponse.json({ ok: true, client_document_id: doc.id, replaced: Boolean(replacesId) });
 }

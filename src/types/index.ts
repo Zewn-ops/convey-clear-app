@@ -227,6 +227,14 @@ export interface ClientDocument {
   storage_path: string | null;
   uploaded_by: string | null;
   created_at: string;
+  // FICA vault v2 (migration 032).
+  status?: "current" | "superseded" | "archived" | null;
+  expiry_date?: string | null;
+  verified?: boolean | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  supersedes_id?: string | null;
+  notes?: string | null;
 }
 
 export interface MatterDocument {

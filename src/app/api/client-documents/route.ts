@@ -16,8 +16,10 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from("client_documents")
-    .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at")
+    .select("id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, uploaded_by, created_at, status, expiry_date, verified")
     .eq("client_id", clientId)
+    // Reuse pickers read this — only current documents are offerable (032).
+    .eq("status", "current")
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 

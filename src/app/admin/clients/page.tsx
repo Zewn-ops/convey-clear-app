@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import { isStaffRole, clientDisplayName, type Client } from "@/types";
+import ClientRow from "@/components/clients/ClientRow";
 
 export const metadata = { title: "Clients — ConveyClear Admin" };
 
@@ -55,9 +56,14 @@ export default async function AdminClientsPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {clients.map((client) => (
-                <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                <ClientRow key={client.id} href={`/admin/clients/${client.id}`}>
                   <td className="px-5 py-3">
-                    <span className="font-medium text-gray-900">{clientDisplayName(client)}</span>
+                    <Link
+                      href={`/admin/clients/${client.id}`}
+                      className="font-medium text-gray-900 hover:text-[#1B2E6B] hover:underline"
+                    >
+                      {clientDisplayName(client)}
+                    </Link>
                   </td>
                   <td className="px-5 py-3 hidden md:table-cell">
                     <Badge
@@ -73,7 +79,7 @@ export default async function AdminClientsPage() {
                       View
                     </Link>
                   </td>
-                </tr>
+                </ClientRow>
               ))}
               {clients.length === 0 && (
                 <tr>
