@@ -151,6 +151,17 @@ export interface Client {
   business_partner_id: string | null;
   created_at: string;
   updated_at: string;
+  // FICA fields (migration 010). These have existed in the database since June but
+  // were never declared here, so nothing outside the onboard submit could read or
+  // write them in a type-safe way — which is part of why in-place capture stalled.
+  person_industry?: string | null;
+  person_designation?: string | null;
+  /** The CLIENT's own municipal-portal login. Staff-only — never exposed to a partner. */
+  municipal_username?: string | null;
+  municipal_password?: string | null;
+  marketing_opt_in?: boolean | null;
+  popia_consent_at?: string | null;
+  terms_accepted_at?: string | null;
 }
 
 export interface Matter {

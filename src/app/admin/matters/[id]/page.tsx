@@ -18,6 +18,7 @@ import {
   type MatterPriority,
   type MatterStatus,
   type CouncilPoc,
+  type Client,
 } from "@/types";
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
@@ -44,6 +45,8 @@ import {
 } from "@/lib/pipelines";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
+import InPlaceFica from "@/components/matters/InPlaceFica";
+import { toDirectors, type ConsentEvent } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 
@@ -426,6 +429,24 @@ export default async function AdminMatterDetailPage({
     }
   }
 
+  // In-place FICA (migration 033): the client details + consent that only the
+  // /onboard link used to be able to collect.
+  const [{ data: ficaClient }, { data: ficaConsents }, { data: ficaDirectors }] = matterClientId
+    ? await Promise.all([
+        supabase.from("clients").select("*").eq("id", matterClientId).maybeSingle(),
+        supabase
+          .from("consent_events")
+          .select("id, consent_type, granted, source, captured_by, capture_method, note, created_at")
+          .eq("client_id", matterClientId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("contacts")
+          .select("name, email, cell, work_number, designation")
+          .eq("client_id", matterClientId)
+          .eq("is_director", true),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+
   const svc = (matter as { services?: { code?: string; name?: string } | null }).services;
   const firm = (matter as { business_partners?: { name?: string | null; abbreviation?: string | null } | null }).business_partners;
   // COO has no FICA — its document button + onboarding link say "documents" (A7).
@@ -766,6 +787,17 @@ export default async function AdminMatterDetailPage({
 
       {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
       <PartiesCard parties={parties} manage />
+
+      {/* In-place FICA — client details + consent. Together with the document
+          checklist below, this is what makes /onboard optional rather than the
+          only way to actually finish a matter (migration 033). */}
+      <InPlaceFica
+        matterId={id}
+        client={ficaClient as Client | null}
+        consents={(ficaConsents as ConsentEvent[] | null) ?? []}
+        directors={toDirectors(ficaDirectors)}
+        isStaff
+      />
 
       {/* In-place intake — service-aware required-document checklist + upload
           (the primary capture method; renders null for non-COO/PRC services) */}

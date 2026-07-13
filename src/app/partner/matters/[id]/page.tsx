@@ -12,6 +12,8 @@ import { getMatterEnquiries } from "@/lib/enquiries";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
+import InPlaceFica from "@/components/matters/InPlaceFica";
+import { toDirectors, type ConsentEvent } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { getPipeline } from "@/lib/pipelines";
@@ -19,6 +21,7 @@ import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
+  type Client,
   type Matter,
   type MatterStatus,
   type MatterDocument,
@@ -90,6 +93,28 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       (vaultByClient[r.client_id] ??= []).push(r);
     }
   }
+
+  // In-place FICA (033) — the firm can complete the client's details and record
+  // consent without ConveyClear sending an onboarding link. Municipal-portal
+  // credentials are excluded for partners (isStaff=false): they are the client's
+  // own council login and the firm has no business holding them. The API enforces
+  // that too — it refuses those fields from a partner, it doesn't just hide them.
+  const [{ data: ficaClient }, { data: ficaConsents }, { data: ficaDirectors }] = matterClientId
+    ? await Promise.all([
+        supabase.from("clients").select("*").eq("id", matterClientId).maybeSingle(),
+        supabase
+          .from("consent_events")
+          .select("id, consent_type, granted, source, captured_by, capture_method, note, created_at")
+          .eq("client_id", matterClientId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("contacts")
+          .select("name, email, cell, work_number, designation")
+          .eq("client_id", matterClientId)
+          .eq("is_director", true),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+
   const activities = (actData as { id: string; body: string; activity_type: string; created_at: string }[] | null) ?? [];
 
   // The shared enquiry thread on this matter (#3). RLS gives the firm its own
@@ -178,6 +203,15 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       {/* Parties (COO buyer/seller) — renders nothing for single-client matters */}
       <PartiesCard parties={parties} />
+
+      {/* In-place FICA — client details + consent, without an onboarding link. */}
+      <InPlaceFica
+        matterId={params.id}
+        client={ficaClient as Client | null}
+        consents={(ficaConsents as ConsentEvent[] | null) ?? []}
+        directors={toDirectors(ficaDirectors)}
+        isStaff={false}
+      />
 
       {/* In-place intake — service-aware required-document checklist + upload.
           Partners upload on the client's behalf and may mark an optional document
