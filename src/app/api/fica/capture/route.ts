@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, isPartnerRole } from "@/types";
 import { ficaFields, CONSENT_TYPES, CAPTURE_METHODS, type CaptureMethod } from "@/lib/fica";
+import { logMatterActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -221,16 +222,16 @@ export async function POST(request: Request) {
 
   // Best-effort, but logged: activity_type carries a CHECK constraint, and an
   // unchecked await swallows the 23514 whole — which is how this entry silently
-  // went missing until migration 035 legalised 'fica_capture'.
-  const { error: actErr } = await admin.from("matter_activities").insert({
-    matter_id: matterId,
-    author_id: session!.profile!.id,
-    activity_type: "fica_capture",
+  // went missing until migration 035 legalised 'fica_capture'. logMatterActivity
+  // keeps that logging and adds 036's double-write guard.
+  await logMatterActivity(admin, {
+    matterId,
+    authorId: session!.profile!.id,
+    activityType: "fica_capture",
     body: body.consents
       ? "FICA details and consent recorded in place"
       : "FICA client details updated",
   });
-  if (actErr) console.error("[fica/capture] activity insert failed:", actErr.message);
 
   return NextResponse.json({ ok: true });
 }

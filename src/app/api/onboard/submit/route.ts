@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logMatterActivity } from "@/lib/activity";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
 import { notifyStaff } from "@/lib/notify";
@@ -235,10 +236,10 @@ export async function POST(request: Request) {
 
   // 6. Mark the link used + log activity (best-effort).
   await admin.from("onboarding_links").update({ used_at: new Date().toISOString() }).eq("id", link.id);
-  await admin.from("matter_activities").insert({
-    matter_id: matterId,
-    activity_type: "document_upload",
-    author_label: "Client (onboarding form)",
+  await logMatterActivity(admin, {
+    matterId,
+    activityType: "document_upload",
+    authorLabel: "Client (onboarding form)",
     body: `Onboarding submitted — ${docs.length} document(s) uploaded${na.length ? `, ${na.length} marked not available` : ""}.`,
   });
 

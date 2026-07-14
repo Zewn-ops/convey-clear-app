@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { STAFF_ROLES, type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { logMatterActivity, logTransferActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -70,28 +71,28 @@ export async function POST(request: Request) {
   const { error } = await admin.from("matters").update({ transfer_id: transferId }).eq("id", matterId);
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
-  await admin.from("matter_activities").insert({
-    matter_id: matterId,
-    author_id: auth.callerId,
-    activity_type: "system",
+  await logMatterActivity(admin, {
+    matterId,
+    authorId: auth.callerId,
+    activityType: "system",
     body: reference ? `Linked to property transfer ${reference}` : "Removed from its property transfer",
   });
 
   // Mirror it onto the transfer's own feed (035) — the transaction's history has
   // to be readable from the transfer, not only by opening each matter in turn.
   if (transferId) {
-    await admin.from("transfer_activities").insert({
-      transfer_id: transferId,
-      author_id: auth.callerId,
-      activity_type: "matter_linked",
+    await logTransferActivity(admin, {
+      transferId,
+      authorId: auth.callerId,
+      activityType: "matter_linked",
       body: `${matterTitle} was linked to this transfer`,
     });
   }
   if (previousTransferId && previousTransferId !== transferId) {
-    await admin.from("transfer_activities").insert({
-      transfer_id: previousTransferId,
-      author_id: auth.callerId,
-      activity_type: "matter_unlinked",
+    await logTransferActivity(admin, {
+      transferId: previousTransferId,
+      authorId: auth.callerId,
+      activityType: "matter_unlinked",
       body: `${matterTitle} was removed from this transfer`,
     });
   }

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TRANSFER_DOCS_BUCKET } from "@/lib/storage";
 import { STAFF_ROLES, type UserRole } from "@/types";
+import { logTransferActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -91,13 +92,12 @@ export async function POST(request: Request) {
   }
 
   const label = body.file_name || body.document_type || "document";
-  const { error: actErr } = await admin.from("transfer_activities").insert({
-    transfer_id,
-    author_id: me.id,
-    activity_type: "document_upload",
+  await logTransferActivity(admin, {
+    transferId: transfer_id,
+    authorId: me.id,
+    activityType: "document_upload",
     body: replacesId ? `Replaced transfer document: ${label}` : `Added transfer document: ${label}`,
   });
-  if (actErr) console.error("[transfer-documents/confirm] activity insert failed:", actErr.message);
 
   return NextResponse.json({ ok: true, transfer_document_id: doc.id, replaced: Boolean(replacesId) });
 }

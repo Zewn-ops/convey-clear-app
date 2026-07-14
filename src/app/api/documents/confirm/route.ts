@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
 import { supersedeSlot } from "@/lib/documents";
+import { logMatterActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -82,12 +83,13 @@ export async function POST(request: Request) {
     .single();
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
-  // Best-effort activity entry (matter_activities.body — column confirmed).
+  // Best-effort activity entry, de-duplicated (036): a re-fired upload confirm
+  // must not post the same "Document uploaded: X" line twice.
   const label = body.file_name || documentType || "file";
-  await admin.from("matter_activities").insert({
-    matter_id,
-    author_id: me?.id ?? null,
-    activity_type: "document_upload",
+  await logMatterActivity(admin, {
+    matterId: matter_id,
+    authorId: me?.id ?? null,
+    activityType: "document_upload",
     body: replaced.length ? `Document replaced: ${label}` : `Document uploaded: ${label}`,
   });
 

@@ -7,6 +7,7 @@ import { getPipeline } from "@/lib/pipelines";
 import { composeFullName } from "@/types";
 import { firePortalIntake } from "@/lib/n8n";
 import { notifyStaff } from "@/lib/notify";
+import { logMatterActivity } from "@/lib/activity";
 import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
@@ -177,10 +178,10 @@ export async function POST(request: Request) {
     const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     await admin.from("onboarding_links").insert({ token, matter_id: matter.id, purpose: "onboarding", expires_at: expires });
 
-    await admin.from("matter_activities").insert({
-      matter_id: matter.id,
-      author_id: auth.userId,
-      activity_type: "post",
+    await logMatterActivity(admin, {
+      matterId: matter.id,
+      authorId: auth.userId,
+      activityType: "post",
       body: "Matter referred by partner.",
     });
 
@@ -242,10 +243,10 @@ export async function POST(request: Request) {
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   await admin.from("onboarding_links").insert({ token, matter_id: matter.id, purpose: "onboarding", expires_at: expires });
 
-  await admin.from("matter_activities").insert({
-    matter_id: matter.id,
-    author_id: auth.userId,
-    activity_type: "post",
+  await logMatterActivity(admin, {
+    matterId: matter.id,
+    authorId: auth.userId,
+    activityType: "post",
     body: "Matter referred by partner.",
   });
 

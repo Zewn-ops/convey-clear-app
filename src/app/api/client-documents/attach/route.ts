@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { supersedeSlot } from "@/lib/documents";
+import { logMatterActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,9 @@ export const runtime = "nodejs";
 // documents row that references the client_documents object (migration 025).
 // The existing doc lists / in-place intake / signed-download all keep working
 // (the row carries the vault storage_bucket + storage_path). Gated by matter
-// access AND client-document access (both via RLS); de-duped per matter+party.
+// access AND client-document access (both via RLS); de-duped per MATTER (see the
+// note on the dedupe query — keying it on the party is what let the transfer-doc
+// twin of this route attach the same file twice).
 export async function POST(request: Request) {
   if (!rateLimit(`client-doc-attach:${clientIp(request)}`, 60, 60_000)) {
     return NextResponse.json({ message: "Too many requests." }, { status: 429 });
@@ -54,14 +57,18 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // De-dup: same vault doc already attached to this matter (+ same party slot).
-  let dupQ = admin
+  // De-dup: same vault doc already on this matter? A vault document is PERSON-level
+  // (a certified ID belongs to one client), so it lands on a matter at most once —
+  // the party the click came from does not make it a different document. Migration
+  // 036 enforces this as a unique index, which is what actually wins the race; this
+  // check only saves the round trip.
+  const { data: existing } = await admin
     .from("documents")
     .select("id")
     .eq("matter_id", matter_id)
-    .eq("client_document_id", client_document_id);
-  dupQ = matterPartyId ? dupQ.eq("matter_party_id", matterPartyId) : dupQ.is("matter_party_id", null);
-  const { data: existing } = await dupQ.maybeSingle();
+    .eq("client_document_id", client_document_id)
+    .neq("document_status", "superseded")
+    .maybeSingle();
   if (existing) return NextResponse.json({ ok: true, document_id: existing.id, deduped: true });
 
   const uploadedBy =
@@ -94,13 +101,28 @@ export async function POST(request: Request) {
     })
     .select("id")
     .single();
-  if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+
+  // Lost the race to a concurrent identical attach (036's index). The document is
+  // on the matter either way — that is what the caller asked for, so it is not an error.
+  if (error) {
+    if (error.code === "23505") {
+      const { data: winner } = await admin
+        .from("documents")
+        .select("id")
+        .eq("matter_id", matter_id)
+        .eq("client_document_id", client_document_id)
+        .neq("document_status", "superseded")
+        .maybeSingle();
+      if (winner) return NextResponse.json({ ok: true, document_id: winner.id, deduped: true });
+    }
+    return NextResponse.json({ message: error.message }, { status: 400 });
+  }
 
   const label = cdoc.file_name || documentType || "file";
-  await admin.from("matter_activities").insert({
-    matter_id,
-    author_id: me?.id ?? null,
-    activity_type: "document_upload",
+  await logMatterActivity(admin, {
+    matterId: matter_id,
+    authorId: me?.id ?? null,
+    activityType: "document_upload",
     body: replaced.length
       ? `Reused client document (replaced the previous one): ${label}`
       : `Reused client document: ${label}`,

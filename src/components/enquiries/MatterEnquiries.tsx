@@ -74,8 +74,11 @@ export default function MatterEnquiries({
   return (
     <Card className="space-y-4">
       <div className="flex items-center justify-between gap-3">
+        {/* "Matter Enquiries", not "Enquiries" (Jukka, meeting 1): a matter page
+            carries two threads, and the names have to say which one the partner
+            firm and the client can see. Its twin is the Internal Activity Feed. */}
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-          <MessageSquare className="h-3.5 w-3.5" /> Enquiries · {threads.length}
+          <MessageSquare className="h-3.5 w-3.5" /> Matter Enquiries · {threads.length}
         </p>
         <button
           onClick={() => setComposing((c) => !c)}
@@ -87,7 +90,7 @@ export default function MatterEnquiries({
 
       <p className="text-xs text-gray-500 -mt-1">
         {audience === "staff"
-          ? "Shared with the client and the referring firm. Internal notes belong on the activity feed below."
+          ? "Shared with the client and the referring firm. Internal notes belong on the Internal Activity Feed below."
           : "A direct line to the ConveyClear team about this matter."}
       </p>
 

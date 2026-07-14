@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logMatterActivity } from "@/lib/activity";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { getPipeline } from "@/lib/pipelines";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
@@ -100,8 +101,8 @@ export async function POST(request: Request) {
     token, matter_id: matter.id, purpose: "onboarding",
     expires_at: new Date(Date.now() + 7 * 864e5).toISOString(),
   });
-  await admin.from("matter_activities").insert({
-    matter_id: matter.id, author_id: me?.id ?? null, activity_type: "post", body: "Matter created in portal by staff.",
+  await logMatterActivity(admin, {
+    matterId: matter.id, authorId: me?.id ?? null, activityType: "post", body: "Matter created in portal by staff.",
   });
 
   // #6: have n8n create the Drive folder for this portal-originated matter so

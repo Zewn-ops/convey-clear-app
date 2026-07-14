@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { supersedeSlot } from "@/lib/documents";
 import { getSessionProfile } from "@/lib/auth";
+import { logMatterActivity } from "@/lib/activity";
 import { isStaffRole, isPartnerRole } from "@/types";
 
 export const runtime = "nodejs";
@@ -77,14 +78,28 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Already attached (same transfer doc, same slot)? Idempotent re-click.
-  let dupQ = admin
+  // Already on this matter? Idempotent re-click.
+  //
+  // 🐛 This check used to include the PARTY, and that is what put the same file on
+  // one matter twice. The intake renders "From transfer" in two places for the same
+  // document — once in the "From this property transfer" panel (matter-level, party
+  // NULL) and again on a matching slot row (party-scoped) — as two separate
+  // components with two separate busy flags. Keyed on the party, the second attach
+  // read as a different slot and inserted a second row for the same storage object.
+  // Migration 030's slot index did not catch it either: it exempts document_type
+  // 'other', which is what the duplicated 'A4 - 2.pdf' was.
+  //
+  // A transfer document is PROPERTY-level (a deed search is never a person's
+  // document), so it belongs on a matter at most once, whatever slot the click came
+  // from. Migration 036 enforces the same rule as a unique index — the check below
+  // still races, and only the index actually wins that race.
+  const { data: existing } = await admin
     .from("documents")
     .select("id")
     .eq("matter_id", matter_id)
-    .eq("transfer_document_id", transfer_document_id);
-  dupQ = matterPartyId ? dupQ.eq("matter_party_id", matterPartyId) : dupQ.is("matter_party_id", null);
-  const { data: existing } = await dupQ.maybeSingle();
+    .eq("transfer_document_id", transfer_document_id)
+    .neq("document_status", "superseded")
+    .maybeSingle();
   if (existing) return NextResponse.json({ ok: true, document_id: existing.id, deduped: true });
 
   // One current document per (matter, party, type) slot — migration 030.
@@ -115,13 +130,29 @@ export async function POST(request: Request) {
     })
     .select("id")
     .single();
-  if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+
+  // The loser of a genuine race (two clicks in flight at once) lands here on the
+  // 036 index instead of inserting a second row. That is not an error to show a
+  // human: the document IS on the matter, which is what they asked for.
+  if (error) {
+    if (error.code === "23505") {
+      const { data: winner } = await admin
+        .from("documents")
+        .select("id")
+        .eq("matter_id", matter_id)
+        .eq("transfer_document_id", transfer_document_id)
+        .neq("document_status", "superseded")
+        .maybeSingle();
+      if (winner) return NextResponse.json({ ok: true, document_id: winner.id, deduped: true });
+    }
+    return NextResponse.json({ message: error.message }, { status: 400 });
+  }
 
   const label = tdoc.file_name || documentType || "file";
-  await admin.from("matter_activities").insert({
-    matter_id,
-    author_id: session?.profile?.id ?? null,
-    activity_type: "document_upload",
+  await logMatterActivity(admin, {
+    matterId: matter_id,
+    authorId: session?.profile?.id ?? null,
+    activityType: "document_upload",
     body: replaced.length
       ? `Reused transfer document (replaced the previous one): ${label}`
       : `Reused transfer document: ${label}`,

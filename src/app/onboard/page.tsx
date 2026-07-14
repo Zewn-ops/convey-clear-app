@@ -2,6 +2,7 @@ import OnboardForm from "./OnboardForm";
 import CooOnboardForm from "./CooOnboardForm";
 import PrcOnboardForm from "./PrcOnboardForm";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logMatterActivity } from "@/lib/activity";
 import { validateOnboardingToken, resolveMatterForFreshLink, type OnboardTokenReason } from "@/lib/onboard-token";
 import { notifyStaff } from "@/lib/notify";
 import { redirect } from "next/navigation";
@@ -25,19 +26,22 @@ async function requestFreshLink(formData: FormData) {
     // it to a matter, so fall back to the contact path.
     redirect(`/onboard?token=${encodeURIComponent(token)}&requested=nomatch`);
   }
-  await admin.from("matter_activities").insert({
-    matter_id: matterId,
-    author_id: null,
-    activity_type: "system",
+  const logged = await logMatterActivity(admin, {
+    matterId,
+    authorId: null,
+    activityType: "system",
     body: "Client requested a fresh onboarding link (their link was expired or already used).",
   });
-  await notifyStaff({
-    type: "onboard",
-    title: "Client requested a fresh onboarding link",
-    body: "Their onboarding link had expired or was already used — send a new one.",
-    matter_id: matterId,
-    link: `/admin/matters/${matterId}`,
-  });
+  // A client whose link just failed will press this twice. One request, one ping.
+  if (!logged.deduped) {
+    await notifyStaff({
+      type: "onboard",
+      title: "Client requested a fresh onboarding link",
+      body: "Their onboarding link had expired or was already used — send a new one.",
+      matter_id: matterId,
+      link: `/admin/matters/${matterId}`,
+    });
+  }
   redirect(`/onboard?token=${encodeURIComponent(token)}&requested=1`);
 }
 

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   UploadCloud,
   FileText,
-  ShieldCheck,
+  Lock,
   CheckCircle2,
   AlertTriangle,
   Clock,
@@ -150,11 +150,17 @@ export default function ClientVault({
   }
 
   // ------------------------------------------------------------------ view ---
+  // The heavy blue border + padlock are deliberate (Jukka, meeting 1 — he asked
+  // twice). This card is the one place on the page holding a person's identity
+  // documents, and it should not look like the cards around it: the border says
+  // "this is the vault" before anyone reads the heading.
   return (
-    <Card>
+    <Card className="border-2 border-[#1B2E6B]">
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[#1B2E6B]" />
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#1B2E6B]/10">
+            <Lock className="h-3.5 w-3.5 text-[#1B2E6B]" />
+          </span>
           <h2 className="font-semibold text-gray-900">FICA vault</h2>
         </div>
         <VaultProgress held={summary.requiredHeld} total={summary.requiredTotal} complete={summary.complete} />

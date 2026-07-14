@@ -47,7 +47,9 @@ import {
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
+import SubmitButton from "@/components/ui/SubmitButton";
 import { buildFicaSubjects } from "@/lib/fica";
+import { logMatterActivity } from "@/lib/activity";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 
@@ -135,8 +137,8 @@ async function clearOutcomeIfReverted(
   delete rest.stage_outcome;
   delete rest.stage_reason;
   await supabase.from("matters").update({ service_data: rest }).eq("id", matterId);
-  await supabase.from("matter_activities").insert({
-    matter_id: matterId, author_id: userId || null, activity_type: "system",
+  await logMatterActivity(supabase, {
+    matterId, authorId: userId || null, activityType: "system",
     body: `Council decision cleared (matter reverted before ${decision.stage.name})`,
   });
 }
@@ -168,13 +170,16 @@ export default async function AdminMatterDetailPage({
     await supabase.from("matters").update({ current_phase: newPhase, ...statusPatch }).eq("id", matterId);
     // Reverting to an earlier phase clears any stale council decision (see helper).
     await clearOutcomeIfReverted(supabase, matterId, pl, { phaseKey: newPhase }, userId || null);
-    await supabase.from("matter_activities").insert({
-      matter_id: matterId, author_id: userId || null, activity_type: "phase_transition",
+    const logged = await logMatterActivity(supabase, {
+      matterId, authorId: userId || null, activityType: "phase_transition",
       body: `Phase: ${label}`,
     });
     // Client/partner are only pinged for phases they can see (avoid overload).
+    // `deduped` = this exact transition was already recorded seconds ago (a
+    // double-click), so the notification went out with it — sending again would
+    // duplicate the push as well as the feed row.
     const phaseClientVisible = pl ? (phaseSteps(pl).some((s) => s.key === newPhase) && newPhase !== pl.prePhase.key) : true;
-    if (phaseClientVisible) {
+    if (phaseClientVisible && !logged.deduped) {
       await notifyMatterParties(matterId, { type: "phase", title: `Moved to ${label}` }, { excludeUserId: userId || null });
     }
     revalidatePath(`/admin/matters/${matterId}`);
@@ -196,21 +201,22 @@ export default async function AdminMatterDetailPage({
     await supabase.from("matters").update({ current_stage: newStage, ...statusPatch }).eq("id", matterId);
     // Reverting to an earlier stage clears any stale council decision (see helper).
     await clearOutcomeIfReverted(supabase, matterId, pl, { stageKey: newStage }, userId || null);
-    await supabase.from("matter_activities").insert({
-      matter_id: matterId, author_id: userId || null, activity_type: "status_change",
+    const logged = await logMatterActivity(supabase, {
+      matterId, authorId: userId || null, activityType: "status_change",
       body: `Stage: ${label}`,
     });
     // General Note: when stages are skipped (e.g. 1 → 4), list them on the feed.
     const skipped = pl ? skippedStageNames(pl, prevStage, newStage) : [];
     if (skipped.length > 0) {
-      await supabase.from("matter_activities").insert({
-        matter_id: matterId, author_id: userId || null, activity_type: "system",
+      await logMatterActivity(supabase, {
+        matterId, authorId: userId || null, activityType: "system",
         body: `Skipped: ${skipped.join(", ")}`,
       });
     }
-    // Only notify the client/partner for client-visible stages (orange).
+    // Only notify the client/partner for client-visible stages (orange), and only
+    // if this stage change was actually new (see advancePhase).
     const clientVisible = pl ? isStageClientVisible(pl, newStage) : true;
-    if (clientVisible) {
+    if (clientVisible && !logged.deduped) {
       await notifyMatterParties(matterId, { type: "stage", title: `Update: ${label}` }, { excludeUserId: userId || null });
     }
     revalidatePath(`/admin/matters/${matterId}`);
@@ -240,11 +246,11 @@ export default async function AdminMatterDetailPage({
       stage_reason: reasonKey || null,
     };
     await supabase.from("matters").update({ service_data }).eq("id", matterId);
-    await supabase.from("matter_activities").insert({
-      matter_id: matterId, author_id: userId || null, activity_type: "status_change",
+    const logged = await logMatterActivity(supabase, {
+      matterId, authorId: userId || null, activityType: "status_change",
       body: `Outcome: ${label}`,
     });
-    if (outcomeDef?.clientVisible) {
+    if (outcomeDef?.clientVisible && !logged.deduped) {
       await notifyMatterParties(matterId, { type: "outcome", title: `Outcome: ${label}` }, { excludeUserId: userId || null });
     }
     revalidatePath(`/admin/matters/${matterId}`);
@@ -259,17 +265,19 @@ export default async function AdminMatterDetailPage({
     if (!status?.trim()) return;
 
     await supabase.from("matters").update({ status }).eq("id", matterId);
-    await supabase.from("matter_activities").insert({
-      matter_id: matterId,
-      author_id: userId || null,
-      activity_type: "status_change",
+    const logged = await logMatterActivity(supabase, {
+      matterId,
+      authorId: userId || null,
+      activityType: "status_change",
       body: `Status changed to: ${MATTER_STATUS_LABELS[status as MatterStatus] ?? status}`,
     });
-    await notifyMatterParties(
-      matterId,
-      { type: "status", title: `Status: ${MATTER_STATUS_LABELS[status as MatterStatus] ?? status}` },
-      { excludeUserId: userId || null }
-    );
+    if (!logged.deduped) {
+      await notifyMatterParties(
+        matterId,
+        { type: "status", title: `Status: ${MATTER_STATUS_LABELS[status as MatterStatus] ?? status}` },
+        { excludeUserId: userId || null }
+      );
+    }
     revalidatePath(`/admin/matters/${matterId}`);
   }
 
@@ -285,8 +293,8 @@ export default async function AdminMatterDetailPage({
     const { data: cur } = await supabase.from("matters").select("service_data").eq("id", matterId).maybeSingle();
     const sd = ((cur as { service_data?: Record<string, unknown> } | null)?.service_data) ?? {};
     await supabase.from("matters").update({ service_data: { ...sd, rates_account_no: value || null } }).eq("id", matterId);
-    await supabase.from("matter_activities").insert({
-      matter_id: matterId, author_id: authorId || null, activity_type: "system",
+    await logMatterActivity(supabase, {
+      matterId, authorId: authorId || null, activityType: "system",
       body: value ? `Rates account number set: ${value}` : "Rates account number cleared",
     });
     revalidatePath(`/admin/matters/${matterId}`);
@@ -301,22 +309,25 @@ export default async function AdminMatterDetailPage({
 
     if (!body?.trim()) return;
 
-    await supabase.from("matter_activities").insert({
-      matter_id: matterId,
-      author_id: userId || null,
-      activity_type: "post",
+    const logged = await logMatterActivity(supabase, {
+      matterId,
+      authorId: userId || null,
+      activityType: "post",
       body: body.trim(),
     });
 
     // Internal notes notify ConveyClear staff (note 11) — never the client/partner.
     // Title prefixing ("<matter title>: …") is centralised in notifyUsers.
-    await notifyStaff({
-      type: "note",
-      title: "Internal note",
-      body: body.trim().slice(0, 140),
-      link: `/admin/matters/${matterId}`,
-      matter_id: matterId,
-    });
+    // Skipped when the note was a double-click of one already posted seconds ago.
+    if (!logged.deduped) {
+      await notifyStaff({
+        type: "note",
+        title: "Internal note",
+        body: body.trim().slice(0, 140),
+        link: `/admin/matters/${matterId}`,
+        matter_id: matterId,
+      });
+    }
 
     revalidatePath(`/admin/matters/${matterId}`);
   }
@@ -583,7 +594,7 @@ export default async function AdminMatterDetailPage({
                   {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
                 </select>
               </label>
-              <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set</button>
+              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set</SubmitButton>
             </form>
             <form action={setStage} className="flex items-end gap-2">
               <input type="hidden" name="matter_id" value={id} />
@@ -595,7 +606,7 @@ export default async function AdminMatterDetailPage({
                   {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
                 </select>
               </label>
-              <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90">Update</button>
+              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90">Update</SubmitButton>
             </form>
           </div>
 
@@ -615,7 +626,7 @@ export default async function AdminMatterDetailPage({
                     {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
                   </select>
                 </label>
-                <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set outcome</button>
+                <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set outcome</SubmitButton>
               </form>
             </div>
           )}
@@ -645,7 +656,7 @@ export default async function AdminMatterDetailPage({
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
             />
           </label>
-          <button type="submit" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Save</button>
+          <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Save</SubmitButton>
         </form>
       </Card>
 
@@ -706,9 +717,9 @@ export default async function AdminMatterDetailPage({
               <option key={s} value={s}>{MATTER_STATUS_LABELS[s]}</option>
             ))}
           </select>
-          <button type="submit" className="px-3 py-1.5 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">
+          <SubmitButton pendingLabel="Updating…" className="px-3 py-1.5 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">
             Update status
-          </button>
+          </SubmitButton>
           {matter.status === "new" && (
             <span className="text-xs font-medium text-amber-600">Awaiting review — set to Open once reviewed</span>
           )}
@@ -825,9 +836,19 @@ export default async function AdminMatterDetailPage({
         {docGroup("ConveyClear uploads", ccDocs)}
       </div>
 
-      {/* Activity feed */}
+      {/* Internal activity feed. Named for its AUDIENCE, not its content (Jukka,
+          meeting 1): staff kept having to remember which of the two threads on
+          this page the partner firm can see. The enquiry thread above is the
+          shared one; everything here is ours. */}
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3">Activity Feed</h2>
+        <div className="mb-3 flex items-center gap-1.5">
+          <Lock className="h-3.5 w-3.5 text-gray-400" />
+          <h2 className="font-semibold text-gray-900">Internal Activity Feed</h2>
+        </div>
+        <p className="-mt-2 mb-3 text-xs text-gray-500">
+          ConveyClear only. Notes here are never shown to the client or the partner firm — use Matter Enquiries above to
+          talk to them.
+        </p>
 
         {/* Post note form */}
         <form action={postNote} className="mb-4">
@@ -840,12 +861,12 @@ export default async function AdminMatterDetailPage({
               placeholder="Add a note or update..."
               className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
             />
-            <button
-              type="submit"
+            <SubmitButton
+              pendingLabel="Posting…"
               className="px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 transition-colors self-end"
             >
               Post
-            </button>
+            </SubmitButton>
           </div>
         </form>
 

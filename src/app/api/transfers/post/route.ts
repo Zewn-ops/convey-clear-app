@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, isPartnerRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { logTransferActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -49,14 +50,17 @@ export async function POST(request: Request) {
   if (!transfer) return NextResponse.json({ message: "Transfer not found or access denied" }, { status: 403 });
 
   const admin = createAdminClient();
-  const { error } = await admin.from("transfer_activities").insert({
-    transfer_id: transferId,
-    author_id: session!.profile!.id,
-    author_label: isPartnerRole(role) ? "Partner" : "ConveyClear",
-    activity_type: "post",
+  const { id, deduped } = await logTransferActivity(admin, {
+    transferId,
+    authorId: session!.profile!.id,
+    authorLabel: isPartnerRole(role) ? "Partner" : "ConveyClear",
+    activityType: "post",
     body: text,
   });
-  if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+  // Unlike the best-effort feed entries elsewhere, the post IS this route — a
+  // failure to write it has to surface. `deduped` is a success: the note is on the
+  // feed, it was simply already there (a double-submitted click).
+  if (!id) return NextResponse.json({ message: "Could not post to the transfer feed." }, { status: 400 });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, deduped });
 }

@@ -1,4 +1,5 @@
 import Card from "@/components/ui/Card";
+import SubmitButton from "@/components/ui/SubmitButton";
 import StorageUpload from "@/components/matters/StorageUpload";
 import ReuseVaultDoc from "@/components/matters/ReuseVaultDoc";
 import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
@@ -245,9 +246,9 @@ export default function InPlaceIntake({
                           <input type="hidden" name="matter_id" value={matterId} />
                           <input type="hidden" name="doc_key" value={key} />
                           <input type="hidden" name="make" value="0" />
-                          <button type="submit" className="text-xs text-[#1B2E6B] hover:underline">
+                          <SubmitButton pendingLabel="…" className="text-xs text-[#1B2E6B] hover:underline">
                             Undo
-                          </button>
+                          </SubmitButton>
                         </form>
                       )
                     ) : (
@@ -269,9 +270,9 @@ export default function InPlaceIntake({
                             <input type="hidden" name="matter_id" value={matterId} />
                             <input type="hidden" name="doc_key" value={key} />
                             <input type="hidden" name="make" value="1" />
-                            <button type="submit" className="text-xs text-gray-400 hover:text-gray-600 hover:underline">
+                            <SubmitButton pendingLabel="…" className="text-xs text-gray-400 hover:text-gray-600 hover:underline">
                               Not available
-                            </button>
+                            </SubmitButton>
                           </form>
                         )}
                       </div>

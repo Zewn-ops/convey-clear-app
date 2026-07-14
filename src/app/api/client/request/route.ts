@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { logMatterActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -68,8 +69,8 @@ export async function POST(request: Request) {
   }).select("id").single();
   if (mErr) return NextResponse.json({ message: mErr.message }, { status: 400 });
 
-  await admin.from("matter_activities").insert({
-    matter_id: matter.id, author_id: me.id, activity_type: "post", body: "Service requested by client via portal.",
+  await logMatterActivity(admin, {
+    matterId: matter.id, authorId: me.id, activityType: "post", body: "Service requested by client via portal.",
   });
 
   return NextResponse.json({ ok: true, matter_id: matter.id, title });
