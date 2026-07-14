@@ -7,9 +7,10 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import SearchSelect from "@/components/ui/SearchSelect";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { PRIORITY_LABELS, type MatterPriority } from "@/types";
-import { CheckCircle2, ExternalLink } from "lucide-react";
+import { CheckCircle2, ExternalLink, Home } from "lucide-react";
 
 const MUNI = [
   { value: "COT", label: "City of Tshwane (COT)" },
@@ -19,16 +20,34 @@ const MUNI = [
 ];
 const PRIORITIES: MatterPriority[] = ["standard", "priority", "urgent", "complex", "emerging", "whale"];
 
+/** The transfer a matter is being created INSIDE (Jukka: the transfer is the primary object now). */
+export interface CreateInTransfer {
+  id: string;
+  reference: string;
+  municipality: string | null;
+  property_description: string | null;
+  /** Seller/buyer of the transfer — the two clients this matter is almost always for. */
+  parties: { id: string; label: string; role: string }[];
+}
+
 export default function CreateMatterForm({
   services,
   clients,
+  transfer,
 }: {
   services: { id: string; code: string; name: string }[];
   clients: { id: string; full_name: string | null; business_name: string | null }[];
+  /**
+   * When set, the matter is created inside this property transfer: the property
+   * and municipality are inherited (they belong to the TRANSACTION, not the
+   * matter, and retyping them is how they drift apart), and the transfer's own
+   * seller/buyer are offered first as the client.
+   */
+  transfer?: CreateInTransfer;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"existing" | "new">(clients.length ? "existing" : "new");
-  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [clientId, setClientId] = useState(transfer?.parties[0]?.id ?? clients[0]?.id ?? "");
   const [entityType, setEntityType] = useState<"natural_person" | "business" | "trust">("natural_person");
   const [name, setName] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -36,8 +55,8 @@ export default function CreateMatterForm({
   const [email, setEmail] = useState("");
   const [cell, setCell] = useState("");
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
-  const [municipality, setMunicipality] = useState("COT");
-  const [property, setProperty] = useState("");
+  const [municipality, setMunicipality] = useState(transfer?.municipality || "COT");
+  const [property, setProperty] = useState(transfer?.property_description || "");
   const [priority, setPriority] = useState<MatterPriority>("standard");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<{ matterId: string; title: string; token: string } | null>(null);
@@ -66,12 +85,13 @@ export default function CreateMatterForm({
         last_name: entityType === "natural_person" ? lastName : undefined,
         business_name: entityType !== "natural_person" ? name : undefined,
         email, cell, service_id: serviceId, municipality, property_description: property, priority,
+        transfer_id: transfer?.id,
       }),
     });
     const json = await res.json();
     setLoading(false);
     if (!res.ok) return toast.error(json.message ?? "Could not create matter");
-    toast.success("Matter created");
+    toast.success(transfer ? "Matter created in this transfer" : "Matter created");
     setDone({ matterId: json.matter_id, title: json.title, token: json.onboarding_token });
     router.refresh();
   };
@@ -101,6 +121,19 @@ export default function CreateMatterForm({
 
   return (
     <Card className="space-y-4">
+      {transfer && (
+        <div className="flex items-start gap-2 rounded-lg border border-[#E8521A]/30 bg-[#E8521A]/[0.04] px-3 py-2.5">
+          <Home className="mt-0.5 h-4 w-4 shrink-0 text-[#E8521A]" />
+          <div className="min-w-0 text-xs">
+            <p className="font-medium text-gray-900">Creating a matter inside transfer {transfer.reference}</p>
+            <p className="mt-0.5 text-gray-500">
+              It is linked to the transfer on creation, and inherits the property and municipality — those describe the{" "}
+              <b>transaction</b>, so they are not retyped per matter.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -119,13 +152,39 @@ export default function CreateMatterForm({
       </div>
 
       {mode === "existing" ? (
-        <Select
-          label="Client"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-          placeholder="Select a client…"
-          options={clients.map((c) => ({ value: c.id, label: c.business_name || c.full_name || "Unnamed" }))}
-        />
+        <div className="space-y-2">
+          {/* The transfer's own seller and buyer, one click away. On a transfer,
+              the matter is nearly always for one of them — and hunting for that
+              person in a list of every client is the thing Jukka complained about. */}
+          {transfer && transfer.parties.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">This transfer:</span>
+              {transfer.parties.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setClientId(p.id)}
+                  className={
+                    "rounded-full border px-2.5 py-1 text-xs font-medium " +
+                    (clientId === p.id
+                      ? "border-[#1B2E6B] bg-[#1B2E6B] text-white"
+                      : "border-gray-200 text-gray-600 hover:border-[#1B2E6B]/40")
+                  }
+                >
+                  {p.label} <span className="opacity-70">· {p.role}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <SearchSelect
+            label="Client"
+            value={clientId}
+            onChange={setClientId}
+            placeholder="Search clients…"
+            emptyLabel="— Select a client —"
+            options={clients.map((c) => ({ value: c.id, label: c.business_name || c.full_name || "Unnamed" }))}
+          />
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select

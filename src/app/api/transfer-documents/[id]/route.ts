@@ -29,7 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (gate.error) return gate.error;
   const me = gate.me!;
 
-  let body: { verified?: boolean; notes?: string | null; status?: "current" | "archived" };
+  let body: { verified?: boolean; notes?: string | null; status?: "current" | "archived"; file_name?: string };
   try {
     body = await request.json();
   } catch {
@@ -37,10 +37,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const admin = createAdminClient();
-  const { data: doc } = await admin.from("transfer_documents").select("id, status").eq("id", id).maybeSingle();
+  const { data: doc } = await admin
+    .from("transfer_documents")
+    .select("id, status, file_name")
+    .eq("id", id)
+    .maybeSingle();
   if (!doc) return NextResponse.json({ message: "Document not found" }, { status: 404 });
 
   const patch: Record<string, unknown> = {};
+
+  // Rename (Jukka: already possible on a matter document, missing on a transfer
+  // one). Display name only — the stored object path never changes.
+  let renameFrom: string | null = null;
+  if (body.file_name !== undefined) {
+    const name = body.file_name.trim();
+    if (!name) return NextResponse.json({ message: "A document name can't be empty" }, { status: 400 });
+    patch.file_name = name;
+    renameFrom = (doc.file_name as string | null) ?? null;
+  }
+
   if (typeof body.verified === "boolean") {
     patch.verified = body.verified;
     patch.verified_at = body.verified ? new Date().toISOString() : null;
@@ -65,7 +80,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { error } = await admin.from("transfer_documents").update(patch).eq("id", id);
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true });
+
+  // Carry a rename down to the matters that REUSED this document — they hold their
+  // own copy of file_name (taken at attach time), so without this the same file
+  // reads one way on the transfer and another on every matter under it.
+  //
+  // Only rows that still carry the OLD name are touched: a document someone
+  // deliberately renamed on a matter keeps that name. A rename here is "fix the
+  // label", not "overrule everyone".
+  let renamedOnMatters = 0;
+  if (patch.file_name && renameFrom) {
+    const { data: touched } = await admin
+      .from("documents")
+      .update({ file_name: patch.file_name as string })
+      .eq("transfer_document_id", id)
+      .eq("file_name", renameFrom)
+      .select("id");
+    renamedOnMatters = (touched ?? []).length;
+  }
+
+  return NextResponse.json({ ok: true, renamed_on_matters: renamedOnMatters });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {

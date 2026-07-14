@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
-import { UploadCloud, FileText, CheckCircle2, RotateCcw, Trash2, Files } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle2, RotateCcw, Trash2, Files, Pencil, Check, X } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { docLabel } from "@/lib/prc-docs";
 import { formatDate } from "@/lib/utils";
@@ -165,6 +165,14 @@ export default function TransferDocuments({
                 )}
                 {canManage && (
                   <>
+                    {/* Rename — matter documents have had this since B1; transfer
+                        documents did not, which is what Jukka hit. The rename also
+                        follows the file down onto every matter that reused it. */}
+                    <RenameDoc
+                      current={d.file_name || ""}
+                      busy={busy === d.id}
+                      onSave={(name) => patch(d.id, { file_name: name }, "Renamed")}
+                    />
                     <button
                       type="button"
                       disabled={busy === d.id}
@@ -281,6 +289,73 @@ export default function TransferDocuments({
         </details>
       )}
     </Card>
+  );
+}
+
+// Inline rename, same interaction as the matter-side DocRenameButton (B1) so the
+// two document lists behave identically.
+function RenameDoc({
+  current,
+  busy,
+  onSave,
+}: {
+  current: string;
+  busy: boolean;
+  onSave: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(current);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          setName(current);
+          setEditing(true);
+        }}
+        title="Rename"
+        className="text-gray-400 hover:text-[#1B2E6B] disabled:opacity-50"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+    );
+  }
+
+  const commit = () => {
+    const trimmed = name.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === current) return;
+    onSave(trimmed);
+  };
+
+  return (
+    <span className="flex items-center gap-1">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        disabled={busy}
+        className="w-44 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
+      />
+      <button type="button" onClick={commit} disabled={busy} title="Save" className="text-green-600 hover:text-green-800">
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        disabled={busy}
+        title="Cancel"
+        className="text-gray-400 hover:text-gray-600"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </span>
   );
 }
 

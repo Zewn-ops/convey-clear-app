@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { logMatterActivity } from "@/lib/activity";
+import { logMatterActivity, logTransferActivity } from "@/lib/activity";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { getPipeline } from "@/lib/pipelines";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
@@ -41,10 +41,30 @@ export async function POST(request: Request) {
     property_description?: string;
     priority?: string;
     notes?: string;
+    transfer_id?: string;
   };
   try { body = await request.json(); } catch { return NextResponse.json({ message: "Invalid JSON" }, { status: 400 }); }
 
   const admin = createAdminClient();
+
+  // Created INSIDE a property transfer (Jukka, meeting 1: the transfer is the
+  // primary object — "create matters within the property transfer immediately"
+  // rather than making one and linking it afterwards).
+  //
+  // Resolved through the CALLER's client, not the service role: a transfer the
+  // caller cannot see must not become a transfer they can attach a matter to.
+  // Staff can see all of them, so this is belt-and-braces today — but this route
+  // is the one place a transfer_id arrives from a browser.
+  let transferId: string | null = null;
+  if (body.transfer_id) {
+    const { data: t } = await supabase
+      .from("property_transfers")
+      .select("id, reference")
+      .eq("id", body.transfer_id)
+      .maybeSingle();
+    if (!t) return NextResponse.json({ message: "Transfer not found or access denied" }, { status: 403 });
+    transferId = t.id;
+  }
 
   // Resolve / create client
   let clientId = body.client_id ?? null;
@@ -92,6 +112,7 @@ export async function POST(request: Request) {
     municipality: body.municipality || null,
     service_notes: body.notes || null,
     current_owner_id: me?.id ?? null,
+    transfer_id: transferId,
   }).select("id").single();
   if (mErr) return NextResponse.json({ message: mErr.message }, { status: 400 });
 
@@ -102,8 +123,22 @@ export async function POST(request: Request) {
     expires_at: new Date(Date.now() + 7 * 864e5).toISOString(),
   });
   await logMatterActivity(admin, {
-    matterId: matter.id, authorId: me?.id ?? null, activityType: "post", body: "Matter created in portal by staff.",
+    matterId: matter.id, authorId: me?.id ?? null, activityType: "post",
+    body: transferId ? "Matter created in portal by staff, inside this property transfer." : "Matter created in portal by staff.",
   });
+
+  // Mirror it onto the transfer's feed — same as the link route, because to the
+  // transaction "a matter was created in it" and "a matter was linked to it" are
+  // the same event. Without this, matters made the new way are invisible in the
+  // transfer's own history.
+  if (transferId) {
+    await logTransferActivity(admin, {
+      transferId,
+      authorId: me?.id ?? null,
+      activityType: "matter_linked",
+      body: `${title} was created in this transfer`,
+    });
+  }
 
   // #6: have n8n create the Drive folder for this portal-originated matter so
   // FICA uploads have somewhere to land. Best-effort — never blocks creation.

@@ -22,9 +22,10 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
+import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -94,8 +95,9 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const transfer = transferData as TransferDetail | null;
   if (!transfer) notFound();
 
-  // Matters under this transfer + the pool of matters free to attach.
-  const [{ data: linkedData }, { data: freeData }] = await Promise.all([
+  // Matters under this transfer + the pool of matters free to attach + what the
+  // "create a matter in here" form needs (services, clients).
+  const [{ data: linkedData }, { data: freeData }, { data: servicesData }, { data: clientsData }] = await Promise.all([
     supabase
       .from("matters")
       .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, services(code, name)")
@@ -107,12 +109,25 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       .is("transfer_id", null)
       .order("created_at", { ascending: false })
       .limit(100),
+    supabase.from("services").select("id, code, name").order("name"),
+    supabase
+      .from("clients")
+      .select("id, full_name, business_name")
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
   const candidates = ((freeData as { id: string; title: string | null; municipality: string | null }[] | null) ?? []).map(
     (m) => ({ id: m.id, label: m.title || `Untitled matter (${municipalityLabel(m.municipality)})` })
   );
+
+  // The transaction's own seller/buyer, offered first when creating a matter in
+  // here — on a transfer the matter is nearly always for one of these two.
+  const transferParties = [
+    transfer.seller ? { id: transfer.seller.id, label: clientDisplayName(transfer.seller), role: "Seller" } : null,
+    transfer.buyer ? { id: transfer.buyer.id, label: clientDisplayName(transfer.buyer), role: "Buyer" } : null,
+  ].filter((p): p is { id: string; label: string; role: string } => p !== null);
 
   // Transfer-level documents (migration 034) + how many matters already reuse
   // each one — that count is what tells staff a document is load-bearing before
@@ -282,8 +297,37 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-4 border-t border-gray-100">
-          <LinkMatterControl transferId={id} candidates={candidates} />
+        {/* Create a matter INSIDE the transfer (Jukka, meeting 1: "we want to move
+            away from linking matters and instead create matters within the property
+            transfer immediately"). Linking an existing matter stays — a PRC opened
+            months before anyone knew it was part of this transaction still has to
+            be attachable — but creating is now the primary path, so it is first.
+
+            Native <details>: this is a server component, and a disclosure needs no
+            JavaScript to be a disclosure. */}
+        <div className="px-5 py-4 border-t border-gray-100 space-y-4">
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[#E8521A] hover:underline">
+              <Plus className="h-4 w-4" /> Create a matter in this transfer
+            </summary>
+            <div className="mt-3">
+              <CreateMatterForm
+                services={(servicesData as { id: string; code: string; name: string }[] | null) ?? []}
+                clients={(clientsData as { id: string; full_name: string | null; business_name: string | null }[] | null) ?? []}
+                transfer={{
+                  id,
+                  reference: transfer.reference,
+                  municipality: transfer.municipality,
+                  property_description: transfer.property_description,
+                  parties: transferParties,
+                }}
+              />
+            </div>
+          </details>
+
+          <div className="border-t border-gray-100 pt-4">
+            <LinkMatterControl transferId={id} candidates={candidates} />
+          </div>
         </div>
       </Card>
 

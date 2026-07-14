@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import SearchSelect from "@/components/ui/SearchSelect";
 import {
   TRANSFER_STATUS_LABELS,
   type PropertyTransfer,
@@ -50,8 +51,10 @@ export default function TransferForm({
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [loading, setLoading] = useState(false);
 
-  const firmOptions = [{ value: "", label: "— None —" }, ...firms.map((f) => ({ value: f.id, label: f.label }))];
-  const clientOptions = [{ value: "", label: "— None —" }, ...clients.map((c) => ({ value: c.id, label: c.label }))];
+  // Searchable, not raw <select>: these carry every firm and every client in the
+  // database, and a dropdown of 300 clients is a scroll, not a choice (Jukka).
+  const firmOptions = firms.map((f) => ({ value: f.id, label: f.label }));
+  const clientOptions = clients.map((c) => ({ value: c.id, label: c.label }));
 
   const submit = async () => {
     if (!reference.trim()) return toast.error("A transfer reference is required");
@@ -112,15 +115,34 @@ export default function TransferForm({
       <div className="pt-2 border-t border-gray-100">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Parties</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
+          <SearchSelect
             label="Conveyancing attorney (firm)"
             value={attorneyId}
-            onChange={(e) => setAttorneyId(e.target.value)}
+            onChange={setAttorneyId}
             options={firmOptions}
+            placeholder="Search firms…"
           />
-          <Select label="Estate agent (firm)" value={agentId} onChange={(e) => setAgentId(e.target.value)} options={firmOptions} />
-          <Select label="Seller" value={sellerId} onChange={(e) => setSellerId(e.target.value)} options={clientOptions} />
-          <Select label="Buyer" value={buyerId} onChange={(e) => setBuyerId(e.target.value)} options={clientOptions} />
+          <SearchSelect
+            label="Estate agent (firm)"
+            value={agentId}
+            onChange={setAgentId}
+            options={firmOptions}
+            placeholder="Search firms…"
+          />
+          <SearchSelect
+            label="Seller"
+            value={sellerId}
+            onChange={setSellerId}
+            options={clientOptions}
+            placeholder="Search clients…"
+          />
+          <SearchSelect
+            label="Buyer"
+            value={buyerId}
+            onChange={setBuyerId}
+            options={clientOptions}
+            placeholder="Search clients…"
+          />
         </div>
         <p className="text-xs text-gray-500 mt-2">
           The attorney firm controls who sees this transfer — its partner users get read access to the

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import SearchSelect from "@/components/ui/SearchSelect";
 import { Link2 } from "lucide-react";
 
 export interface LinkableMatter {
@@ -47,19 +48,19 @@ export default function LinkMatterControl({
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-end gap-2">
-      <label className="flex-1 text-xs font-medium text-gray-500">
-        Link an existing matter
-        <select
+      {/* Searchable: a matter's title is a long code (COT_COO_SMITH_ERF123), and
+          picking one out of a raw dropdown of every unlinked matter is guesswork
+          the moment there are more than a screenful. */}
+      <div className="flex-1">
+        <SearchSelect
+          label="Link an existing matter"
           value={matterId}
-          onChange={(e) => setMatterId(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
-        >
-          <option value="">— Select a matter —</option>
-          {candidates.map((m) => (
-            <option key={m.id} value={m.id}>{m.label}</option>
-          ))}
-        </select>
-      </label>
+          onChange={setMatterId}
+          options={candidates.map((m) => ({ value: m.id, label: m.label }))}
+          placeholder="Search by matter, client or property…"
+          emptyLabel="— Select a matter —"
+        />
+      </div>
       <Button onClick={link} loading={loading} className="shrink-0">
         <Link2 className="h-4 w-4" /> Link
       </Button>
