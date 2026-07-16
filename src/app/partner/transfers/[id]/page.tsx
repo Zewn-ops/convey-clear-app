@@ -17,6 +17,7 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
+import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { ArrowLeft } from "lucide-react";
@@ -73,6 +74,18 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     .order("created_at", { ascending: true });
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
+
+  // The firm's own matters not yet under any transfer — the pool this transfer
+  // can pull from. RLS (can_access_matter) already scopes these to the firm.
+  const { data: freeData } = await supabase
+    .from("matters")
+    .select("id, title, municipality, created_at")
+    .is("transfer_id", null)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  const candidates = ((freeData as { id: string; title: string | null; municipality: string | null }[] | null) ?? []).map(
+    (m) => ({ id: m.id, label: m.title || `Untitled matter (${municipalityLabel(m.municipality)})` })
+  );
 
   // Transfer documents — the owning firm READS them (RLS: can_access_transfer)
   // but does not author them, matching how transfers themselves work (026).
@@ -191,11 +204,18 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               })}
               {linked.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">No matters linked yet.</td>
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                    No matters linked yet. Refer a matter, then attach it here to build up the transaction.
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+        {/* The firm attaches its own referred matters (Meeting 2). Server route
+            re-checks both matter and transfer belong to this firm. */}
+        <div className="px-5 py-4 border-t border-gray-100">
+          <LinkMatterControl transferId={id} candidates={candidates} endpoint="/api/partner/transfers/link" />
         </div>
       </Card>
 

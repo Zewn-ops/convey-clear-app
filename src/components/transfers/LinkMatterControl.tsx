@@ -15,12 +15,18 @@ export interface LinkableMatter {
 // Attach a matter to this transfer. Only shows matters that are not already
 // under some other transfer — moving a matter between transfers is a deliberate
 // two-step (unlink there, link here) so it can't happen by mis-click.
+//
+// `endpoint` lets the partner detail page point this at the firm-scoped route
+// (/api/partner/transfers/link) instead of the staff one — same UI, tighter
+// authorisation on the server.
 export default function LinkMatterControl({
   transferId,
   candidates,
+  endpoint = "/api/admin/property-transfers/link",
 }: {
   transferId: string;
   candidates: LinkableMatter[];
+  endpoint?: string;
 }) {
   const router = useRouter();
   const [matterId, setMatterId] = useState("");
@@ -33,7 +39,7 @@ export default function LinkMatterControl({
   const link = async () => {
     if (!matterId) return toast.error("Pick a matter");
     setLoading(true);
-    const res = await fetch("/api/admin/property-transfers/link", {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matter_id: matterId, transfer_id: transferId }),
