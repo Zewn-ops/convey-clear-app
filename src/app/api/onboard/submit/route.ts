@@ -110,28 +110,46 @@ export async function POST(request: Request) {
     const d = fica.details;
     const consents = fica.consents ?? {};
     const now = new Date().toISOString();
-    const patch: Record<string, unknown> = {
-      primary_cell: d.cell || null,
-      primary_email: d.email || null,
-      id_number: d.id_number || null,
-      physical_address: d.home_address || null,
-      person_industry: d.industry || null,
-      person_designation: d.designation || null,
-      municipal_username: d.municipal_username || null,
-      municipal_password: d.municipal_password || null,
-      marketing_opt_in: Boolean(consents.marketing),
-      popia_consent_at: consents.popia ? now : null,
-      terms_accepted_at: consents.terms ? now : null,
-      updated_at: now,
+    const patch: Record<string, unknown> = { updated_at: now };
+
+    // Only overwrite a field the form actually PROVIDED. Onboarding links are
+    // re-issued routinely ("request a fresh link"), so a second submission with a
+    // field left blank must not null what was already captured. `x || null` on
+    // every field did exactly that.
+    const put = (k: string, v: unknown) => {
+      if (typeof v === "string") { const t = v.trim(); if (t) patch[k] = t; }
+      else if (v != null) patch[k] = v;
     };
+    put("primary_cell", d.cell);
+    put("primary_email", d.email);
+    put("id_number", d.id_number);
+    put("physical_address", d.home_address);
+    put("person_industry", d.industry);
+    put("person_designation", d.designation);
+    // NOTE: municipal_username/password are NOT written here. They are the
+    // client's council login — a staff-only (sensitive) field the public onboard
+    // form does not collect, so `d.municipal_* || null` only ever ERASED what
+    // staff had entered. This path does not own them.
+
+    // marketing is a preference — safe to set either way.
+    patch.marketing_opt_in = Boolean(consents.marketing);
+    // Consent timestamps are stamped only when granted, never nulled here: a
+    // re-submit that doesn't re-tick must not erase a consent already on record
+    // (the durable audit trail is consent_events, written below regardless).
+    if (consents.popia) patch.popia_consent_at = now;
+    if (consents.terms) patch.terms_accepted_at = now;
+
     if (entityType === "business") {
-      patch.business_name = d.business_name || null;
-      patch.registration_no = d.registration_no || null;
+      put("business_name", d.business_name);
+      put("registration_no", d.registration_no);
     } else {
       // FICA form's "full_name" field holds first name(s); surname is separate.
-      patch.first_name = d.full_name?.trim() || null;
-      patch.last_name = d.surname?.trim() || null;
-      patch.full_name = `${d.full_name ?? ""} ${d.surname ?? ""}`.trim() || null;
+      const first = d.full_name?.trim() || "";
+      const last = d.surname?.trim() || "";
+      if (first) patch.first_name = first;
+      if (last) patch.last_name = last;
+      const full = `${first} ${last}`.trim();
+      if (full) patch.full_name = full;
     }
     try {
       const { error: clientErr } = await admin.from("clients").update(patch).eq("id", clientId);
@@ -175,6 +193,14 @@ export async function POST(request: Request) {
     if (consentErr) console.error("[onboard/submit] consent_events insert failed:", consentErr.message);
   }
 
+  // A token holder must not file a document under a matter_party_id from ANOTHER
+  // matter: the id would pass the FK but attach the doc to a stranger's party.
+  // Unknown ids are scrubbed to null (the doc lands at matter level) rather than
+  // failing the whole submission.
+  const { data: validParties } = await admin.from("matter_parties").select("id").eq("matter_id", matterId);
+  const validPartyIds = new Set(((validParties as { id: string }[] | null) ?? []).map((p) => p.id));
+  const safeParty = (pid?: string | null) => (pid && validPartyIds.has(pid) ? pid : null);
+
   // 4. Record document rows from their Storage paths (files already uploaded).
   const docs = (body.documents ?? []).filter(
     (d) => d.storage_path && d.storage_path.startsWith(`${matterId}/`)
@@ -195,7 +221,7 @@ export async function POST(request: Request) {
         file_name: d.file_name || null,
         mime_type: d.mime_type || null,
         size_bytes: d.size_bytes || null,
-        matter_party_id: d.matter_party_id || null,
+        matter_party_id: safeParty(d.matter_party_id),
         uploaded_by: "client",
       }))
     );
@@ -227,7 +253,7 @@ export async function POST(request: Request) {
         document_type: x.document_type,
         document_status: "not_available_reason_given",
         not_available_reason: x.reason || null,
-        matter_party_id: x.matter_party_id || null,
+        matter_party_id: safeParty(x.matter_party_id),
         uploaded_by: "client",
       }))
     );
