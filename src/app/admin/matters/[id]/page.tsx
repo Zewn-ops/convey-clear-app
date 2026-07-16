@@ -28,6 +28,7 @@ import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/Ma
 import MatterPocsCard from "@/components/matters/MatterPocsCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
+import CouncilPackButton from "@/components/matters/CouncilPackButton";
 import Celebrate from "@/components/matters/Celebrate";
 import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
 import { getMatterEnquiries } from "@/lib/enquiries";
@@ -827,7 +828,8 @@ export default async function AdminMatterDetailPage({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-semibold text-gray-900">Documents ({documents.length})</h2>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {documents.length > 0 && <CouncilPackButton matterId={id} />}
             <StorageUpload matterId={id} />
             <CollectFicaButton matterId={id} fica={!isCoo} />
           </div>
