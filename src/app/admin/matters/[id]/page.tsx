@@ -21,7 +21,7 @@ import {
   type Client,
   type TransferDocument,
 } from "@/types";
-import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock } from "lucide-react";
+import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock, User, Workflow } from "lucide-react";
 import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
@@ -576,9 +576,9 @@ export default async function AdminMatterDetailPage({
 
       {/* Pipeline (config-driven) */}
       {pipeline ? (
-        <Card className="space-y-4">
+        <Card accent="service" className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pipeline · {pipeline.label}</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><Workflow className="h-3.5 w-3.5 text-sky-700" /> Pipeline · {pipeline.label}</p>
             <span className="text-xs text-gray-400">
               {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
             </span>
@@ -632,7 +632,7 @@ export default async function AdminMatterDetailPage({
           )}
         </Card>
       ) : (
-        <Card>
+        <Card accent="service">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Pipeline</p>
           <p className="text-sm text-gray-500">
             No pipeline configured for {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"} yet.
@@ -643,7 +643,7 @@ export default async function AdminMatterDetailPage({
 
       {/* Council rates account number — the council's primary key for a
           clearance matter (proof / application / certificate reference it). */}
-      <Card>
+      <Card accent="service">
         <form action={setRatesAccount} className="flex items-end gap-2">
           <input type="hidden" name="matter_id" value={id} />
           <label className="flex-1 text-xs font-medium text-gray-500">
@@ -661,7 +661,7 @@ export default async function AdminMatterDetailPage({
       </Card>
 
       {/* Matter facts */}
-      <Card>
+      <Card accent="service">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
             <dt className="text-xs text-gray-400">Status</dt>
@@ -727,7 +727,7 @@ export default async function AdminMatterDetailPage({
       </Card>
 
       {/* ConveyClear internal — staff-only container (note 2026-06-22). */}
-      <Card className="border-[#1B2E6B]/20 bg-[#1B2E6B]/5">
+      <Card accent="internal" className="bg-[#1B2E6B]/5">
         <div className="flex items-center gap-1.5 mb-3">
           <Lock className="h-3.5 w-3.5 text-[#1B2E6B]" />
           <h2 className="text-xs font-semibold uppercase tracking-wide text-[#1B2E6B]">ConveyClear internal</h2>
@@ -766,9 +766,9 @@ export default async function AdminMatterDetailPage({
 
       {/* Client info */}
       {matter.clients && (
-        <Card>
+        <Card accent="client">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-emerald-700" /> Client</p>
             <Link
               href={`/admin/clients/${(matter.clients as any).id}`}
               className="text-xs text-[#E8521A] hover:underline"
@@ -826,7 +826,7 @@ export default async function AdminMatterDetailPage({
       {/* Documents — split client/partner uploads vs ConveyClear uploads (note 29) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-gray-900">Documents ({documents.length})</h2>
+          <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
           <div className="flex items-center gap-3">
             <StorageUpload matterId={id} />
             <CollectFicaButton matterId={id} fica={!isCoo} />
@@ -871,7 +871,7 @@ export default async function AdminMatterDetailPage({
         </form>
 
         {activities.length > 0 ? (
-          <Card padding="none">
+          <Card accent="internal" padding="none">
             <ul className="divide-y divide-gray-100">
               {activities.map((a) => {
                 const authorName = (a.users as any)?.full_name ?? a.author_label ?? "System";
@@ -903,7 +903,7 @@ export default async function AdminMatterDetailPage({
             </ul>
           </Card>
         ) : (
-          <Card className="text-center py-8">
+          <Card accent="internal" className="text-center py-8">
             <p className="text-sm text-gray-400">No activity yet</p>
           </Card>
         )}

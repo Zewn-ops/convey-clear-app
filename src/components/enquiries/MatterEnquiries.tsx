@@ -72,7 +72,7 @@ export default function MatterEnquiries({
   };
 
   return (
-    <Card className="space-y-4">
+    <Card accent="client" className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         {/* "Matter Enquiries", not "Enquiries" (Jukka, meeting 1): a matter page
             carries two threads, and the names have to say which one the partner

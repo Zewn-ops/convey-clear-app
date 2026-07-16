@@ -61,7 +61,7 @@ export default function MatterTransferCard({
   };
 
   return (
-    <Card className="space-y-3">
+    <Card accent="service" className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
           <Building2 className="h-3.5 w-3.5" /> Property transfer

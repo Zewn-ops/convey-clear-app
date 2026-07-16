@@ -128,7 +128,7 @@ export default function TransferDocuments({
   }
 
   return (
-    <Card>
+    <Card accent="service">
       <div className="mb-1 flex items-center gap-2">
         <Files className="h-4 w-4 text-[#E8521A]" />
         <h2 className="font-semibold text-gray-900">Transfer documents</h2>

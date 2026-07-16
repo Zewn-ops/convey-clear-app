@@ -58,7 +58,7 @@ export default function TransferFeed({
   }
 
   return (
-    <Card>
+    <Card accent="firm">
       <div className="mb-1 flex items-center gap-2">
         <MessageSquare className="h-4 w-4 text-[#1B2E6B]" />
         <h2 className="font-semibold text-gray-900">Transfer feed</h2>
