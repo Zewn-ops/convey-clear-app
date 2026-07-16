@@ -1,20 +1,10 @@
 import { cn } from "@/lib/utils";
-import type { RequestStatus } from "@/types";
 
 interface BadgeProps {
   label: string;
   variant?: "default" | "success" | "warning" | "danger" | "info" | "gray";
   className?: string;
 }
-
-export const statusVariantMap: Record<RequestStatus, BadgeProps["variant"]> = {
-  pending: "warning",
-  documents_required: "danger",
-  in_review: "info",
-  in_progress: "info",
-  completed: "success",
-  rejected: "danger",
-};
 
 const variantClasses: Record<NonNullable<BadgeProps["variant"]>, string> = {
   default: "bg-[#1B2E6B] text-white",

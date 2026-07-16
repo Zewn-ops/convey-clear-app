@@ -27,10 +27,10 @@ export async function POST(request: Request) {
   }
 
   const { data: existing } = await admin
-    .from("onboarding_links").select("token, expires_at, used")
+    .from("onboarding_links").select("token, expires_at, used_at")
     .eq("matter_id", body.matter_id).eq("purpose", "onboarding")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (existing && !existing.used && (!existing.expires_at || new Date(existing.expires_at) > new Date())) {
+  if (existing && !existing.used_at && (!existing.expires_at || new Date(existing.expires_at) > new Date())) {
     return NextResponse.json({ ok: true, token: existing.token });
   }
 

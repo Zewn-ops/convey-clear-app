@@ -3,15 +3,17 @@
 // Content-Security-Policy. script-src stays permissive ('unsafe-inline'/'unsafe-eval')
 // because Next injects inline runtime scripts — locking it fully needs per-request
 // nonces (fast-follow). The high-value directives ARE locked: frame-ancestors 'none'
-// (clickjacking), object-src 'none', base-uri 'self', form-action scoped. connect-src
-// allows Supabase + the n8n webhook host (the onboarding form POSTs uploads there).
+// (clickjacking), object-src 'none', base-uri 'self', form-action scoped.
+// connect-src: Supabase (REST + Realtime) and Turnstile only. The browser no
+// longer talks to n8n — uploads go direct-to-Storage via signed URLs and the
+// onboard submit is Supabase-native. Server-side n8n calls don't pass CSP.
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://vercel.live",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://n8n.conveyclear.co.za https://challenges.cloudflare.com https://vercel.live",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://vercel.live",
   "frame-src https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
   "object-src 'none'",

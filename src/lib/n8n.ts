@@ -14,7 +14,10 @@ export async function firePortalIntake(
 ): Promise<string | null> {
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
+    // 3s, not 8: this call is AWAITED inside matter creation, so its timeout is
+    // a floor on how long "Create matter" can spin when the webhook host
+    // blackholes. Drive-folder creation is best-effort; the user's click isn't.
+    const t = setTimeout(() => ctrl.abort(), 3000);
     const res = await fetch(`${N8N_URL}/webhook/portal-intake`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

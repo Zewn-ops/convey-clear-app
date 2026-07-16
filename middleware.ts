@@ -1,20 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-const STAFF_ROLES = [
-  "super_admin",
-  "admin",
-  "staff_services",
-  "staff_ops",
-  "staff_delivery",
-];
-const ADMIN_ROLES = ["super_admin", "admin"];
+// Imported, not re-declared: a role added in types/index.ts but forgotten here
+// would bounce that staff member out of /admin with no error anywhere.
+import { STAFF_ROLES, ADMIN_ROLES } from "@/types";
 
 // Forced staff 2FA — off until the security gate. See the guard below.
 const FORCE_STAFF_MFA = process.env.FORCE_STAFF_MFA === "true";
 
 function homeForRole(role?: string | null): string {
-  if (role && STAFF_ROLES.includes(role)) return "/admin";
+  if (role && (STAFF_ROLES as string[]).includes(role)) return "/admin";
   if (role === "business_partner") return "/partner";
   return "/dashboard";
 }
@@ -133,7 +127,7 @@ export async function middleware(request: NextRequest) {
   //
   // Runs after the temp-password gate above, so a new staff account sets its own
   // password first and only then enrols.
-  if (FORCE_STAFF_MFA && isProtected && role && STAFF_ROLES.includes(role)) {
+  if (FORCE_STAFF_MFA && isProtected && role && (STAFF_ROLES as string[]).includes(role)) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (aal) {
       if (aal.nextLevel !== "aal2") {
@@ -151,7 +145,7 @@ export async function middleware(request: NextRequest) {
 
   // /admin → staff only (incl. super_admin). Non-staff bounced to their home.
   if (pathname.startsWith("/admin")) {
-    if (!role || !STAFF_ROLES.includes(role)) {
+    if (!role || !(STAFF_ROLES as string[]).includes(role)) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = homeForRole(role);
       return NextResponse.redirect(redirectUrl);
@@ -159,7 +153,7 @@ export async function middleware(request: NextRequest) {
     // /admin/users + /admin/settings → admin tier only (admin + super_admin).
     if (
       (pathname.startsWith("/admin/users") || pathname.startsWith("/admin/settings")) &&
-      !ADMIN_ROLES.includes(role)
+      !(ADMIN_ROLES as string[]).includes(role)
     ) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/admin";

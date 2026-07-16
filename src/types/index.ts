@@ -1,10 +1,9 @@
 // ============================================================================
 // ConveyClear — App Types
 // ============================================================================
-// REAL SCHEMA types (matches Supabase migrations 001–006). Use these for all
-// new/rebuilt pages. The LEGACY block at the bottom is the old scaffold schema
-// (profiles / service_requests) kept only so not-yet-migrated pages compile;
-// remove it once those pages are rebuilt.
+// REAL SCHEMA types (matches the Supabase migrations). Single source of truth
+// for role lists and row shapes — middleware.ts imports the role constants from
+// here, so adding a role in one place is adding it everywhere.
 // ============================================================================
 
 // --- Roles (matches users_role_check, migration 013) -----------------------
@@ -453,87 +452,6 @@ export function councilPocName(p?: { first_name?: string | null; last_name?: str
   return [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
 }
 
-// ============================================================================
-// LEGACY (old scaffold schema) — DEPRECATED. Only kept so un-migrated pages
-// (dashboard/requests, dashboard/profile, admin/*, api/requests) still compile.
-// Do NOT use in new code. Remove when those pages are rebuilt.
-// ============================================================================
-export type ServiceType =
-  | "change_of_ownership"
-  | "rates_clearance"
-  | "compliance_certificate";
-
-export type RequestStatus =
-  | "pending"
-  | "documents_required"
-  | "in_review"
-  | "in_progress"
-  | "completed"
-  | "rejected";
-
-export type DocumentType =
-  | "fica"
-  | "proof_of_residence"
-  | "id_document"
-  | "other";
-
-/** @deprecated old scaffold schema — use AppUser */
-export interface Profile {
-  id: string;
-  full_name: string;
-  phone: string | null;
-  id_number: string | null;
-  role: "client" | "admin";
-  created_at: string;
-  updated_at: string;
-}
-
-/** @deprecated old scaffold schema — use Matter */
-export interface ServiceRequest {
-  id: string;
-  client_id: string;
-  service_type: ServiceType;
-  status: RequestStatus;
-  property_address: string;
-  notes: string | null;
-  admin_notes: string | null;
-  assigned_to: string | null;
-  created_at: string;
-  updated_at: string;
-  profiles?: Pick<Profile, "id" | "full_name" | "phone" | "id_number">;
-}
-
-/** @deprecated old scaffold schema — use MatterDocument */
-export interface Document {
-  id: string;
-  client_id: string;
-  request_id: string | null;
-  document_type: DocumentType;
-  file_name: string;
-  file_path: string;
-  file_size: number | null;
-  mime_type: string | null;
-  created_at: string;
-}
-
-export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  change_of_ownership: "Change of Ownership",
-  rates_clearance: "Property Rates Clearance",
-  compliance_certificate: "Compliance Certificate",
-};
-
-export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
-  pending: "Pending",
-  documents_required: "Documents Required",
-  in_review: "In Review",
-  in_progress: "In Progress",
-  completed: "Completed",
-  rejected: "Rejected",
-};
-
-export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  fica: "FICA Document",
-  proof_of_residence: "Proof of Residence",
-  id_document: "ID Document",
-  other: "Other",
-};
+// The old scaffold schema (profiles / service_requests) is GONE — its last
+// consumers (the /api/requests routes and three dead components) were deleted
+// 2026-07-16 with the legacy types that served them.

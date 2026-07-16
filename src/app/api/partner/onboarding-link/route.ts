@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   // Reuse a live, unused link if one exists.
   const { data: existing } = await admin
     .from("onboarding_links")
-    .select("token, expires_at, used")
+    .select("token, expires_at, used_at")
     .eq("matter_id", body.matter_id)
     .eq("purpose", "onboarding")
     .order("created_at", { ascending: false })
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   const live =
-    existing && !existing.used && (!existing.expires_at || new Date(existing.expires_at) > new Date());
+    existing && !existing.used_at && (!existing.expires_at || new Date(existing.expires_at) > new Date());
 
   if (live) {
     return NextResponse.json({ ok: true, token: existing!.token });

@@ -52,11 +52,26 @@ export async function POST(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
-  const { error: sameErr } = await probe.auth.signInWithPassword({ email: user.email, password });
-  if (!sameErr) {
+  const { error: probeErr } = await probe.auth.signInWithPassword({ email: user.email, password });
+  if (!probeErr) {
     return NextResponse.json(
       { message: "That is your current password — choose a different one." },
       { status: 400 }
+    );
+  }
+  // ⚠️ The probe failing does NOT always mean "different password". With Supabase
+  // bot protection ON (it is, in prod), a server-side sign-in carries no Turnstile
+  // token and fails captcha_failed BEFORE the password is ever checked — which
+  // silently reduced this guard to a no-op (found in the 2026-07-16 audit). Only
+  // invalid_credentials actually proves the password differs. Anything else is
+  // inconclusive: warn loudly and let the change proceed, because blocking a
+  // legitimate password change on a captcha misconfig would hold the user at the
+  // gate forever. Structural fix (needs thought): there is no server-side way to
+  // verify a user's current password past the captcha wall.
+  const probeCode = (probeErr as { code?: string }).code ?? "";
+  if (probeCode !== "invalid_credentials" && !/invalid login credentials/i.test(probeErr.message)) {
+    console.warn(
+      `[change-password] same-password probe inconclusive (${probeCode || probeErr.message}) — proceeding without the check`
     );
   }
 
