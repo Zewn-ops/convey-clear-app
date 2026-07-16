@@ -16,12 +16,16 @@ import {
   LogOut,
   Scale,
   UserCircle,
+  Landmark,
   Menu,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const navItems = [
+type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean };
+
+const navItems: NavItem[] = [
   { href: "/partner", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/partner/matters", label: "Matters", icon: Briefcase },
   { href: "/partner/transfers", label: "Property Transfers", icon: Building2 },
@@ -30,12 +34,17 @@ const navItems = [
   { href: "/partner/refer", label: "Refer a matter", icon: PlusCircle },
 ];
 
+// Firm-admin-only; appended when isFirmAdmin (migration 037).
+const firmAdminItem: NavItem = { href: "/partner/firm", label: "Firm details", icon: Landmark };
+
 export default function PartnerNav({
   firmName,
   variant,
+  isFirmAdmin = false,
 }: {
   firmName: string;
   variant: "desktop" | "mobile";
+  isFirmAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -49,8 +58,10 @@ export default function PartnerNav({
     router.push("/auth/login");
   };
 
+  const items = isFirmAdmin ? [...navItems, firmAdminItem] : navItems;
+
   const links = (onClick?: () => void) =>
-    navItems.map((item) => {
+    items.map((item) => {
       const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
       return (
         <Link
