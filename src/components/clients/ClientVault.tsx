@@ -154,8 +154,12 @@ export default function ClientVault({
   // twice). This card is the one place on the page holding a person's identity
   // documents, and it should not look like the cards around it: the border says
   // "this is the vault" before anyone reads the heading.
+  // ! modifiers: Card already carries `border border-gray-200`, and cn() is a
+  // string join, not a tailwind-merge — without !important the grey wins the
+  // stylesheet-order fight and the vault renders with the default border.
+  // (Confirmed live 2026-07-16: padlock showed, border didn't.)
   return (
-    <Card className="border-2 border-[#1B2E6B]">
+    <Card className="!border-2 !border-[#1B2E6B]">
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#1B2E6B]/10">
