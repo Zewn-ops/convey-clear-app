@@ -205,18 +205,19 @@ export async function POST(request: Request) {
       const { error } = await admin.from("consent_events").insert(events);
       if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
-      // Mirror onto the client row the same way the onboard submit does, so the
-      // rest of the app keeps reading one place for "has this client consented".
+      // Mirror onto the client row so the rest of the app reads one place for
+      // "has this client consented". Consent timestamps are stamped only when
+      // granted, NEVER nulled: capturing a subset (e.g. marketing only) must not
+      // erase a POPIA/terms consent already on record. The durable audit trail is
+      // consent_events above; this mirror is a convenience cache.
       const now = new Date().toISOString();
-      await admin
-        .from("clients")
-        .update({
-          popia_consent_at: c.popia ? now : null,
-          terms_accepted_at: c.terms ? now : null,
-          marketing_opt_in: Boolean(c.marketing),
-          updated_at: now,
-        })
-        .eq("id", clientId);
+      const consentPatch: Record<string, unknown> = {
+        marketing_opt_in: Boolean(c.marketing),
+        updated_at: now,
+      };
+      if (c.popia) consentPatch.popia_consent_at = now;
+      if (c.terms) consentPatch.terms_accepted_at = now;
+      await admin.from("clients").update(consentPatch).eq("id", clientId);
     }
   }
 
