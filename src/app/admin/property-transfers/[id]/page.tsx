@@ -25,7 +25,7 @@ import TransferFeed, { type TransferActivity } from "@/components/transfers/Tran
 import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
-import { ArrowLeft, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Scale } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -196,8 +196,8 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       </div>
 
       {/* Parties to the transaction */}
-      <Card>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Parties</p>
+      <Card accent="firm">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5"><Scale className="h-3.5 w-3.5 text-violet-700" /> Parties</p>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <PartyRow label="Conveyancing attorney" value={transfer.attorney?.name ?? "—"} />
           <PartyRow label="Estate agent" value={transfer.estate_agent?.name ?? "—"} />
@@ -220,7 +220,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       </Card>
 
       {/* Facts */}
-      <Card>
+      <Card accent="service">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
             <dt className="text-xs text-gray-400">Status</dt>
@@ -244,7 +244,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       </Card>
 
       {/* Linked matters — the point of the hub */}
-      <Card padding="none">
+      <Card accent="service" padding="none">
         <div className="px-5 py-4 border-b border-gray-100">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Matters in this transfer · {linked.length}

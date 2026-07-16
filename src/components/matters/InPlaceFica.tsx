@@ -60,7 +60,7 @@ export default function InPlaceFica({
   if (subjects.length === 0) return null;
 
   return (
-    <Card>
+    <Card accent="client">
       <div className="mb-1 flex items-center gap-2">
         <ClipboardCheck className="h-4 w-4 text-[#1B2E6B]" />
         <h2 className="font-semibold text-gray-900">Client details &amp; consent</h2>

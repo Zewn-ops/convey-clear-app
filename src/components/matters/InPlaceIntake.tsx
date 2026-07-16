@@ -13,7 +13,7 @@ import {
   type ClientDocument,
   type TransferDocument,
 } from "@/types";
-import { CheckCircle2, Circle, Ban, FileText, Link2 } from "lucide-react";
+import { CheckCircle2, Circle, Ban, FileText, Link2, ClipboardList } from "lucide-react";
 
 // In-place intake (foundation): capture a matter's required documents directly
 // on the matter detail, service-aware, per party — the primary method (the
@@ -132,10 +132,10 @@ export default function InPlaceIntake({
   const complete = required > 0 && done === required;
 
   return (
-    <Card className="space-y-5">
+    <Card accent="service" className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-semibold text-gray-900">Capture documents</h2>
+          <h2 className="font-semibold text-gray-900 flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /> Capture documents</h2>
           <p className="text-xs text-gray-500 mt-0.5">
             Upload each required document straight onto the matter — no need to send a link first.
           </p>

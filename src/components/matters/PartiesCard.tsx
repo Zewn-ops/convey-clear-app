@@ -38,7 +38,7 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
           const isEntity = p.entity_type !== "natural_person";
           const name = isEntity ? p.business_name : composeFullName(p.first_name, p.last_name) || p.full_name;
           return (
-            <Card key={p.id} className="space-y-3">
+            <Card key={p.id} accent="client" className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#1B2E6B]">
                   {ROLE_LABELS[p.role] ?? p.role}

@@ -89,7 +89,7 @@ export default function MatterPocsCard({
   }
 
   return (
-    <Card>
+    <Card accent="internal">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold text-gray-900 flex items-center gap-2">
           <Landmark className="h-4 w-4 text-[#1B2E6B]" /> Council POC{linked.length === 1 ? "" : "s"} ({linked.length})
