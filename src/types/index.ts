@@ -134,6 +134,9 @@ export interface AppUser {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  // A business_partner user with rights over their own firm's banking/trust/BP
+  // details (migration 037). Not a role — gates the /partner/firm surface only.
+  is_firm_admin?: boolean;
 }
 
 export interface Client {

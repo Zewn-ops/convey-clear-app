@@ -20,3 +20,28 @@ export async function requirePartner() {
   }
   return { userId: me.id as string, partnerId: me.business_partner_id as string };
 }
+
+// Stricter guard for the firm-detail surface (banking / trust / BP numbers,
+// migration 037): a partner user whose is_firm_admin flag is set. Enforced here
+// AND by RLS — the flag gates who may even read those tables.
+export async function requireFirmAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated", status: 401 as const };
+
+  const { data: me } = await supabase
+    .from("users")
+    .select("id, role, business_partner_id, is_firm_admin")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (!me || me.role !== "business_partner" || !me.business_partner_id) {
+    return { error: "Not a partner account", status: 403 as const };
+  }
+  if (!(me as { is_firm_admin?: boolean }).is_firm_admin) {
+    return { error: "Firm administrators only", status: 403 as const };
+  }
+  return { userId: me.id as string, partnerId: me.business_partner_id as string };
+}
