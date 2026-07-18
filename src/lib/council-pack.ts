@@ -5,13 +5,23 @@
 // even scroll." So the matter's documents are merged into a single PDF in a
 // FIXED order.
 //
-// ⚠️ THE ORDER IS ONLY PARTLY CONFIRMED. The Meeting-2 notes contradict
-// themselves — the Decisions section lists a deed search where the Details
-// section does not, and names the municipal-figures step differently. What IS
-// settled: the electrical COC is LAST (and optional), the seller's documents sit
-// second-to-last, and the buyer's documents come early. The rest below is the
-// best reading of the notes. Confirm with Jukka, then edit this ONE array — the
-// merge engine reads it and nothing else encodes the order.
+// ORDER RECONCILED 2026-07-19 against the Meeting-2 notes + the real data.
+// The two sections still disagree on paper, but the disagreement resolves:
+//
+//   - Decisions §28 lists a deed search at position 2; Details §68 omits it.
+//     Prod has 13 `deed_search` documents — the third most common type in the
+//     whole table — so §68 dropped it, it was not removed. KEPT.
+//   - §28 says "municipal figures", §68 says "K figures and existing account".
+//     Same step, two names: `clearance_figures` (14 in prod). The "existing
+//     account" half is a separate document — `council_account_statement` — so
+//     it is placed next to the figures rather than left to fall to the end.
+//
+// Everything else matches in both sections: transfer letter first, buyer's
+// documents early, proof of payment after the figures, seller's documents
+// second-to-last, electrical COC last and optional.
+//
+// Unmatched documents are appended after this sequence by the route, never
+// dropped. To change the order, edit this ONE array — nothing else encodes it.
 
 export type PackStep =
   | { kind: "type"; docType: string } // a property/matter-level document of this type
@@ -19,9 +29,10 @@ export type PackStep =
 
 export const COUNCIL_PACK_ORDER: PackStep[] = [
   { kind: "type", docType: "transfer_letter" },
-  { kind: "type", docType: "deed_search" }, // ⚠️ present in Decisions §28, absent in Details §68 — confirm
+  { kind: "type", docType: "deed_search" }, // §28; omitted by §68 but 13 live rows say it belongs
   { kind: "party", role: "buyer" }, // buyer's documents (ID / COR 14.3 + director ID / resolution)
-  { kind: "type", docType: "clearance_figures" }, // "municipal figures" / "K figures + existing account"
+  { kind: "type", docType: "clearance_figures" }, // "municipal figures" / "K figures"
+  { kind: "type", docType: "council_account_statement" }, // §68's "existing account"
   { kind: "type", docType: "proof_of_payment_figures" },
   { kind: "party", role: "seller" }, // seller's documents
   { kind: "type", docType: "coc_electrical" }, // ✅ confirmed last, optional
