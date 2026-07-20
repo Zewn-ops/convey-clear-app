@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
-import { supersedeSlot, syncMatterDocToTransfer } from "@/lib/documents";
+import { supersedeSlot, syncMatterDocToTransfer, isUndefinedColumn } from "@/lib/documents";
+import { canonicalDocumentName } from "@/lib/doc-naming";
 import { logMatterActivity, logTransferActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
@@ -65,27 +66,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: (e as Error).message }, { status: 400 });
   }
 
-  const { data: doc, error } = await admin
-    .from("documents")
-    .insert({
-      matter_id,
-      document_type: documentType,
-      document_status: "provided",
-      storage_bucket: MATTER_DOCS_BUCKET,
-      storage_path,
-      file_name: body.file_name || null,
-      mime_type: body.mime_type || null,
-      size_bytes: body.size_bytes || null,
-      matter_party_id: matterPartyId,
-      uploaded_by: uploadedBy,
-    })
-    .select("id")
-    .single();
-  if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+  // Canonical display name — "Certified ID — Peter van der Merwe — 2026-07-20"
+  // rather than "A4 - 1.pdf". Best-effort: a naming failure must not cost the
+  // user an upload that has already reached storage.
+  let displayName = body.file_name || null;
+  try {
+    displayName = await canonicalDocumentName(admin, {
+      matterId: matter_id,
+      matterPartyId,
+      documentType,
+      originalFileName: body.file_name || null,
+    });
+  } catch (e) {
+    console.error("[documents/confirm] canonical naming failed", e);
+  }
+
+  const row = {
+    matter_id,
+    document_type: documentType,
+    document_status: "provided",
+    storage_bucket: MATTER_DOCS_BUCKET,
+    storage_path,
+    file_name: displayName,
+    original_file_name: body.file_name || null,
+    mime_type: body.mime_type || null,
+    size_bytes: body.size_bytes || null,
+    matter_party_id: matterPartyId,
+    uploaded_by: uploadedBy,
+  };
+
+  let { data: doc, error } = await admin.from("documents").insert(row).select("id").single();
+
+  // Deployed ahead of migration 040? Drop the new column and carry on rather
+  // than failing an upload whose file is already in storage.
+  if (error && isUndefinedColumn(error)) {
+    const { original_file_name: _dropped, ...legacyRow } = row;
+    ({ data: doc, error } = await admin.from("documents").insert(legacyRow).select("id").single());
+  }
+  if (error || !doc) {
+    return NextResponse.json({ message: error?.message ?? "Could not record the document" }, { status: 400 });
+  }
 
   // Best-effort activity entry, de-duplicated (036): a re-fired upload confirm
   // must not post the same "Document uploaded: X" line twice.
-  const label = body.file_name || documentType || "file";
+  const label = displayName || documentType || "file";
   await logMatterActivity(admin, {
     matterId: matter_id,
     authorId: me?.id ?? null,
@@ -103,7 +127,7 @@ export async function POST(request: Request) {
       documentId: doc.id,
       matterId: matter_id,
       documentType,
-      fileName: body.file_name || null,
+      fileName: displayName,
       mimeType: body.mime_type || null,
       sizeBytes: body.size_bytes || null,
       storageBucket: MATTER_DOCS_BUCKET,

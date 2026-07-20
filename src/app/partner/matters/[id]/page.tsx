@@ -143,8 +143,17 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <Link href="/partner/matters" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-        <ArrowLeft className="h-4 w-4" /> Back to matters
+      {/* Back to the transfer when the matter belongs to one — that is where the
+          user came from. Partners may read their own firm's transfers, so this
+          link is always reachable for them. (The CLIENT dashboard deliberately
+          keeps "All matters": clients have no transfer-level access at all,
+          migration 026, because a transfer spans both sides of the deal.) */}
+      <Link
+        href={partnerTransferId ? `/partner/transfers/${partnerTransferId}` : "/partner/matters"}
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+      >
+        <ArrowLeft className="h-4 w-4" />{" "}
+        {partnerTransferId ? matter.property_transfers?.reference ?? "Property transfer" : "Back to matters"}
       </Link>
 
       <div className="flex items-start justify-between">

@@ -78,6 +78,17 @@ export function isSlotConflict(error: { code?: string; message?: string } | null
   return error?.code === "23505" && Boolean(error.message?.includes("documents_one_current_per_slot"));
 }
 
+/**
+ * Postgres "column does not exist". The bug shape this project has shipped three
+ * times: code that compiles perfectly and assumes a column production hasn't got
+ * yet. Callers writing a NEW column should detect this and retry without it, so
+ * deploying ahead of the migration degrades to the old behaviour instead of
+ * breaking the feature outright.
+ */
+export function isUndefinedColumn(error: { code?: string } | null): boolean {
+  return error?.code === "42703";
+}
+
 // ---------------------------------------------------------------------------
 // Two-way document sync (matter → transfer). Migration 034 built the downward
 // half — a transfer document reused onto a matter. This is the upward half:

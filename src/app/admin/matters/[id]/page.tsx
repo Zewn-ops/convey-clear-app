@@ -541,8 +541,16 @@ export default async function AdminMatterDetailPage({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <Link href="/admin/matters" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4">
-          <ArrowLeft className="h-4 w-4" /> All matters
+        {/* Back where you came from. A matter inside a property transfer is
+            almost always reached FROM that transfer — Jukka's model makes the
+            transfer the primary object — so bouncing to the full matters list
+            threw away the context the user was working in. */}
+        <Link
+          href={transferId ? `/admin/property-transfers/${transferId}` : "/admin/matters"}
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {transferId ? matter.property_transfers?.reference ?? "Property transfer" : "All matters"}
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>

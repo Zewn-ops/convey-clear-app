@@ -4,7 +4,8 @@ import { logMatterActivity } from "@/lib/activity";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
 import { notifyStaff } from "@/lib/notify";
-import { dedupeSlotBatch, supersedeSlot, syncMatterDocToTransfer } from "@/lib/documents";
+import { dedupeSlotBatch, supersedeSlot, syncMatterDocToTransfer, isUndefinedColumn } from "@/lib/documents";
+import { canonicalDocumentName } from "@/lib/doc-naming";
 
 export const runtime = "nodejs";
 
@@ -212,18 +213,36 @@ export async function POST(request: Request) {
     // submission to a raw 23505); and against rows already on the matter, since
     // a re-issued onboarding link means this form can be submitted twice.
     const rows = dedupeSlotBatch(
-      docs.map((d) => ({
-        matter_id: matterId,
-        document_type: d.document_type || "other",
-        document_status: "provided",
-        storage_bucket: MATTER_DOCS_BUCKET,
-        storage_path: d.storage_path,
-        file_name: d.file_name || null,
-        mime_type: d.mime_type || null,
-        size_bytes: d.size_bytes || null,
-        matter_party_id: safeParty(d.matter_party_id),
-        uploaded_by: "client",
-      }))
+      await Promise.all(
+        docs.map(async (d) => {
+          // Canonical name, same as the portal upload path. Best-effort — a
+          // naming failure must not cost the client their submission.
+          let displayName = d.file_name || null;
+          try {
+            displayName = await canonicalDocumentName(admin, {
+              matterId,
+              matterPartyId: safeParty(d.matter_party_id),
+              documentType: d.document_type || "other",
+              originalFileName: d.file_name || null,
+            });
+          } catch (e) {
+            console.error("[onboard/submit] canonical naming failed", e);
+          }
+          return {
+            matter_id: matterId,
+            document_type: d.document_type || "other",
+            document_status: "provided",
+            storage_bucket: MATTER_DOCS_BUCKET,
+            storage_path: d.storage_path,
+            file_name: displayName,
+            original_file_name: d.file_name || null,
+            mime_type: d.mime_type || null,
+            size_bytes: d.size_bytes || null,
+            matter_party_id: safeParty(d.matter_party_id),
+            uploaded_by: "client",
+          };
+        })
+      )
     );
 
     try {
@@ -238,10 +257,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: `Could not record documents: ${(e as Error).message}` }, { status: 400 });
     }
 
-    const { data: insertedDocs, error: docErr } = await admin
+    const SELECT_BACK = "id, document_type, file_name, mime_type, size_bytes, storage_path";
+    let { data: insertedDocs, error: docErr } = await admin
       .from("documents")
       .insert(rows)
-      .select("id, document_type, file_name, mime_type, size_bytes, storage_path");
+      .select(SELECT_BACK);
+
+    // Deployed ahead of migration 040 — drop the new column and retry rather
+    // than losing a client's whole submission to a missing column.
+    if (docErr && isUndefinedColumn(docErr)) {
+      const legacyRows = rows.map(({ original_file_name: _dropped, ...rest }) => rest);
+      ({ data: insertedDocs, error: docErr } = await admin
+        .from("documents")
+        .insert(legacyRows)
+        .select(SELECT_BACK));
+    }
     if (docErr) {
       return NextResponse.json({ message: `Could not record documents: ${docErr.message}` }, { status: 400 });
     }
