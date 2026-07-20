@@ -1,6 +1,7 @@
 import Card from "@/components/ui/Card";
 import SubmitButton from "@/components/ui/SubmitButton";
 import StorageUpload from "@/components/matters/StorageUpload";
+import DocRemoveButton from "@/components/matters/DocRemoveButton";
 import ReuseVaultDoc from "@/components/matters/ReuseVaultDoc";
 import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
 import { cooSharedDocs, cooPartyDocs, partyRoleOrder, type CooEntity, type CooDocRule } from "@/lib/coo-docs";
@@ -239,7 +240,25 @@ export default function InPlaceIntake({
                   </div>
                   <div className="shrink-0">
                     {doc ? (
-                      <span className="text-xs font-medium text-green-600">Uploaded</span>
+                      // A filled slot used to render this label ALONE, which made the
+                      // slot a dead end: migration 030 deliberately made a second
+                      // upload supersede the first ("rejecting it would strand the
+                      // user with a wrong file"), but with no control on screen that
+                      // path was unreachable and a wrong document was permanent.
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-green-600">Uploaded</span>
+                        {canManage && (
+                          <>
+                            <StorageUpload
+                              matterId={matterId}
+                              documentType={s.docType}
+                              matterPartyId={g.partyId ?? undefined}
+                              label="Replace"
+                            />
+                            <DocRemoveButton documentId={doc.id} fileName={doc.file_name} />
+                          </>
+                        )}
+                      </div>
                     ) : isUnavailable ? (
                       canManage && (
                         <form action={toggleDocUnavailable}>
