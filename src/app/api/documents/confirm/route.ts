@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
-import { supersedeSlot } from "@/lib/documents";
-import { logMatterActivity } from "@/lib/activity";
+import { supersedeSlot, syncMatterDocToTransfer } from "@/lib/documents";
+import { logMatterActivity, logTransferActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -93,5 +93,41 @@ export async function POST(request: Request) {
     body: replaced.length ? `Document replaced: ${label}` : `Document uploaded: ${label}`,
   });
 
-  return NextResponse.json({ ok: true, document_id: doc.id, replaced: replaced.length });
+  // Two-way sync: mirror the upload onto the matter's property transfer.
+  // Best-effort BY DESIGN — the file is uploaded and the documents row is
+  // written by this point, so a failure here must not fail the request and
+  // strand the user with a file the app says it never received.
+  let syncedToTransfer = false;
+  try {
+    const sync = await syncMatterDocToTransfer(admin, {
+      documentId: doc.id,
+      matterId: matter_id,
+      documentType,
+      fileName: body.file_name || null,
+      mimeType: body.mime_type || null,
+      sizeBytes: body.size_bytes || null,
+      storageBucket: MATTER_DOCS_BUCKET,
+      storagePath: storage_path,
+      uploadedById: me?.id ?? null,
+    });
+    syncedToTransfer = sync.synced;
+    // Only announce a document that is genuinely new to the transfer.
+    if (sync.synced && !sync.deduped && sync.transferId) {
+      await logTransferActivity(admin, {
+        transferId: sync.transferId,
+        authorId: me?.id ?? null,
+        activityType: "document_upload",
+        body: `${label} was added from a linked matter`,
+      });
+    }
+  } catch (e) {
+    console.error("[documents/confirm] transfer sync failed", e);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    document_id: doc.id,
+    replaced: replaced.length,
+    synced_to_transfer: syncedToTransfer,
+  });
 }

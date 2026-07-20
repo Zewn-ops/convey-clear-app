@@ -4,7 +4,7 @@ import { logMatterActivity } from "@/lib/activity";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { MATTER_DOCS_BUCKET } from "@/lib/storage";
 import { notifyStaff } from "@/lib/notify";
-import { dedupeSlotBatch, supersedeSlot } from "@/lib/documents";
+import { dedupeSlotBatch, supersedeSlot, syncMatterDocToTransfer } from "@/lib/documents";
 
 export const runtime = "nodejs";
 
@@ -238,9 +238,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: `Could not record documents: ${(e as Error).message}` }, { status: 400 });
     }
 
-    const { error: docErr } = await admin.from("documents").insert(rows);
+    const { data: insertedDocs, error: docErr } = await admin
+      .from("documents")
+      .insert(rows)
+      .select("id, document_type, file_name, mime_type, size_bytes, storage_path");
     if (docErr) {
       return NextResponse.json({ message: `Could not record documents: ${docErr.message}` }, { status: 400 });
+    }
+
+    // Two-way sync: a client's onboarding upload also lands on the matter's
+    // property transfer. Best-effort per document — the submission has already
+    // been recorded and must not be failed by the mirror. The client is not a
+    // portal user, so these rows carry no uploaded_by.
+    for (const d of insertedDocs ?? []) {
+      try {
+        await syncMatterDocToTransfer(admin, {
+          documentId: d.id as string,
+          matterId,
+          documentType: (d.document_type as string) || "other",
+          fileName: (d.file_name as string | null) ?? null,
+          mimeType: (d.mime_type as string | null) ?? null,
+          sizeBytes: (d.size_bytes as number | null) ?? null,
+          storageBucket: MATTER_DOCS_BUCKET,
+          storagePath: d.storage_path as string,
+          uploadedById: null,
+        });
+      } catch (e) {
+        console.error("[onboard/submit] transfer sync failed", e);
+      }
     }
   }
 

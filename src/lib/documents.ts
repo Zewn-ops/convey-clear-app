@@ -77,3 +77,119 @@ export function dedupeSlotBatch<T extends { document_type?: string | null; matte
 export function isSlotConflict(error: { code?: string; message?: string } | null): boolean {
   return error?.code === "23505" && Boolean(error.message?.includes("documents_one_current_per_slot"));
 }
+
+// ---------------------------------------------------------------------------
+// Two-way document sync (matter → transfer). Migration 034 built the downward
+// half — a transfer document reused onto a matter. This is the upward half:
+// a document uploaded on a matter also becomes a document of its transfer.
+//
+// SCOPE — option B, "everything syncs", decided by Zewn 2026-07-20.
+// Every document type travels up, including person-scoped FICA documents.
+// That is safe ONLY under the rule that a property transfer belongs to exactly
+// ONE firm: two firms on one property means two independent transfers, one
+// each. Without that rule a synced certified ID would be readable by a firm
+// acting for the other side of the deal. The rule is now enforced in the two
+// staff link paths (api/admin/property-transfers/link and the create-matter-
+// inside-a-transfer route); the partner routes already enforced it.
+//
+// If that rule is ever relaxed, this is the code that has to change with it.
+//
+// SHARES THE OBJECT, DOES NOT COPY IT — same call as 034 and the client vault:
+// the transfer_documents row carries the MATTER's bucket and path. Transfer
+// document lists sign with the service role and signedDocUrls is bucket-aware,
+// so a row pointing into the matter bucket views correctly.
+// ---------------------------------------------------------------------------
+
+export interface TransferSyncInput {
+  documentId: string;
+  matterId: string;
+  documentType: string;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  storageBucket: string;
+  storagePath: string;
+  uploadedById: string | null;
+}
+
+export interface TransferSyncResult {
+  synced: boolean;
+  transferId: string | null;
+  transferDocumentId: string | null;
+  /** True when the object was already on the transfer and we only re-linked. */
+  deduped: boolean;
+}
+
+const NOT_SYNCED: TransferSyncResult = {
+  synced: false,
+  transferId: null,
+  transferDocumentId: null,
+  deduped: false,
+};
+
+/**
+ * Push a freshly-uploaded matter document up to its property transfer, and link
+ * the two rows. No-op when the matter has no transfer.
+ *
+ * Idempotent on (transfer_id, storage_path): a re-fired confirm, a retry, or two
+ * racing tabs re-link the existing transfer document instead of stacking a
+ * second row for the same object — the same failure this project hit with
+ * duplicate activity rows and duplicate slot rows.
+ *
+ * Call with a service-role client. Callers should treat a throw as non-fatal:
+ * the upload itself already succeeded and must not be failed by the mirror.
+ */
+export async function syncMatterDocToTransfer(
+  admin: SupabaseClient,
+  input: TransferSyncInput
+): Promise<TransferSyncResult> {
+  const { data: matter } = await admin
+    .from("matters")
+    .select("transfer_id")
+    .eq("id", input.matterId)
+    .maybeSingle();
+
+  const transferId = (matter?.transfer_id as string | null) ?? null;
+  if (!transferId) return NOT_SYNCED;
+
+  // Already up there? Re-link rather than duplicate.
+  const { data: existing } = await admin
+    .from("transfer_documents")
+    .select("id")
+    .eq("transfer_id", transferId)
+    .eq("storage_path", input.storagePath)
+    .maybeSingle();
+
+  if (existing?.id) {
+    await admin
+      .from("documents")
+      .update({ transfer_document_id: existing.id })
+      .eq("id", input.documentId);
+    return { synced: true, transferId, transferDocumentId: existing.id as string, deduped: true };
+  }
+
+  const { data: tdoc, error } = await admin
+    .from("transfer_documents")
+    .insert({
+      transfer_id: transferId,
+      document_type: input.documentType,
+      file_name: input.fileName,
+      mime_type: input.mimeType,
+      size_bytes: input.sizeBytes,
+      storage_bucket: input.storageBucket,
+      storage_path: input.storagePath,
+      status: "current",
+      uploaded_by: input.uploadedById,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(`Could not sync the document to its transfer: ${error.message}`);
+
+  await admin
+    .from("documents")
+    .update({ transfer_document_id: tdoc.id })
+    .eq("id", input.documentId);
+
+  return { synced: true, transferId, transferDocumentId: tdoc.id as string, deduped: false };
+}

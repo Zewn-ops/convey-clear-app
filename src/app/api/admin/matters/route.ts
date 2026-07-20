@@ -56,22 +56,43 @@ export async function POST(request: Request) {
   // Staff can see all of them, so this is belt-and-braces today — but this route
   // is the one place a transfer_id arrives from a browser.
   let transferId: string | null = null;
+  let transferFirm: string | null = null;
   if (body.transfer_id) {
     const { data: t } = await supabase
       .from("property_transfers")
-      .select("id, reference")
+      .select("id, reference, business_partner_id")
       .eq("id", body.transfer_id)
       .maybeSingle();
     if (!t) return NextResponse.json({ message: "Transfer not found or access denied" }, { status: 403 });
     transferId = t.id;
+    transferFirm = (t.business_partner_id as string | null) ?? null;
   }
 
   // Resolve / create client
   let clientId = body.client_id ?? null;
   let clientName = "";
   if (clientId) {
-    const { data: c } = await admin.from("clients").select("full_name, business_name").eq("id", clientId).maybeSingle();
+    const { data: c } = await admin
+      .from("clients")
+      .select("full_name, business_name, business_partner_id")
+      .eq("id", clientId)
+      .maybeSingle();
     clientName = c?.business_name || c?.full_name || "";
+
+    // ONE TRANSFER = ONE FIRM (see api/admin/property-transfers/link for the
+    // full reasoning). Everything on a matter syncs up to its transfer, and the
+    // transfer is readable by the firm that owns it — so a matter for another
+    // firm's client cannot be created inside it.
+    const clientFirm = (c?.business_partner_id as string | null) ?? null;
+    if (transferFirm && clientFirm && clientFirm !== transferFirm) {
+      return NextResponse.json(
+        {
+          message:
+            "That client belongs to a different firm. A property transfer belongs to one firm — create a separate transfer for the other firm.",
+        },
+        { status: 409 }
+      );
+    }
   } else {
     const entityType = body.entity_type ?? "natural_person";
     const personName = composeFullName(body.first_name, body.last_name) || (body.full_name ?? "").trim();

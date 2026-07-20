@@ -50,11 +50,46 @@ export async function POST(request: Request) {
   if (transferId) {
     const { data: t } = await admin
       .from("property_transfers")
-      .select("reference")
+      .select("reference, business_partner_id")
       .eq("id", transferId)
       .maybeSingle();
     if (!t) return NextResponse.json({ message: "That property transfer no longer exists." }, { status: 404 });
     reference = t.reference as string;
+
+    // ONE TRANSFER = ONE FIRM. Two firms on the same property means two
+    // independent transfers, one each — never one transfer shared between them.
+    //
+    // This is what makes the two-way document sync safe: every document on a
+    // matter travels up to its transfer, and the transfer is readable by the
+    // firm that owns it. Linking another firm's matter here would hand that
+    // firm's client documents — certified IDs included — to a firm that never
+    // acted for them. The partner-side routes already enforced this; staff
+    // could cross firms freely, which is how production ended up with two
+    // transfers spanning 2 and 3 firms.
+    //
+    // A matter's firm is its own business_partner_id, or its client's when the
+    // matter is client-owned. A matter with NO firm has nothing to leak and is
+    // allowed through.
+    const { data: m } = await admin
+      .from("matters")
+      .select("business_partner_id, clients(business_partner_id)")
+      .eq("id", matterId)
+      .maybeSingle();
+
+    const matterFirm =
+      ((m as { business_partner_id?: string | null } | null)?.business_partner_id ?? null) ||
+      ((m?.clients as { business_partner_id?: string | null } | null)?.business_partner_id ?? null);
+    const transferFirm = (t.business_partner_id as string | null) ?? null;
+
+    if (matterFirm && transferFirm && matterFirm !== transferFirm) {
+      return NextResponse.json(
+        {
+          message:
+            "That matter belongs to a different firm. A property transfer belongs to one firm — create a separate transfer for the other firm rather than linking across them.",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   // The matter we're about to detach, so the OLD transfer's feed can record the
