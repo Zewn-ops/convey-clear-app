@@ -93,14 +93,26 @@ export async function POST(request: Request) {
     size_bytes: body.size_bytes || null,
     matter_party_id: matterPartyId,
     uploaded_by: uploadedBy,
+    // WHO uploaded, as a real reference. uploaded_by above is a text category
+    // ('staff' | 'attorney' | 'client'), so it cannot tell an admin apart from a
+    // runner — which is exactly what the approval gate (042) has to decide on,
+    // and what the review queue has to display. Migration 042 adds this column.
+    uploaded_by_user_id: me?.id ?? null,
   };
 
   let { data: doc, error } = await admin.from("documents").insert(row).select("id").single();
 
-  // Deployed ahead of migration 040? Drop the new column and carry on rather
-  // than failing an upload whose file is already in storage.
+  // Deployed ahead of migration 040 or 042? Drop the new columns and carry on
+  // rather than failing an upload whose file is already in storage. Both are
+  // dropped together because PostgREST names only the first missing column, so
+  // retrying them one at a time would cost an extra round trip per column and
+  // still land here.
+  //
+  // ⚠️ Losing uploaded_by_user_id means 042's trigger falls back to the text
+  // category, which still gates 'staff' uploads correctly — the gate degrades to
+  // "we know a staff member did it, not which one", never to "ungated".
   if (error && isUndefinedColumn(error)) {
-    const { original_file_name: _dropped, ...legacyRow } = row;
+    const { original_file_name: _dropped, uploaded_by_user_id: _dropped2, ...legacyRow } = row;
     ({ data: doc, error } = await admin.from("documents").insert(legacyRow).select("id").single());
   }
   if (error || !doc) {

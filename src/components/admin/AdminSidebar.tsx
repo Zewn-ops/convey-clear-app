@@ -17,6 +17,7 @@ import {
   Scale,
   LogOut,
   ShieldCheck,
+  BadgeCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -30,6 +31,9 @@ const baseNav = [
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
 ];
 const adminNav = [
+  // Admin-only: approving your own team's uploads is the one thing staff must
+  // not be able to do for themselves (see migration 042).
+  { href: "/admin/approvals", label: "Document Approvals", icon: BadgeCheck, exact: false },
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
 ];
 
