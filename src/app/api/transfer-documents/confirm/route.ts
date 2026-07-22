@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { TRANSFER_DOCS_BUCKET } from "@/lib/storage";
 import { STAFF_ROLES, type UserRole } from "@/types";
 import { logTransferActivity } from "@/lib/activity";
+import { canonicalTransferDocumentName } from "@/lib/doc-naming";
 
 export const runtime = "nodejs";
 
@@ -70,28 +71,61 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: doc, error } = await admin
+  // Canonical name — "Deed Search — ERF 1234 Waterkloof — 2026-07-22.pdf".
+  // Best-effort, exactly as on the matter side: the file is already in storage by
+  // the time we get here, so a naming failure must not lose the upload.
+  const docType = body.document_type || "other";
+  let displayName = body.file_name || null;
+  try {
+    displayName = await canonicalTransferDocumentName(admin, {
+      transferId: transfer_id,
+      documentType: docType,
+      originalFileName: body.file_name || null,
+    });
+  } catch (e) {
+    console.error("[transfer-documents/confirm] canonical naming failed", e);
+  }
+
+  const row: Record<string, unknown> = {
+    transfer_id,
+    document_type: docType,
+    storage_bucket: TRANSFER_DOCS_BUCKET,
+    storage_path,
+    file_name: displayName,
+    original_file_name: body.file_name || null,
+    mime_type: body.mime_type || null,
+    size_bytes: body.size_bytes || null,
+    supersedes_id: replacesId,
+    uploaded_by: me.id,
+  };
+
+  let { data: doc, error } = await admin
     .from("transfer_documents")
-    .insert({
-      transfer_id,
-      document_type: body.document_type || "other",
-      storage_bucket: TRANSFER_DOCS_BUCKET,
-      storage_path,
-      file_name: body.file_name || null,
-      mime_type: body.mime_type || null,
-      size_bytes: body.size_bytes || null,
-      supersedes_id: replacesId,
-      uploaded_by: me.id,
-    })
+    .insert(row)
     .select("id")
     .single();
-  if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+
+  // 42703 = column does not exist. Migration 041 adds original_file_name to
+  // transfer_documents; until it is applied, drop the column and insert anyway so
+  // deploying ahead of the migration degrades to "no provenance" rather than
+  // "uploads fail". Same play as 040 on the matter side.
+  if (error && (error as { code?: string }).code === "42703") {
+    const { original_file_name: _dropped, ...legacyRow } = row;
+    ({ data: doc, error } = await admin
+      .from("transfer_documents")
+      .insert(legacyRow)
+      .select("id")
+      .single());
+  }
+  if (error || !doc) {
+    return NextResponse.json({ message: error?.message ?? "Insert failed" }, { status: 400 });
+  }
 
   if (replacesId) {
     await admin.from("transfer_documents").update({ status: "superseded" }).eq("id", replacesId);
   }
 
-  const label = body.file_name || body.document_type || "document";
+  const label = displayName || body.file_name || docType || "document";
   await logTransferActivity(admin, {
     transferId: transfer_id,
     authorId: me.id,

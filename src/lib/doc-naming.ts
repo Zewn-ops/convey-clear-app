@@ -93,6 +93,54 @@ export async function resolveDocumentSubject(
   return (matter?.property_description as string | null) || null;
 }
 
+/**
+ * Work out what a TRANSFER-level document is about.
+ *
+ * A transfer document belongs to the transaction, not to a person — a deed
+ * search or a transfer confirmation letter is about the property and nothing
+ * else. So there is no party branch here: the subject is always the property.
+ *
+ * WHY THIS EXISTS SEPARATELY
+ *   `resolveDocumentSubject` keys off a matterId, and a transfer document has no
+ *   matter. That mismatch is the whole reason transfer-level uploads were still
+ *   landing as `A4 - 1.pdf` after canonical naming shipped (2026-07-20): the
+ *   naming code was never reachable from that write path, so it looked like the
+ *   resolver was failing to find the property when it was simply never called.
+ *
+ * Call with a service-role client; this runs after the caller is authorised.
+ */
+export async function resolveTransferSubject(
+  admin: SupabaseClient,
+  transferId: string
+): Promise<string | null> {
+  const { data: transfer } = await admin
+    .from("property_transfers")
+    .select("property_description, reference")
+    .eq("id", transferId)
+    .maybeSingle();
+
+  // Fall back to the firm's own transaction reference: a document named for
+  // "AS1234" is still findable, whereas one named for nothing is not.
+  return (
+    (transfer?.property_description as string | null) ||
+    (transfer?.reference as string | null) ||
+    null
+  );
+}
+
+/** Convenience: resolve the property and build the name for a transfer document. */
+export async function canonicalTransferDocumentName(
+  admin: SupabaseClient,
+  input: { transferId: string; documentType: string; originalFileName?: string | null }
+): Promise<string> {
+  const subject = await resolveTransferSubject(admin, input.transferId);
+  return buildDocumentName({
+    documentType: input.documentType,
+    subject,
+    originalFileName: input.originalFileName,
+  });
+}
+
 /** Convenience: resolve the subject and build the name in one call. */
 export async function canonicalDocumentName(
   admin: SupabaseClient,
