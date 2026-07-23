@@ -147,6 +147,17 @@ export default function TransferDocuments({
                 <p className="flex items-center gap-1.5 truncate text-sm font-medium text-gray-800">
                   {docLabel(d.document_type)}
                   {d.verified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Verified" />}
+                  {/* Staff-upload approval gate (042/043): a pending mirror or a
+                      direct staff upload. canManage = staff/admin only, so the
+                      partner firm never sees the internal review state. */}
+                  {canManage && d.approved_at === null && (
+                    <span
+                      className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
+                      title="Not released. Hidden from the partner firm until an admin approves it in Document Approvals."
+                    >
+                      Awaiting approval
+                    </span>
+                  )}
                 </p>
                 <p className="truncate text-xs text-gray-400">
                   {d.file_name || "—"} · {formatDate(d.created_at)}

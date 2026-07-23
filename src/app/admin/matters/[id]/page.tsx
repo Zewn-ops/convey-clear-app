@@ -355,7 +355,7 @@ export default async function AdminMatterDetailPage({
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at, client_document_id, transfer_document_id")
+      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at, client_document_id, transfer_document_id, approved_at")
       .eq("matter_id", id)
       // Superseded = replaced by a newer upload in the same slot (migration 030).
       // Kept in the table for audit, never shown as a matter document.
@@ -520,6 +520,17 @@ export default async function AdminMatterDetailPage({
         <span className="text-xs text-gray-300 shrink-0">No file</span>
       )}
       <DocRenameButton documentId={doc.id} current={doc.file_name || doc.document_type} />
+      {/* Staff-upload approval gate (042/043): approved_at NULL = held for an
+          admin. Once 043 is live the client and partner firm cannot see the row
+          at all — this badge tells staff WHY it is not out yet. */}
+      {doc.approved_at === null && (
+        <span
+          className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
+          title="Not released. Hidden from the client and partner firm until an admin approves it in Document Approvals."
+        >
+          Awaiting approval
+        </span>
+      )}
       {doc.verified && <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>}
       {doc.document_status && doc.document_status !== "uploaded" && (
         <span className="text-xs text-amber-600 font-medium shrink-0">{doc.document_status}</span>
