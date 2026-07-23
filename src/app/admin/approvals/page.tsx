@@ -27,7 +27,7 @@ type PendingMatterDoc = {
   document_type: string | null;
   created_at: string;
   matter_id: string;
-  matters?: { reference: string | null } | null;
+  matters?: { title: string | null } | null;
   users?: { full_name: string | null; email: string | null; role: string | null } | null;
 };
 
@@ -58,7 +58,7 @@ export default async function AdminApprovalsPage() {
     admin
       .from("documents")
       .select(
-        "id, file_name, document_type, created_at, matter_id, matters(reference), users!documents_uploaded_by_user_id_fkey(full_name, email, role)"
+        "id, file_name, document_type, created_at, matter_id, matters(title), users!documents_uploaded_by_user_id_fkey(full_name, email, role)"
       )
       .is("approved_at", null)
       .order("created_at", { ascending: true }),
@@ -156,7 +156,7 @@ export default async function AdminApprovalsPage() {
                         href={`/admin/matters/${d.matter_id}`}
                         className="text-[#1B2E6B] hover:underline"
                       >
-                        {d.matters?.reference || "Open matter"}
+                        {d.matters?.title || "Open matter"}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{uploaderLabel(d.users)}</td>
