@@ -269,6 +269,9 @@ export interface TransferDocument {
   verified_by?: string | null;
   notes?: string | null;
   uploaded_by: string | null;
+  // Staff-upload approval gate (042). NULL = pending an admin's review, hidden
+  // from clients and the partner firm once 043 is applied.
+  approved_at?: string | null;
   created_at: string;
 }
 
@@ -293,6 +296,9 @@ export interface MatterDocument {
   transfer_document_id?: string | null;
   uploaded_at: string | null;
   verified: boolean | null;
+  // Staff-upload approval gate (042). NULL = pending an admin's review, hidden
+  // from clients and the partner firm once 043 is applied.
+  approved_at?: string | null;
   created_at: string;
 }
 
