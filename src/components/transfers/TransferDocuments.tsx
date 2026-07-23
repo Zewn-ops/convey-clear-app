@@ -140,22 +140,35 @@ export default function TransferDocuments({
 
       {current.length > 0 ? (
         <ul className="mb-4 divide-y divide-gray-100">
-          {current.map((d) => (
-            <li key={d.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 ${busy === d.id ? "opacity-50" : ""}`}>
+          {current.map((d) => {
+            // Approval gate (042/043/044), staff-facing only. Pending = held for
+            // an admin; disapproved = rejected with a reason. Both stay hidden
+            // from the partner firm; grey a pending row so staff see it is not out.
+            const isDisapproved = d.disapproved_at != null;
+            const isPending = canManage && d.approved_at == null && !isDisapproved;
+            return (
+            <li key={d.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 ${busy === d.id ? "opacity-50" : isPending ? "opacity-60" : ""}`}>
               <FileText className="h-4 w-4 shrink-0 text-gray-400" />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 truncate text-sm font-medium text-gray-800">
                   {docLabel(d.document_type)}
                   {d.verified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Verified" />}
-                  {/* Staff-upload approval gate (042/043): a pending mirror or a
-                      direct staff upload. canManage = staff/admin only, so the
-                      partner firm never sees the internal review state. */}
-                  {canManage && d.approved_at === null && (
+                  {/* canManage = staff/admin only, so the partner firm never sees
+                      the internal review state. */}
+                  {isPending && (
                     <span
                       className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
                       title="Not released. Hidden from the partner firm until an admin approves it in Document Approvals."
                     >
                       Awaiting approval
+                    </span>
+                  )}
+                  {canManage && isDisapproved && (
+                    <span
+                      className="shrink-0 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700"
+                      title={d.disapproval_reason ? `Not approved: ${d.disapproval_reason}` : "Not approved by an admin."}
+                    >
+                      Not approved
                     </span>
                   )}
                 </p>
@@ -216,7 +229,8 @@ export default function TransferDocuments({
                 )}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : (
         <p className="mb-4 text-sm text-gray-400">No transfer documents yet.</p>

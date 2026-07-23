@@ -355,7 +355,7 @@ export default async function AdminMatterDetailPage({
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at, client_document_id, transfer_document_id, approved_at")
+      .select("id, matter_id, document_type, document_status, file_name, drive_file_id, storage_bucket, storage_path, matter_party_id, verified, uploaded_by, created_at, client_document_id, transfer_document_id, approved_at, disapproved_at, disapproval_reason")
       .eq("matter_id", id)
       // Superseded = replaced by a newer upload in the same slot (migration 030).
       // Kept in the table for audit, never shown as a matter document.
@@ -496,8 +496,15 @@ export default async function AdminMatterDetailPage({
   const clientPartnerDocs = documents.filter(isClientUpload);
   const ccDocs = documents.filter((d) => !isClientUpload(d));
 
-  const docRow = (doc: MatterDocument) => (
-    <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
+  const docRow = (doc: MatterDocument) => {
+    // Approval gate state (042/043/044). approved_at set = released; disapproved_at
+    // set = rejected (held, has a reason); neither = pending an admin decision.
+    const isDisapproved = doc.disapproved_at != null;
+    const isPending = doc.approved_at == null && !isDisapproved;
+    // Grey while it is neither approved nor disapproved — a held upload the
+    // client and partner firm cannot see yet.
+    return (
+    <li key={doc.id} className={`flex items-center gap-3 px-5 py-3 ${isPending ? "opacity-60" : ""}`}>
       <FileText className="h-4 w-4 text-gray-400 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 truncate">{doc.file_name || doc.document_type}</p>
@@ -520,10 +527,10 @@ export default async function AdminMatterDetailPage({
         <span className="text-xs text-gray-300 shrink-0">No file</span>
       )}
       <DocRenameButton documentId={doc.id} current={doc.file_name || doc.document_type} />
-      {/* Staff-upload approval gate (042/043): approved_at NULL = held for an
-          admin. Once 043 is live the client and partner firm cannot see the row
-          at all — this badge tells staff WHY it is not out yet. */}
-      {doc.approved_at === null && (
+      {/* Approval gate (042/043/044). Pending = held for an admin; disapproved =
+          rejected with a reason. Both stay hidden from the client and partner
+          firm; these badges tell staff WHY a row is not out. */}
+      {isPending && (
         <span
           className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
           title="Not released. Hidden from the client and partner firm until an admin approves it in Document Approvals."
@@ -531,12 +538,21 @@ export default async function AdminMatterDetailPage({
           Awaiting approval
         </span>
       )}
+      {isDisapproved && (
+        <span
+          className="shrink-0 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700"
+          title={doc.disapproval_reason ? `Not approved: ${doc.disapproval_reason}` : "Not approved by an admin."}
+        >
+          Not approved
+        </span>
+      )}
       {doc.verified && <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>}
       {doc.document_status && doc.document_status !== "uploaded" && (
         <span className="text-xs text-amber-600 font-medium shrink-0">{doc.document_status}</span>
       )}
     </li>
-  );
+    );
+  };
 
   const docGroup = (title: string, list: MatterDocument[]) => (
     <div>

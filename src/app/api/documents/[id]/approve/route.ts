@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ADMIN_ROLES, type UserRole } from "@/types";
 import { logMatterActivity } from "@/lib/activity";
+import { notifyUsers } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -47,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const admin = createAdminClient();
   const { data: doc } = await admin
     .from("documents")
-    .select("id, matter_id, file_name, document_type, approved_at")
+    .select("id, matter_id, file_name, document_type, approved_at, uploaded_by_user_id")
     .eq("id", id)
     .maybeSingle();
   if (!doc) return NextResponse.json({ message: "Document not found" }, { status: 404 });
@@ -66,11 +67,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .is("approved_at", null);
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
+  const label = doc.file_name || doc.document_type || "file";
+
   await logMatterActivity(admin, {
     matterId: doc.matter_id,
     authorId: me.id,
     activityType: "document_status",
-    body: `Document approved for release: ${doc.file_name || doc.document_type || "file"}`,
+    body: `Document approved for release: ${label}`,
+  });
+
+  // Tell the uploader their document is out. Best-effort — notifyUsers never
+  // throws, and it no-ops when uploaded_by_user_id is null (rows predating 042 /
+  // direct n8n inserts). The uploader is staff, so the link is the admin view.
+  await notifyUsers([doc.uploaded_by_user_id], {
+    type: "document_status",
+    title: "Document approved",
+    body: `${label} was approved and is now visible to the client and partner firm.`,
+    link: `/admin/matters/${doc.matter_id}`,
+    matter_id: doc.matter_id,
   });
 
   return NextResponse.json({ ok: true });

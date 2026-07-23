@@ -272,6 +272,10 @@ export interface TransferDocument {
   // Staff-upload approval gate (042). NULL = pending an admin's review, hidden
   // from clients and the partner firm once 043 is applied.
   approved_at?: string | null;
+  // Disapproval (044). Set = an admin rejected this upload; it stays hidden and
+  // carries the reason shown to the uploader.
+  disapproved_at?: string | null;
+  disapproval_reason?: string | null;
   created_at: string;
 }
 
@@ -299,6 +303,10 @@ export interface MatterDocument {
   // Staff-upload approval gate (042). NULL = pending an admin's review, hidden
   // from clients and the partner firm once 043 is applied.
   approved_at?: string | null;
+  // Disapproval (044). Set = an admin rejected this upload; it stays hidden and
+  // carries the reason shown to the uploader.
+  disapproved_at?: string | null;
+  disapproval_reason?: string | null;
   created_at: string;
 }
 

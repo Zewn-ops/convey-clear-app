@@ -7,19 +7,27 @@ import { notifyUsers } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
-// Approve a TRANSFER-level document so the owning firm can see it.
+// Disapprove (reject) a TRANSFER-level document (044). Counterpart to the
+// transfer approve route: covers a staff member uploading a deed search /
+// transfer letter straight onto the transfer. A matter document mirrored upward
+// by the sync (038) is disapproved through the MATTER route — 044's propagate
+// trigger carries the disapproval across, so it never needs this.
 //
-// Matter documents mirrored upward by the sync (038) are approved through the
-// matter route — 042's propagate trigger carries the approval across, so they
-// never need this. This covers the other case: a staff member uploading a deed
-// search or transfer letter straight onto the transfer, which has no matter
-// document behind it to approve.
-//
-// Admin only, same reasoning as the matter route: review by someone other than
-// the uploader is the entire feature.
+// Admin only; the document is kept (row + reason = audit), not deleted.
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  let body: { reason?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    body = {};
+  }
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (!reason) {
+    return NextResponse.json({ message: "A reason is required to disapprove a document." }, { status: 400 });
+  }
 
   const supabase = await createClient();
   const {
@@ -34,26 +42,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .maybeSingle();
 
   if (!me || !ADMIN_ROLES.includes(me.role as UserRole)) {
-    return NextResponse.json({ message: "Only an admin can approve documents" }, { status: 403 });
+    return NextResponse.json({ message: "Only an admin can disapprove documents" }, { status: 403 });
   }
 
   const admin = createAdminClient();
   const { data: doc } = await admin
     .from("transfer_documents")
-    .select("id, transfer_id, file_name, document_type, approved_at, uploaded_by")
+    .select("id, transfer_id, file_name, document_type, approved_at, disapproved_at, uploaded_by")
     .eq("id", id)
     .maybeSingle();
   if (!doc) return NextResponse.json({ message: "Document not found" }, { status: 404 });
 
   if (doc.approved_at) {
-    return NextResponse.json({ ok: true, already_approved: true });
+    return NextResponse.json({ message: "This document has already been approved." }, { status: 409 });
+  }
+  if (doc.disapproved_at) {
+    return NextResponse.json({ ok: true, already_disapproved: true });
   }
 
   const { error } = await admin
     .from("transfer_documents")
-    .update({ approved_at: new Date().toISOString(), approved_by: me.id })
+    .update({
+      disapproved_at: new Date().toISOString(),
+      disapproved_by: me.id,
+      disapproval_reason: reason,
+    })
     .eq("id", id)
-    .is("approved_at", null);
+    .is("approved_at", null)
+    .is("disapproved_at", null);
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
   const label = doc.file_name || doc.document_type || "file";
@@ -62,16 +78,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     transferId: doc.transfer_id,
     authorId: me.id,
     activityType: "document_upload",
-    body: `Document approved for release: ${label}`,
+    body: `Document not approved: ${label} — ${reason}`,
   });
 
-  // Tell the uploader (transfer_documents.uploaded_by is the user's uuid here,
-  // unlike documents.uploaded_by). Best-effort; no matter_id, so link straight
-  // to the transfer.
   await notifyUsers([doc.uploaded_by], {
     type: "document_status",
-    title: "Transfer document approved",
-    body: `${label} was approved and is now visible to the partner firm.`,
+    title: "Transfer document not approved",
+    body: `${label} was not approved. Reason: ${reason}`,
     link: `/admin/property-transfers/${doc.transfer_id}`,
   });
 

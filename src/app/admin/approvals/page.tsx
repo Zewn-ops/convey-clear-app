@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import ApproveDocButton from "@/components/admin/ApproveDocButton";
+import ReviewDocActions from "@/components/admin/ReviewDocActions";
 import { formatDateTime } from "@/lib/utils";
 import { isAdminRole } from "@/types";
 
@@ -27,6 +27,8 @@ type PendingMatterDoc = {
   document_type: string | null;
   created_at: string;
   matter_id: string;
+  storage_bucket: string | null;
+  storage_path: string | null;
   matters?: { title: string | null } | null;
   users?: { full_name: string | null; email: string | null; role: string | null } | null;
 };
@@ -37,6 +39,8 @@ type PendingTransferDoc = {
   document_type: string | null;
   created_at: string;
   transfer_id: string;
+  storage_bucket: string | null;
+  storage_path: string | null;
   property_transfers?: { reference: string | null } | null;
   users?: { full_name: string | null; email: string | null; role: string | null } | null;
 };
@@ -58,16 +62,20 @@ export default async function AdminApprovalsPage() {
     admin
       .from("documents")
       .select(
-        "id, file_name, document_type, created_at, matter_id, matters(title), users!documents_uploaded_by_user_id_fkey(full_name, email, role)"
+        "id, file_name, document_type, created_at, matter_id, storage_bucket, storage_path, matters(title), users!documents_uploaded_by_user_id_fkey(full_name, email, role)"
       )
       .is("approved_at", null)
+      // 044: a disapproved doc also has approved_at NULL but is decided, not
+      // pending — keep it out of the review queue.
+      .is("disapproved_at", null)
       .order("created_at", { ascending: true }),
     admin
       .from("transfer_documents")
       .select(
-        "id, file_name, document_type, created_at, transfer_id, property_transfers(reference), users!transfer_documents_uploaded_by_fkey(full_name, email, role)"
+        "id, file_name, document_type, created_at, transfer_id, storage_bucket, storage_path, property_transfers(reference), users!transfer_documents_uploaded_by_fkey(full_name, email, role)"
       )
       .is("approved_at", null)
+      .is("disapproved_at", null)
       .order("created_at", { ascending: true }),
   ]);
 
@@ -81,6 +89,20 @@ export default async function AdminApprovalsPage() {
     (r) => r.users
   );
   const total = matterRows.length + transferRows.length;
+
+  // Signed URLs so the reviewer can open the file before deciding — the whole
+  // point of a review queue. Service role, short-lived (5 min). Keyed by doc id.
+  const viewUrls: Record<string, string> = {};
+  await Promise.all(
+    [
+      ...matterRows.map((d) => ({ id: d.id, bucket: d.storage_bucket ?? "matter-documents", path: d.storage_path })),
+      ...transferRows.map((d) => ({ id: d.id, bucket: d.storage_bucket ?? "transfer-documents", path: d.storage_path })),
+    ].map(async ({ id, bucket, path }) => {
+      if (!path) return;
+      const { data } = await admin.storage.from(bucket).createSignedUrl(path, 300);
+      if (data?.signedUrl) viewUrls[id] = data.signedUrl;
+    })
+  );
 
   // ⚠️ An empty queue and a BROKEN queue look identical unless we say so.
   // If either query errors — a mistyped embed hint, or migration 042 not applied
@@ -162,7 +184,7 @@ export default async function AdminApprovalsPage() {
                     <td className="px-4 py-3 text-gray-700">{uploaderLabel(d.users)}</td>
                     <td className="px-4 py-3 text-gray-500">{formatDateTime(d.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <ApproveDocButton id={d.id} kind="matter" />
+                      <ReviewDocActions id={d.id} kind="matter" viewUrl={viewUrls[d.id]} />
                     </td>
                   </tr>
                 ))}
@@ -185,7 +207,7 @@ export default async function AdminApprovalsPage() {
                     <td className="px-4 py-3 text-gray-700">{uploaderLabel(d.users)}</td>
                     <td className="px-4 py-3 text-gray-500">{formatDateTime(d.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <ApproveDocButton id={d.id} kind="transfer" />
+                      <ReviewDocActions id={d.id} kind="transfer" viewUrl={viewUrls[d.id]} />
                     </td>
                   </tr>
                 ))}
