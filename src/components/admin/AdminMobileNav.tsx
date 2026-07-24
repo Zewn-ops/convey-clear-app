@@ -18,6 +18,7 @@ import {
   LogOut,
   Menu,
   X,
+  Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -31,6 +32,7 @@ const baseNav = [
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
 ];
 const adminNav = [
+  { href: "/admin/email-signature", label: "Email Signatures", icon: Mail, exact: false },
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
 ];
 
