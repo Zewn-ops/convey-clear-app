@@ -7,6 +7,7 @@ import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import { isStaffRole, clientDisplayName, type Client } from "@/types";
 import ClientRow from "@/components/clients/ClientRow";
+import NewClientButton from "@/components/clients/NewClientButton";
 
 export const metadata = { title: "Clients — ConveyClear Admin" };
 
@@ -36,9 +37,12 @@ export default async function AdminClientsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-        <p className="text-sm text-gray-500 mt-1">{clients.length} registered client{clients.length === 1 ? "" : "s"}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
+          <p className="text-sm text-gray-500 mt-1">{clients.length} registered client{clients.length === 1 ? "" : "s"}</p>
+        </div>
+        <NewClientButton />
       </div>
 
       <Card padding="none">
