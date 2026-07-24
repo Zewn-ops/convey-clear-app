@@ -49,22 +49,30 @@ function buildSignature(v: {
   signoff: string;
 }): string {
   const phoneLink = (v.phone || "").replace(/[^\d+]/g, "");
+  const contactRows =
+    `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333333;line-height:1.5;border-collapse:collapse;">` +
+    `<tr><td width="26" style="padding:0 8px 6px 0;vertical-align:middle;"><img src="${BASE}phone.png" alt="Phone" width="12" height="20" style="display:block;border:0;outline:none;width:12px;height:20px;" /></td><td style="padding:0 0 6px 0;vertical-align:middle;"><a href="tel:${esc(phoneLink)}" style="color:#333333;text-decoration:none;">${esc(v.phone)}</a></td></tr>` +
+    `<tr><td width="26" style="padding:0 8px 6px 0;vertical-align:middle;"><img src="${BASE}envelope.png" alt="Email" width="18" height="18" style="display:block;border:0;outline:none;width:18px;height:18px;" /></td><td style="padding:0 0 6px 0;vertical-align:middle;"><a href="mailto:${esc(v.email)}" style="color:#1B2E6B;text-decoration:underline;">${esc(v.email)}</a></td></tr>` +
+    `<tr><td width="26" style="padding:0 8px 6px 0;vertical-align:middle;"><img src="${BASE}website.png" alt="Website" width="18" height="18" style="display:block;border:0;outline:none;width:18px;height:18px;" /></td><td style="padding:0 0 6px 0;vertical-align:middle;"><a href="https://conveyclear.co.za" style="color:#1B2E6B;text-decoration:underline;">conveyclear.co.za</a></td></tr>` +
+    `<tr><td width="26" style="padding:0 8px 0 0;vertical-align:middle;"><img src="${BASE}pin.png" alt="Offices" width="13" height="20" style="display:block;border:0;outline:none;width:13px;height:20px;" /></td><td style="vertical-align:middle;">PTA&nbsp;|&nbsp;JHB&nbsp;|&nbsp;CPT</td></tr>` +
+    `</table>`;
   return (
     signoffBlock(v.signoff) +
+    // Layout matches the legacy signature: logo across the top, then name +
+    // title + contacts on the LEFT with the "Your Key In Property" tagline to
+    // their RIGHT (no divider line).
     `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#333333;font-size:12px;line-height:1.4;border-collapse:collapse;">` +
-    `<tr><td style="padding:0 0 4px 0;"><img src="${BASE}logo.png" alt="ConveyClear" width="280" height="75" style="display:block;border:0;outline:none;text-decoration:none;width:280px;height:75px;" /></td></tr>` +
-    `<tr><td style="padding:0 0 10px 0;"><img src="${BASE}tagline.png" alt="Your Key In Property" width="120" height="84" style="display:block;border:0;outline:none;text-decoration:none;width:120px;height:84px;" /></td></tr>` +
-    `<tr><td style="padding:0 0 10px 0;"><div style="width:320px;height:2px;background-color:#1B2E6B;font-size:0;line-height:0;">&nbsp;</div></td></tr>` +
-    `<tr><td style="padding:0 0 2px 0;font-size:17px;font-weight:bold;color:#1B2E6B;font-family:Arial,Helvetica,sans-serif;">${esc(v.name)}</td></tr>` +
-    `<tr><td style="padding:0 0 10px 0;font-size:13px;color:#E8521A;font-family:Arial,Helvetica,sans-serif;">${esc(v.title)}</td></tr>` +
-    `<tr><td>` +
-    `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333333;line-height:1.5;border-collapse:collapse;">` +
-    `<tr><td width="26" style="padding:0 8px 5px 0;vertical-align:middle;"><img src="${BASE}phone.png" alt="Phone" width="12" height="20" style="display:block;border:0;outline:none;width:12px;height:20px;" /></td><td style="padding:0 0 5px 0;vertical-align:middle;"><a href="tel:${esc(phoneLink)}" style="color:#333333;text-decoration:none;">${esc(v.phone)}</a></td></tr>` +
-    `<tr><td width="26" style="padding:0 8px 5px 0;vertical-align:middle;"><img src="${BASE}envelope.png" alt="Email" width="18" height="18" style="display:block;border:0;outline:none;width:18px;height:18px;" /></td><td style="padding:0 0 5px 0;vertical-align:middle;"><a href="mailto:${esc(v.email)}" style="color:#333333;text-decoration:none;">${esc(v.email)}</a></td></tr>` +
-    `<tr><td width="26" style="padding:0 8px 5px 0;vertical-align:middle;"><img src="${BASE}website.png" alt="Website" width="18" height="18" style="display:block;border:0;outline:none;width:18px;height:18px;" /></td><td style="padding:0 0 5px 0;vertical-align:middle;"><a href="https://conveyclear.co.za" style="color:#E8521A;text-decoration:none;">conveyclear.co.za</a></td></tr>` +
-    `<tr><td width="26" style="padding:0 8px 0 0;vertical-align:middle;"><img src="${BASE}pin.png" alt="Offices" width="13" height="20" style="display:block;border:0;outline:none;width:13px;height:20px;" /></td><td style="vertical-align:middle;">PTA&nbsp;|&nbsp;JHB&nbsp;|&nbsp;CPT</td></tr>` +
-    `</table>` +
-    `</td></tr>` +
+    `<tr><td colspan="2" style="padding:0 0 14px 0;"><img src="${BASE}logo.png" alt="ConveyClear" width="320" height="85" style="display:block;border:0;outline:none;text-decoration:none;width:320px;height:85px;" /></td></tr>` +
+    `<tr>` +
+    `<td style="vertical-align:top;padding:0 28px 0 0;">` +
+    `<div style="font-size:17px;font-weight:bold;color:#1B2E6B;font-family:Arial,Helvetica,sans-serif;">${esc(v.name)}</div>` +
+    `<div style="font-size:13px;color:#E8521A;padding:2px 0 12px 0;font-family:Arial,Helvetica,sans-serif;">${esc(v.title)}</div>` +
+    contactRows +
+    `</td>` +
+    `<td style="vertical-align:middle;">` +
+    `<img src="${BASE}tagline.png" alt="Your Key In Property" width="130" height="91" style="display:block;border:0;outline:none;text-decoration:none;width:130px;height:91px;" />` +
+    `</td>` +
+    `</tr>` +
     `</table>`
   );
 }
