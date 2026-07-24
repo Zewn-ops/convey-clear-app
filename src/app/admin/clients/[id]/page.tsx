@@ -20,6 +20,7 @@ import {
 import { ArrowLeft, Briefcase } from "lucide-react";
 import ClientVault from "@/components/clients/ClientVault";
 import ClientDetailsForm from "@/components/clients/ClientDetailsForm";
+import CreateLoginButton from "@/components/clients/CreateLoginButton";
 import { signedDocUrls } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -80,6 +81,18 @@ export default async function AdminClientDetailPage({
 
   const displayName = clientDisplayName(client);
 
+  // Does this client already have a portal login? Read past RLS with the admin
+  // client (the page is staff-gated) — a client's user row is not otherwise
+  // readable by staff. Drives the "Create login" / "Login active" card.
+  const { data: loginRow } = await createAdminClient()
+    .from("users")
+    .select("email")
+    .eq("client_id", id)
+    .not("auth_user_id", "is", null)
+    .maybeSingle();
+  const hasLogin = !!loginRow;
+  const loginEmail = (loginRow as { email: string | null } | null)?.email ?? null;
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -103,6 +116,15 @@ export default async function AdminClientDetailPage({
       {/* Details — read-only until Edit. The field set is shared with the matter's
           in-place FICA form (lib/fica.ts), so the two can't ask for different things. */}
       <ClientDetailsForm client={client} />
+
+      {/* Portal access — provision a login for this client entity (no matter
+          required). Part of the legacy-matter backfill workflow. */}
+      <CreateLoginButton
+        clientId={id}
+        hasLogin={hasLogin}
+        loginEmail={loginEmail}
+        clientEmail={client.primary_email}
+      />
 
       {/* Reusable FICA document vault (migration 025, extended by 032) */}
       <ClientVault
