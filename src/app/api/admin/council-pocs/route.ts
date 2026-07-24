@@ -21,6 +21,12 @@ type PocFields = {
   council?: string;
   department?: string;
   notes?: string;
+  // 045 — fuller contact card.
+  tel?: string;
+  office_description?: string;
+  birthday?: string;
+  region?: string;
+  job_title?: string;
 };
 
 async function requireStaff() {
@@ -46,6 +52,11 @@ function pocPayload(body: PocFields) {
     council: clean(body.council),
     department: clean(body.department),
     notes: clean(body.notes),
+    tel: clean(body.tel),
+    office_description: clean(body.office_description),
+    birthday: clean(body.birthday),
+    region: clean(body.region),
+    job_title: clean(body.job_title),
   };
 }
 

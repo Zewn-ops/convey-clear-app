@@ -18,6 +18,7 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", cell: "", council: "", department: "",
+    job_title: "", tel: "", region: "", office_description: "", birthday: "", notes: "",
   });
 
   const filtered = useMemo(() => {
@@ -43,7 +44,10 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
       const json = await res.json();
       if (!res.ok) return toast.error(json.message ?? "Could not save the POC");
       toast.success("Council POC added");
-      setForm({ first_name: "", last_name: "", email: "", cell: "", council: "", department: "" });
+      setForm({
+        first_name: "", last_name: "", email: "", cell: "", council: "", department: "",
+        job_title: "", tel: "", region: "", office_description: "", birthday: "", notes: "",
+      });
       setAdding(false);
       router.refresh();
     } finally {
@@ -102,6 +106,30 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
             <div>
               <label className="text-xs text-gray-500">Cell</label>
               <input value={form.cell} onChange={(e) => setForm({ ...form, cell: e.target.value })} className={`${input} w-full mt-1`} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Tel</label>
+              <input value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={`${input} w-full mt-1`} placeholder="Office / landline" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Job title</label>
+              <input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} className={`${input} w-full mt-1`} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Region</label>
+              <input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className={`${input} w-full mt-1`} placeholder="e.g. Tshwane North" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Birthday</label>
+              <input type="date" value={form.birthday} onChange={(e) => setForm({ ...form, birthday: e.target.value })} className={`${input} w-full mt-1`} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs text-gray-500">Office description</label>
+              <input value={form.office_description} onChange={(e) => setForm({ ...form, office_description: e.target.value })} className={`${input} w-full mt-1`} placeholder="e.g. Rates hall, 2nd floor, Room 214" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs text-gray-500">Comments</label>
+              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className={`${input} w-full mt-1 resize-none`} />
             </div>
             <div className="sm:col-span-2 flex gap-2 pt-1">
               <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 disabled:opacity-50">

@@ -459,6 +459,12 @@ export interface CouncilPoc {
   council: string | null;
   department: string | null;
   notes: string | null;
+  // Extra contact-card fields (migration 045). "Comments" in the UI reuses notes.
+  tel: string | null;
+  office_description: string | null;
+  birthday: string | null;
+  region: string | null;
+  job_title: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

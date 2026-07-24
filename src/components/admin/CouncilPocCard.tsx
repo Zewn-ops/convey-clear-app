@@ -29,6 +29,11 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
     department: poc.department ?? "",
     email: poc.email ?? "",
     cell: poc.cell ?? "",
+    job_title: poc.job_title ?? "",
+    tel: poc.tel ?? "",
+    region: poc.region ?? "",
+    office_description: poc.office_description ?? "",
+    birthday: poc.birthday ?? "",
     notes: poc.notes ?? "",
   });
 
@@ -97,8 +102,28 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
             <label className="text-xs text-gray-500">Cell</label>
             <input value={form.cell} onChange={(e) => setForm({ ...form, cell: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
+          <div>
+            <label className="text-xs text-gray-500">Tel</label>
+            <input value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={`${input} w-full mt-1`} placeholder="Office / landline" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Job title</label>
+            <input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} className={`${input} w-full mt-1`} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Region</label>
+            <input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className={`${input} w-full mt-1`} placeholder="e.g. Tshwane North" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Birthday</label>
+            <input type="date" value={form.birthday} onChange={(e) => setForm({ ...form, birthday: e.target.value })} className={`${input} w-full mt-1`} />
+          </div>
           <div className="sm:col-span-2">
-            <label className="text-xs text-gray-500">Notes</label>
+            <label className="text-xs text-gray-500">Office description</label>
+            <input value={form.office_description} onChange={(e) => setForm({ ...form, office_description: e.target.value })} className={`${input} w-full mt-1`} placeholder="e.g. Rates hall, 2nd floor, Room 214" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs text-gray-500">Comments</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className={`${input} w-full mt-1 resize-none`} />
           </div>
           <div className="sm:col-span-2 flex gap-2 pt-1">
@@ -128,8 +153,10 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <Row k="First name" v={poc.first_name} />
         <Row k="Surname" v={poc.last_name} />
+        <Row k="Job title" v={poc.job_title} />
         <Row k="Council" v={poc.council} />
         <Row k="Department" v={poc.department} />
+        <Row k="Region" v={poc.region} />
         <div>
           <dt className="text-gray-400 text-xs">Email</dt>
           <dd className="font-medium mt-0.5">{poc.email ? <a href={`mailto:${poc.email}`} className="text-[#1B2E6B] hover:underline">{poc.email}</a> : "—"}</dd>
@@ -138,9 +165,20 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
           <dt className="text-gray-400 text-xs">Cell</dt>
           <dd className="font-medium mt-0.5">{poc.cell ? <a href={`tel:${poc.cell}`} className="text-[#1B2E6B] hover:underline">{poc.cell}</a> : "—"}</dd>
         </div>
+        <div>
+          <dt className="text-gray-400 text-xs">Tel</dt>
+          <dd className="font-medium mt-0.5">{poc.tel ? <a href={`tel:${poc.tel}`} className="text-[#1B2E6B] hover:underline">{poc.tel}</a> : "—"}</dd>
+        </div>
+        <Row k="Birthday" v={poc.birthday} />
+        {poc.office_description && (
+          <div className="col-span-2">
+            <dt className="text-gray-400 text-xs">Office description</dt>
+            <dd className="font-medium mt-0.5 text-gray-800 whitespace-pre-wrap">{poc.office_description}</dd>
+          </div>
+        )}
         {poc.notes && (
           <div className="col-span-2">
-            <dt className="text-gray-400 text-xs">Notes</dt>
+            <dt className="text-gray-400 text-xs">Comments</dt>
             <dd className="font-medium mt-0.5 text-gray-800 whitespace-pre-wrap">{poc.notes}</dd>
           </div>
         )}
