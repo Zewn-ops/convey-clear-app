@@ -8,8 +8,11 @@ import { formatDate } from "@/lib/utils";
 import { isStaffRole, clientDisplayName, type Client } from "@/types";
 import ClientRow from "@/components/clients/ClientRow";
 import NewClientButton from "@/components/clients/NewClientButton";
+import FilterRail, { type Facet } from "@/components/ui/FilterRail";
+import { parseListFilters, applyTextSearch, startOfMonthISO } from "@/lib/list-filters";
 
 export const metadata = { title: "Clients — ConveyClear Admin" };
+export const dynamic = "force-dynamic";
 
 const entityLabels: Record<string, string> = {
   natural_person: "Individual",
@@ -23,21 +26,58 @@ const entityVariants: Record<string, "info" | "default" | "gray"> = {
   trust: "gray",
 };
 
-export default async function AdminClientsPage() {
+export default async function AdminClientsPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getSessionProfile();
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
+  const filters = parseListFilters(searchParams, Object.keys(entityLabels));
+
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("clients")
     .select("id, entity_type, full_name, business_name, primary_email, primary_cell, created_at")
     .order("created_at", { ascending: false });
+  if (filters.type) query = query.eq("entity_type", filters.type);
+  if (filters.scope === "month") query = query.gte("created_at", startOfMonthISO());
+  query = applyTextSearch(query, filters.q, [
+    "full_name",
+    "business_name",
+    "primary_email",
+    "primary_cell",
+  ]);
 
+  const { data } = await query;
   const clients = (data as Client[] | null) ?? [];
+  const filtering = Boolean(filters.q || filters.type) || filters.scope !== "all";
+
+  const facets: Facet[] = [
+    {
+      key: "type",
+      label: "Client type",
+      defaultValue: "",
+      options: [
+        { value: "", label: "Any type" },
+        ...Object.entries(entityLabels).map(([value, label]) => ({ value, label })),
+      ],
+    },
+    {
+      key: "scope",
+      label: "Period",
+      defaultValue: "all",
+      options: [
+        { value: "all", label: "All time" },
+        { value: "month", label: "This month" },
+      ],
+    },
+  ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
           <p className="text-sm text-gray-500 mt-1">{clients.length} registered client{clients.length === 1 ? "" : "s"}</p>
@@ -45,6 +85,9 @@ export default async function AdminClientsPage() {
         <NewClientButton />
       </div>
 
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <FilterRail facets={facets} searchPlaceholder="Search name, email, cell…" />
+        <div className="min-w-0 flex-1">
       <Card padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -87,13 +130,17 @@ export default async function AdminClientsPage() {
               ))}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400">No clients yet</td>
+                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                    {filtering ? "No clients match your filters — try clearing them." : "No clients yet"}
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }

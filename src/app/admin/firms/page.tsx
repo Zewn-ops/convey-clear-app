@@ -11,6 +11,8 @@ import {
   PARTNER_TYPE_LABELS,
   type BusinessPartner,
 } from "@/types";
+import FilterRail, { type Facet } from "@/components/ui/FilterRail";
+import { parseListFilters, applyTextSearch } from "@/lib/list-filters";
 
 export const metadata = { title: "Partner Firms — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
@@ -27,19 +29,59 @@ function tally(rows: { business_partner_id: string | null }[] | null): Map<strin
   return counts;
 }
 
-export default async function AdminFirmsPage() {
+export default async function AdminFirmsPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getSessionProfile();
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
   const canWrite = isAdminRole(session.profile?.role);
 
+  const filters = parseListFilters(searchParams, Object.keys(PARTNER_TYPE_LABELS));
+  const rawStatus = Array.isArray(searchParams?.status) ? searchParams.status[0] : searchParams?.status;
+  const status = rawStatus === "inactive" || rawStatus === "all" ? rawStatus : "active";
+
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("business_partners")
     .select("*")
     .order("active", { ascending: false })
     .order("name");
+  // Default to active firms only. An inactive firm is off-boarded, not deleted —
+  // it stays for the matters that reference it, and showing it by default made
+  // the list read as though ConveyClear had more live partners than it does.
+  if (status === "active") query = query.eq("active", true);
+  else if (status === "inactive") query = query.eq("active", false);
+  if (filters.type) query = query.eq("partner_type", filters.type);
+  // The column is `abbreviation`, not `abbrev` — verified against the live schema.
+  query = applyTextSearch(query, filters.q, ["name", "abbreviation", "primary_email"]);
 
+  const { data } = await query;
   const firms = (data as BusinessPartner[] | null) ?? [];
+  const filtering = Boolean(filters.q || filters.type) || status !== "active";
+
+  const facets: Facet[] = [
+    {
+      key: "status",
+      label: "Status",
+      defaultValue: "active",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "all", label: "All firms" },
+      ],
+    },
+    {
+      key: "type",
+      label: "Firm type",
+      defaultValue: "",
+      options: [
+        { value: "", label: "Any type" },
+        ...Object.entries(PARTNER_TYPE_LABELS).map(([value, label]) => ({ value, label: String(label) })),
+      ],
+    },
+  ];
 
   const ids = firms.map((f) => f.id);
   const [userRows, matterRows] = ids.length
@@ -55,13 +97,17 @@ export default async function AdminFirmsPage() {
   const activeCount = firms.filter((f) => f.active).length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Partner Firms</h1>
+          {/* Counts describe the rows actually shown. The list is filtered to
+              active firms by default, so reporting a global tally here would
+              disagree with what is on screen. */}
           <p className="text-sm text-gray-500 mt-1">
-            {activeCount} active firm{activeCount === 1 ? "" : "s"}
-            {firms.length !== activeCount && ` · ${firms.length - activeCount} inactive`}
+            {firms.length} firm{firms.length === 1 ? "" : "s"}
+            {status === "all" && firms.length !== activeCount && ` · ${firms.length - activeCount} inactive`}
+            {status === "inactive" && " · inactive only"}
           </p>
         </div>
         {canWrite && (
@@ -74,6 +120,9 @@ export default async function AdminFirmsPage() {
         )}
       </div>
 
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <FilterRail facets={facets} searchPlaceholder="Search firm, code, email…" />
+        <div className="min-w-0 flex-1">
       <Card padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -120,7 +169,9 @@ export default async function AdminFirmsPage() {
               {firms.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-gray-400">
-                    No partner firms yet. Create one, then add its partner users under Users &amp; Access.
+                    {filtering
+                      ? "No firms match your filters — try clearing them."
+                      : "No partner firms yet. Create one, then add its partner users under Users & Access."}
                   </td>
                 </tr>
               )}
@@ -128,6 +179,8 @@ export default async function AdminFirmsPage() {
           </table>
         </div>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }
