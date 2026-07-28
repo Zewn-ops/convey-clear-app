@@ -31,8 +31,8 @@ type MatterRow = Matter & {
   services?: { code: string | null } | null;
   matter_parties?: ListParty[] | null;
 };
-import MatterFilters from "@/components/matters/MatterFilters";
 import MatterPagination from "@/components/matters/MatterPagination";
+import FilterRail, { type Facet } from "@/components/ui/FilterRail";
 
 export const metadata = { title: "All Matters — ConveyClear Admin" };
 
@@ -59,7 +59,21 @@ export default async function AdminMattersPage({
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
   const supabase = await createClient();
-  const filters = parseMatterFilters(searchParams);
+
+  // Facet sources come from the DB, not a hardcoded list, so a council added in
+  // `municipalities` shows up as a filter without a code change. Phases are read
+  // from the rows themselves because the phase vocabulary is per-pipeline
+  // (service × municipality) — there is no single global list to enumerate.
+  const [{ data: muniRows }, { data: phaseRows }] = await Promise.all([
+    supabase.from("municipalities").select("code, name").eq("active", true).order("name"),
+    supabase.from("matters").select("current_phase").not("current_phase", "is", null),
+  ]);
+  const municipalities = (muniRows as { code: string; name: string }[] | null) ?? [];
+  const phases = Array.from(
+    new Set(((phaseRows as { current_phase: string | null }[] | null) ?? []).map((r) => r.current_phase!).filter(Boolean))
+  ).sort();
+
+  const filters = parseMatterFilters(searchParams, municipalities.map((m) => m.code));
   const { data, count } = await applyMatterFilters(
     supabase
       .from("matters")
@@ -86,9 +100,76 @@ export default async function AdminMattersPage({
     (notes ?? []).forEach((n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id));
   }
 
+  const hasActiveFilters =
+    filters.status !== "active" ||
+    filters.scope !== "all" ||
+    Boolean(filters.q || filters.municipality || filters.priority || filters.phase);
+
+  // A facet with nothing to choose between is noise — drop it rather than render
+  // an empty heading (which is what a fresh database would otherwise show).
+  const facets: Facet[] = [
+    {
+      key: "status",
+      label: "Status",
+      defaultValue: "active",
+      options: [
+        { value: "active", label: "Active" },
+        ...(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => ({
+          value: s,
+          label: MATTER_STATUS_LABELS[s],
+        })),
+        { value: "all", label: "All statuses" },
+      ],
+    },
+    ...(municipalities.length
+      ? [
+          {
+            key: "municipality",
+            label: "Council",
+            defaultValue: "",
+            options: [
+              { value: "", label: "Any council" },
+              ...municipalities.map((m) => ({ value: m.code, label: m.name })),
+            ],
+          } as Facet,
+        ]
+      : []),
+    {
+      key: "priority",
+      label: "Priority",
+      defaultValue: "",
+      options: [
+        { value: "", label: "Any priority" },
+        ...(Object.keys(PRIORITY_LABELS) as MatterPriority[]).map((p) => ({
+          value: p,
+          label: PRIORITY_LABELS[p],
+        })),
+      ],
+    },
+    ...(phases.length
+      ? [
+          {
+            key: "phase",
+            label: "Phase",
+            defaultValue: "",
+            options: [{ value: "", label: "Any phase" }, ...phases.map((p) => ({ value: p, label: p }))],
+          } as Facet,
+        ]
+      : []),
+    {
+      key: "scope",
+      label: "Period",
+      defaultValue: "all",
+      options: [
+        { value: "all", label: "All time" },
+        { value: "month", label: "This month" },
+      ],
+    },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">All Matters</h1>
           <p className="text-sm text-gray-500 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
@@ -101,9 +182,11 @@ export default async function AdminMattersPage({
         </Link>
       </div>
 
-      <MatterFilters />
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <FilterRail facets={facets} searchPlaceholder="Search title, ref, firm…" />
 
-      <Card padding="none">
+        <div className="min-w-0 flex-1 space-y-6">
+        <Card padding="none">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -181,15 +264,27 @@ export default async function AdminMattersPage({
               })}
               {matters.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td>
+                  {/* "No matches" and "nothing exists yet" are different problems
+                      and need different next actions — saying "no matches" to
+                      someone with an empty database sends them hunting for a
+                      filter they never set. */}
+                  <td colSpan={8} className="px-5 py-10 text-center text-gray-400">
+                    {hasActiveFilters ? (
+                      <>No matters match your filters — try clearing them.</>
+                    ) : (
+                      <>No matters yet. Create the first one with <span className="font-medium text-gray-500">New matter</span>.</>
+                    )}
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </Card>
+        </Card>
 
-      <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
+          <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
+        </div>
+      </div>
     </div>
   );
 }

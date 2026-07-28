@@ -13,31 +13,50 @@ import type { MatterStatus } from "@/types";
 export const MATTER_PAGE_SIZE = 25;
 
 export type MatterScope = "month" | "all";
-export type MatterStatusFilter = "active" | "all";
+/** "active" (default) and "all" are groups; every other value is one literal status. */
+export type MatterStatusFilter = "active" | "all" | MatterStatus;
 
 export interface MatterFilters {
   status: MatterStatusFilter;
   scope: MatterScope;
   q: string;
+  municipality: string; // "" = any
+  priority: string; // "" = any
+  phase: string; // "" = any
   page: number; // 1-indexed
 }
 
 // "Active" = not yet closed out. Closed = won/lost/archived. 'new' = awaiting
 // staff review (H1) and counts as active.
 const ACTIVE_STATUSES: MatterStatus[] = ["new", "open", "on_hold"];
+const ALL_STATUSES: MatterStatus[] = ["new", "open", "on_hold", "won", "lost", "archived"];
 
 type SP = Record<string, string | string[] | undefined>;
 
-export function parseMatterFilters(sp: SP | undefined): MatterFilters {
+// Only ever interpolate values that matched a known-good list. Everything from
+// searchParams is attacker-controlled text heading for a PostgREST filter.
+function pick(v: string | undefined, allowed: readonly string[]): string {
+  return v && allowed.includes(v) ? v : "";
+}
+
+export function parseMatterFilters(sp: SP | undefined, municipalityCodes: readonly string[] = []): MatterFilters {
   const get = (k: string) => {
     const v = sp?.[k];
     return Array.isArray(v) ? v[0] : v;
   };
+  const rawStatus = get("status");
+  const status: MatterStatusFilter =
+    rawStatus === "all" || (rawStatus && (ALL_STATUSES as string[]).includes(rawStatus))
+      ? (rawStatus as MatterStatusFilter)
+      : "active";
   return {
-    status: get("status") === "all" ? "all" : "active",
+    status,
     // Opt IN to the month view; all-time is the default (see the note above).
     scope: get("scope") === "month" ? "month" : "all",
     q: (get("q") ?? "").trim().slice(0, 100),
+    municipality: pick(get("municipality"), municipalityCodes),
+    priority: pick(get("priority"), ["priority", "standard", "emerging", "complex", "urgent", "whale"]),
+    phase: (get("phase") ?? "").trim().slice(0, 60),
     page: Math.max(1, parseInt(get("page") ?? "1", 10) || 1),
   };
 }
@@ -58,7 +77,14 @@ function sanitize(q: string): string {
 export function applyMatterFilters(query: any, f: MatterFilters): any {
   let q = query;
   if (f.status === "active") q = q.in("status", ACTIVE_STATUSES);
+  else if (f.status !== "all") q = q.eq("status", f.status);
   if (f.scope === "month") q = q.gte("created_at", startOfMonthISO());
+  // These three arrive pre-validated against a fixed list by parseMatterFilters,
+  // except `phase`, which is free text — .eq() parameterises it, so it is only
+  // ever compared, never interpolated into an .or() expression.
+  if (f.municipality) q = q.eq("municipality", f.municipality);
+  if (f.priority) q = q.eq("priority", f.priority);
+  if (f.phase) q = q.eq("current_phase", f.phase);
   const s = sanitize(f.q);
   // firm_name / firm_abbrev are a trigger-maintained denorm cache (migration
   // 029) — the firm lives in an embedded table PostgREST can't .or() across.

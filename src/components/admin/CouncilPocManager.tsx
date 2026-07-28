@@ -2,18 +2,29 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { MUNICIPALITIES } from "@/lib/conveyclear-lists";
+import { municipalityLabel } from "@/lib/utils";
 import { councilPocName, type CouncilPoc } from "@/types";
 
-// B5 / Theme G — Council POC directory: searchable table + inline "Add POC".
+// B5 / Theme G — Council POC directory: filterable table + inline "Add POC".
 // Staff-only contact book of the people ConveyClear deals with at each council.
+//
+// Search + council/region/department facets live in the URL (written by the
+// FilterRail beside this table) rather than in local state, so the filters match
+// every other list screen and a filtered view can be linked to or bookmarked.
+// The rows are already all on the client, so narrowing them is a local memo —
+// no round trip.
 export default function CouncilPocManager({ initialPocs }: { initialPocs: CouncilPoc[] }) {
   const router = useRouter();
-  const [q, setQ] = useState("");
+  const sp = useSearchParams();
+  const q = sp.get("q") ?? "";
+  const councilFilter = sp.get("council") ?? "";
+  const regionFilter = sp.get("region") ?? "";
+  const deptFilter = sp.get("department") ?? "";
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -23,13 +34,16 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return initialPocs;
-    return initialPocs.filter((p) =>
-      [councilPocName(p), p.council, p.department, p.email, p.cell]
+    return initialPocs.filter((p) => {
+      if (councilFilter && (p.council ?? "") !== councilFilter) return false;
+      if (regionFilter && (p.region ?? "") !== regionFilter) return false;
+      if (deptFilter && (p.department ?? "") !== deptFilter) return false;
+      if (!t) return true;
+      return [councilPocName(p), p.council, p.department, p.region, p.email, p.cell, p.job_title]
         .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(t))
-    );
-  }, [q, initialPocs]);
+        .some((v) => v!.toLowerCase().includes(t));
+    });
+  }, [q, councilFilter, regionFilter, deptFilter, initialPocs]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,15 +74,9 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, council, department…"
-            className={`${input} w-full pl-9`}
-          />
-        </div>
+        <p className="text-sm text-gray-500">
+          {filtered.length} of {initialPocs.length} contact{initialPocs.length === 1 ? "" : "s"}
+        </p>
         <button
           onClick={() => setAdding((a) => !a)}
           className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 transition-colors shrink-0"
@@ -150,6 +158,7 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Council</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Region / branch</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Department</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Email</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Cell</th>
@@ -160,7 +169,11 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
               {filtered.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3"><span className="font-medium text-gray-900">{councilPocName(p)}</span></td>
-                  <td className="px-5 py-3 text-gray-600">{p.council ?? "—"}</td>
+                  {/* Councils are stored as codes (COT/COJ/COE). A directory is
+                      read by people, so show the name and keep the code as the
+                      value the filters match on. */}
+                  <td className="px-5 py-3 text-gray-600">{p.council ? municipalityLabel(p.council) : "—"}</td>
+                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{p.region ?? "—"}</td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{p.department ?? "—"}</td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{p.email ?? "—"}</td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{p.cell ?? "—"}</td>
@@ -173,8 +186,10 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
-                    {initialPocs.length === 0 ? "No council POCs yet — add one above." : "No POCs match your search."}
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">
+                    {initialPocs.length === 0
+                      ? "No council POCs yet — add one above."
+                      : "No POCs match your filters — try clearing them."}
                   </td>
                 </tr>
               )}

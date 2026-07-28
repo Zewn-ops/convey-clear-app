@@ -1,154 +1,169 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import ReviewDocActions from "@/components/admin/ReviewDocActions";
 import { formatDateTime } from "@/lib/utils";
-import { isAdminRole } from "@/types";
+import { isAdminRole, isStaffRole } from "@/types";
+import {
+  fetchReviewDocs,
+  parseReviewTab,
+  HISTORY_LIMIT,
+  type ReviewDoc,
+  type ReviewTab,
+} from "@/lib/approvals";
 
-export const metadata = { title: "Document Approvals — ConveyClear Admin" };
+export const metadata = { title: "Document Approvals — ConveyClear" };
 export const dynamic = "force-dynamic";
 
-// The review queue for Jukka's requirement (2026-07-22): a document uploaded by
-// ConveyClear ops / services / a runner is invisible to clients and business
-// partners until an admin confirms the right file went up.
+// One route, two audiences (Zewn, 2026-07-28: "a central point").
 //
-// Reads with the SERVICE ROLE deliberately. Once migration 043 is applied the
-// read policies hide unapproved rows from non-staff — but this page must show
-// exactly those rows, and doing it through the caller's client would depend on
-// the staff FOR ALL policy continuing to overlap the gate. Reading past RLS here
-// is safe because the page itself is admin-gated one line below.
+//   ADMIN — the review queue plus the decided history. Approving your own team's
+//           uploads is the one thing staff must not do for themselves (042), so
+//           the Approve/Disapprove controls render for admins only.
+//   STAFF — the same screen scoped to their OWN uploads, read-only. This is where
+//           a ConveyClear member finds out a file was disapproved and why, which
+//           is the other half of the notification they receive.
+//
+// Decided documents no longer vanish. A queue that empties on decision gives the
+// uploader nowhere to look and the reviewer no record of what they released, so
+// approved rows stay green, disapproved rows stay red with the reason on the row
+// (not on hover — the reason is the actionable part, and hover does not exist on
+// the phones these get read on).
 
-type PendingMatterDoc = {
-  id: string;
-  file_name: string | null;
-  document_type: string | null;
-  created_at: string;
-  matter_id: string;
-  storage_bucket: string | null;
-  storage_path: string | null;
-  matters?: { title: string | null } | null;
-  users?: { full_name: string | null; email: string | null; role: string | null } | null;
+const TABS: { key: ReviewTab; label: string }[] = [
+  { key: "pending", label: "Pending" },
+  { key: "approved", label: "Approved" },
+  { key: "disapproved", label: "Not approved" },
+  { key: "all", label: "All" },
+];
+
+const ROW_TINT: Record<ReviewDoc["state"], string> = {
+  pending: "bg-white hover:bg-gray-50",
+  approved: "bg-green-50/70 hover:bg-green-50",
+  disapproved: "bg-red-50/70 hover:bg-red-50",
 };
 
-type PendingTransferDoc = {
-  id: string;
-  file_name: string | null;
-  document_type: string | null;
-  created_at: string;
-  transfer_id: string;
-  storage_bucket: string | null;
-  storage_path: string | null;
-  property_transfers?: { reference: string | null } | null;
-  users?: { full_name: string | null; email: string | null; role: string | null } | null;
-};
-
-export default async function AdminApprovalsPage() {
+export default async function AdminApprovalsPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getSessionProfile();
-  if (!session || !isAdminRole(session.profile?.role)) redirect("/admin");
+  if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
+  const isAdmin = isAdminRole(session.profile?.role);
+  const meId = session.profile?.id ?? null;
 
-  const admin = createAdminClient();
+  const tab = parseReviewTab(searchParams?.tab);
 
-  // Both queries tolerate the columns not existing yet (migration 042 not
-  // applied): PostgREST answers 42703 and returns no rows, so the page renders
-  // an empty queue instead of a 500. That keeps the app deployable ahead of the
-  // migration, which is the whole point of the two-step rollout.
-  const [
-    { data: matterDocs, error: matterErr },
-    { data: transferDocs, error: transferErr },
-  ] = await Promise.all([
-    admin
-      .from("documents")
-      .select(
-        "id, file_name, document_type, created_at, matter_id, storage_bucket, storage_path, matters(title), users!documents_uploaded_by_user_id_fkey(full_name, email, role)"
-      )
-      .is("approved_at", null)
-      // 044: a disapproved doc also has approved_at NULL but is decided, not
-      // pending — keep it out of the review queue.
-      .is("disapproved_at", null)
-      .order("created_at", { ascending: true }),
-    admin
-      .from("transfer_documents")
-      .select(
-        "id, file_name, document_type, created_at, transfer_id, storage_bucket, storage_path, property_transfers(reference), users!transfer_documents_uploaded_by_fkey(full_name, email, role)"
-      )
-      .is("approved_at", null)
-      .is("disapproved_at", null)
-      .order("created_at", { ascending: true }),
-  ]);
-
-  const matterRows = (matterDocs as PendingMatterDoc[] | null) ?? [];
-  // A mirrored matter upload appears in BOTH tables while pending. Approving the
-  // matter row propagates to its mirror (042's trigger), so listing the mirror
-  // separately would show the reviewer two rows for one decision. Transfer rows
-  // are only listed when they carry their own uploader — i.e. someone uploaded
-  // straight onto the transfer and there is no matter row to approve instead.
-  const transferRows = ((transferDocs as PendingTransferDoc[] | null) ?? []).filter(
-    (r) => r.users
+  // Admin reads past RLS (that is the point of a review queue); staff read
+  // through it, restricted to their own uploads. See lib/approvals.ts.
+  const client = isAdmin ? createAdminClient() : await createClient();
+  const { docs, error, truncated } = await fetchReviewDocs(
+    client,
+    tab,
+    isAdmin ? null : meId
   );
-  const total = matterRows.length + transferRows.length;
 
-  // Signed URLs so the reviewer can open the file before deciding — the whole
-  // point of a review queue. Service role, short-lived (5 min). Keyed by doc id.
+  // Signed URLs so a reviewer can open the file before deciding — a review queue
+  // you cannot open the file from is not a review queue. Admin only: minting a
+  // service-role URL for a staff member would hand out a link that outlives their
+  // own permissions.
   const viewUrls: Record<string, string> = {};
-  await Promise.all(
-    [
-      ...matterRows.map((d) => ({ id: d.id, bucket: d.storage_bucket ?? "matter-documents", path: d.storage_path })),
-      ...transferRows.map((d) => ({ id: d.id, bucket: d.storage_bucket ?? "transfer-documents", path: d.storage_path })),
-    ].map(async ({ id, bucket, path }) => {
-      if (!path) return;
-      const { data } = await admin.storage.from(bucket).createSignedUrl(path, 300);
-      if (data?.signedUrl) viewUrls[id] = data.signedUrl;
-    })
-  );
+  if (isAdmin) {
+    const admin = client;
+    await Promise.all(
+      docs.map(async (d) => {
+        if (!d.storagePath) return;
+        const { data } = await admin.storage.from(d.storageBucket).createSignedUrl(d.storagePath, 300);
+        if (data?.signedUrl) viewUrls[d.id] = data.signedUrl;
+      })
+    );
+  }
 
-  // ⚠️ An empty queue and a BROKEN queue look identical unless we say so.
-  // If either query errors — a mistyped embed hint, or migration 042 not applied
-  // so approved_at does not exist — `data` comes back null and this page would
-  // otherwise render a confident "nothing waiting" while documents sit pending
-  // and invisible to the client. On a review screen that silence is the one
-  // failure that must never be quiet, so a load failure is shown, not swallowed.
-  const loadError = matterErr ?? transferErr;
+  const pendingCount = tab === "pending" ? docs.length : null;
 
-  function uploaderLabel(u: PendingMatterDoc["users"]) {
-    if (!u) return "Unknown";
-    return u.full_name || u.email || "Unknown";
+  function tabHref(t: ReviewTab) {
+    return t === "pending" ? "/admin/approvals" : `/admin/approvals?tab=${t}`;
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Document Approvals</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {loadError
-            ? "The queue could not be loaded."
-            : total === 0
-              ? "Nothing waiting — every uploaded document has been released."
-              : `${total} document${total === 1 ? "" : "s"} waiting for review.`}{" "}
-          Uploads by ConveyClear services, ops and delivery staff stay hidden from
-          clients and partner firms until approved here.
+        <p className="mt-1 text-sm text-gray-500">
+          {isAdmin ? (
+            <>
+              Uploads by ConveyClear services, ops and delivery staff are held for
+              review here before clients and partner firms can see them.
+            </>
+          ) : (
+            <>
+              The documents you have uploaded, and what an admin decided about
+              each. Green means released to the client and partner firm; red means
+              it was not approved — the reason is on the row.
+            </>
+          )}
         </p>
       </div>
 
-      {loadError ? (
+      <div className="flex flex-wrap gap-1 border-b border-gray-200">
+        {TABS.map((t) => {
+          const active = t.key === tab;
+          return (
+            <Link
+              key={t.key}
+              href={tabHref(t.key)}
+              className={
+                active
+                  ? "-mb-px border-b-2 border-[#E8521A] px-3 py-2 text-sm font-semibold text-[#E8521A]"
+                  : "-mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+              }
+            >
+              {t.label}
+              {t.key === "pending" && pendingCount ? (
+                <span className="ml-1.5 rounded-full bg-[#E8521A] px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                  {pendingCount}
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* ⚠️ An empty queue and a BROKEN queue look identical unless we say so.
+          If the query errors, `data` comes back null and this page would
+          otherwise render a confident "nothing waiting" while documents sit
+          pending and invisible. On a review screen that silence is the one
+          failure that must never be quiet. */}
+      {error ? (
         <Card className="border-2 !border-red-500">
           <h2 className="text-sm font-semibold text-red-700">
             This queue could not be loaded — do not read it as empty
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Pending documents may exist and are currently hidden from clients and
-            partner firms with no way to release them. Most likely migration 042
-            has not been applied yet.
+            Pending documents may exist with no way to release them. Check that
+            migrations 042 and 044 are applied.
           </p>
-          <p className="mt-2 font-mono text-xs text-gray-500">{loadError.message}</p>
+          <p className="mt-2 font-mono text-xs text-gray-500">{error.message}</p>
         </Card>
-      ) : total === 0 ? (
+      ) : docs.length === 0 ? (
         <Card>
           <p className="text-sm text-gray-500">
-            Nothing to review. Documents uploaded by admins, clients and partner
-            firms are released automatically and never appear in this queue.
+            {tab === "pending"
+              ? isAdmin
+                ? "Nothing waiting. Documents uploaded by admins, clients and partner firms are released automatically and never appear here."
+                : "None of your uploads are waiting for review."
+              : tab === "approved"
+                ? "No approved documents yet."
+                : tab === "disapproved"
+                  ? "No documents have been turned down."
+                  : isAdmin
+                    ? "No documents have been uploaded yet."
+                    : "You have not uploaded any documents yet."}
           </p>
         </Card>
       ) : (
@@ -159,55 +174,55 @@ export default async function AdminApprovalsPage() {
                 <tr>
                   <th className="px-4 py-3">Document</th>
                   <th className="px-4 py-3">Where</th>
-                  <th className="px-4 py-3">Uploaded by</th>
-                  <th className="px-4 py-3">When</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  {isAdmin && <th className="px-4 py-3">Uploaded by</th>}
+                  <th className="px-4 py-3">Uploaded</th>
+                  <th className="px-4 py-3 text-right">{isAdmin ? "Action" : "Status"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {matterRows.map((d) => (
-                  <tr key={`m-${d.id}`} className="hover:bg-gray-50">
+                {docs.map((d) => (
+                  <tr key={`${d.kind}-${d.id}`} className={ROW_TINT[d.state]}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">
-                        {d.file_name || d.document_type || "Untitled"}
+                      <div className="font-medium text-gray-900">{d.fileName}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant={d.kind === "matter" ? "gray" : "info"}
+                          label={d.kind === "matter" ? "Matter" : "Property transfer"}
+                        />
+                        {d.state === "approved" && <Badge variant="success" label="Approved" />}
+                        {d.state === "disapproved" && <Badge variant="danger" label="Not approved" />}
                       </div>
-                      <Badge variant="gray" label="Matter" />
+                      {/* The reason is the actionable part of a disapproval — the
+                          uploader needs it to know what to re-upload. It reads on
+                          the row, not behind a hover title. */}
+                      {d.state === "disapproved" && d.reason && (
+                        <p className="mt-1.5 text-xs text-red-700">
+                          <span className="font-semibold">Reason:</span> {d.reason}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/matters/${d.matter_id}`}
-                        className="text-[#1B2E6B] hover:underline"
-                      >
-                        {d.matters?.title || "Open matter"}
+                      <Link href={d.parentHref} className="text-[#1B2E6B] hover:underline">
+                        {d.parentLabel}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{uploaderLabel(d.users)}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDateTime(d.created_at)}</td>
+                    {isAdmin && <td className="px-4 py-3 text-gray-700">{d.uploader}</td>}
+                    <td className="px-4 py-3 text-gray-500">{formatDateTime(d.createdAt)}</td>
                     <td className="px-4 py-3 text-right">
-                      <ReviewDocActions id={d.id} kind="matter" viewUrl={viewUrls[d.id]} />
-                    </td>
-                  </tr>
-                ))}
-                {transferRows.map((d) => (
-                  <tr key={`t-${d.id}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">
-                        {d.file_name || d.document_type || "Untitled"}
-                      </div>
-                      <Badge variant="info" label="Property transfer" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/property-transfers/${d.transfer_id}`}
-                        className="text-[#1B2E6B] hover:underline"
-                      >
-                        {d.property_transfers?.reference || "Open transfer"}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{uploaderLabel(d.users)}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDateTime(d.created_at)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <ReviewDocActions id={d.id} kind="transfer" viewUrl={viewUrls[d.id]} />
+                      {d.state === "pending" ? (
+                        isAdmin ? (
+                          <ReviewDocActions id={d.id} kind={d.kind} viewUrl={viewUrls[d.id]} />
+                        ) : (
+                          <span className="text-xs font-medium text-amber-700">Awaiting review</span>
+                        )
+                      ) : (
+                        <span className="text-xs text-gray-500">
+                          {d.state === "approved" ? "Released" : "Held"}
+                          {d.decidedAt && (
+                            <span className="block text-gray-400">{formatDateTime(d.decidedAt)}</span>
+                          )}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -217,10 +232,20 @@ export default async function AdminApprovalsPage() {
         </Card>
       )}
 
-      <p className="text-xs text-gray-400">
-        To reject a document instead, open the matter and remove it — removal
-        already distinguishes a file the matter owns from one it reuses.
-      </p>
+      {truncated && (
+        <p className="text-xs text-gray-400">
+          Showing the most recent {HISTORY_LIMIT}. Older documents are still on
+          their matter or transfer.
+        </p>
+      )}
+
+      {isAdmin && (
+        <p className="text-xs text-gray-400">
+          Disapproving keeps the document and its reason as the audit trail and
+          tells the uploader what to replace. To remove a file entirely, open the
+          matter and remove it there.
+        </p>
+      )}
     </div>
   );
 }

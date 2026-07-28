@@ -18,6 +18,7 @@ import {
   LogOut,
   ShieldCheck,
   BadgeCheck,
+  Bell,
   Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -30,11 +31,14 @@ const baseNav = [
   { href: "/admin/firms", label: "Partner Firms", icon: Scale, exact: false },
   { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
+  // Shared by staff and admins, but NOT the same screen: admins get the review
+  // queue with Approve/Disapprove, staff get their own uploads read-only.
+  // Approving your own team's uploads remains admin-only (migration 042); the
+  // page enforces that, not this nav list.
+  { href: "/admin/approvals", label: "Document Approvals", icon: BadgeCheck, exact: false },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell, exact: false },
 ];
 const adminNav = [
-  // Admin-only: approving your own team's uploads is the one thing staff must
-  // not be able to do for themselves (see migration 042).
-  { href: "/admin/approvals", label: "Document Approvals", icon: BadgeCheck, exact: false },
   { href: "/admin/email-signature", label: "Email Signatures", icon: Mail, exact: false },
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
 ];
