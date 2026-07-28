@@ -185,10 +185,19 @@ function SubjectSection({
             {entity === "business" ? "Business" : entity === "trust" ? "Trust" : "Individual"}
           </p>
         </div>
+        {/* Capturing client details + consent is the action on this card, so it
+            reads as a button. As a plain text link it was routinely missed, and
+            an uncaptured party blocks the council pack. Once both are done the
+            work is finished, so it steps back down to a quiet Review link. */}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="shrink-0 text-xs font-medium text-[#1B2E6B] hover:underline"
+          className={
+            "shrink-0 rounded-lg text-xs font-medium transition-colors " +
+            (open || (details.complete && consent.complete)
+              ? "px-2 py-1 text-[#1B2E6B] hover:underline"
+              : "bg-[#E8521A] px-3 py-1.5 text-white hover:bg-[#c94415]")
+          }
         >
           {open ? "Close" : details.complete && consent.complete ? "Review" : "Complete now"}
         </button>

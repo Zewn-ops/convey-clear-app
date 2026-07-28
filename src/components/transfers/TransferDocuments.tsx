@@ -17,14 +17,16 @@ const MAX_SIZE = 10 * 1024 * 1024;
 // the transfer confirmation letter, the clearance figures. Uploaded once here and
 // reused by every matter in the transfer ("From transfer" on the intake), instead
 // of being fetched again for the PRC, the COO and the refund.
-const TRANSFER_DOC_TYPES = [
+/** The five documents a transfer is expected to gather, in order. */
+const NAMED_DOC_TYPES = [
   "deed_search",
   "transfer_letter",
   "clearance_figures",
   "proof_of_payment_figures",
   "coc_electrical",
-  "other",
 ];
+/** `other` is the open-ended catch-all — uploadable, but never part of the count. */
+const TRANSFER_DOC_TYPES = [...NAMED_DOC_TYPES, "other"];
 
 type Doc = TransferDocument & { url?: string; usedOn?: number };
 
@@ -47,6 +49,16 @@ export default function TransferDocuments({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const current = docs.filter((d) => (d.status ?? "current") === "current");
+
+  // Count DISTINCT named types present, not rows — two deed searches are still
+  // one of the five. Disapproved documents do not count: the file is held and
+  // has to be replaced, so counting it would report the transfer as further
+  // along than it is.
+  const presentNamed = new Set(
+    current.filter((d) => d.disapproved_at == null).map((d) => d.document_type)
+  );
+  const missingNamed = NAMED_DOC_TYPES.filter((t) => !presentNamed.has(t));
+  const namedUploaded = NAMED_DOC_TYPES.length - missingNamed.length;
   const archived = docs.filter((d) => d.status === "archived");
 
   async function upload(file: File, docType: string, replacesId?: string) {
@@ -129,9 +141,27 @@ export default function TransferDocuments({
 
   return (
     <Card accent="service">
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
         <Files className="h-4 w-4 text-[#E8521A]" />
         <h2 className="font-semibold text-gray-900">Transfer documents</h2>
+        {/* Progress across the five NAMED transfer documents. "other" is excluded
+            deliberately — it is an open-ended catch-all, so counting it would make
+            the denominator meaningless and the transfer could never read complete. */}
+        <span
+          className={
+            "rounded-full px-2 py-0.5 text-xs font-semibold " +
+            (namedUploaded === NAMED_DOC_TYPES.length
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-600")
+          }
+          title={
+            missingNamed.length
+              ? `Still needed: ${missingNamed.map(docLabel).join(", ")}`
+              : "All five transfer documents uploaded"
+          }
+        >
+          {namedUploaded} of {NAMED_DOC_TYPES.length} uploaded
+        </span>
       </div>
       <p className="mb-4 text-xs text-gray-500">
         Documents about the <b>property</b>, not any one matter — the deed search, transfer letter and clearance

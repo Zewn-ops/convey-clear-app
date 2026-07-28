@@ -47,6 +47,8 @@ interface Group {
   partyId: string | null;
   slots: CooDocRule[];
   vaultDocs: ClientDocument[]; // this group's client's reusable vault docs
+  /** A side of the transaction with no party row captured yet (COO). */
+  missingParty?: boolean;
 }
 
 export default function InPlaceIntake({
@@ -95,6 +97,26 @@ export default function InPlaceIntake({
         partyId: p.id,
         slots: cooPartyDocs(p.role, toCooEntity(p.entity_type), municipality),
         vaultDocs: vaultFor(p.client_id),
+      });
+    }
+    // A COO always has two sides, whether or not a party row exists yet. Older
+    // matters arrived via /onboard or a partner referral, which create the rows —
+    // so this loop alone looked fine. A staff-created matter had none, and the
+    // page rendered "Matter documents" and nothing else, with nowhere to file
+    // either side's FICA. Missing sides are rendered as placeholders so the
+    // structure of the transaction is visible before anyone is captured.
+    for (const role of ["seller", "buyer"] as const) {
+      if (sorted.some((p) => p.role === role)) continue;
+      groups.push({
+        key: `missing-${role}`,
+        title: role === "seller" ? "Seller" : "Buyer",
+        subtitle: ROLE_LABELS[role] ?? role,
+        // No party row means no (matter, party, type) key to file against, so the
+        // slots stay empty and the section prompts for capture instead.
+        partyId: null,
+        slots: [],
+        vaultDocs: [],
+        missingParty: true,
       });
     }
   } else if (code === "RCF") {
@@ -199,6 +221,14 @@ export default function InPlaceIntake({
             <p className="text-sm font-medium text-gray-800">{g.title}</p>
             {g.subtitle && <p className="text-xs text-gray-400">{g.subtitle}</p>}
           </div>
+          {g.missingParty && (
+            <p className="px-4 py-3 text-sm text-gray-500">
+              No {g.title.toLowerCase()} captured on this matter yet. Add their
+              details in <span className="font-medium text-gray-700">Parties</span> above
+              (or send the client the onboarding link) and this side&apos;s document
+              slots appear here.
+            </p>
+          )}
           <ul className="divide-y divide-gray-100">
             {g.slots.map((s) => {
               const doc = docFor(g.partyId, s.docType);

@@ -20,6 +20,76 @@ const MUNI = [
 ];
 const PRIORITIES: MatterPriority[] = ["standard", "priority", "urgent", "complex", "emerging", "whale"];
 
+/** One side of a COO transaction, as captured on this form. */
+export interface PartyDraft {
+  entity_type: "natural_person" | "business" | "trust";
+  first_name: string;
+  last_name: string;
+  business_name: string;
+  id_number: string;
+  email: string;
+  cell: string;
+}
+
+const emptyParty = (): PartyDraft => ({
+  entity_type: "natural_person",
+  first_name: "",
+  last_name: "",
+  business_name: "",
+  id_number: "",
+  email: "",
+  cell: "",
+});
+
+/** Returns the draft only if something was actually typed — an untouched side is
+ *  sent as undefined so the API creates a placeholder rather than a blank party. */
+function partyPayload(p: PartyDraft): PartyDraft | undefined {
+  const touched =
+    p.first_name.trim() || p.last_name.trim() || p.business_name.trim() ||
+    p.id_number.trim() || p.email.trim() || p.cell.trim();
+  return touched ? p : undefined;
+}
+
+function PartyFields({
+  title,
+  value,
+  onChange,
+}: {
+  title: string;
+  value: PartyDraft;
+  onChange: (p: PartyDraft) => void;
+}) {
+  const set = (patch: Partial<PartyDraft>) => onChange({ ...value, ...patch });
+  return (
+    <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+      <p className="text-sm font-semibold text-gray-800">{title}</p>
+      <Select
+        label="Entity type"
+        value={value.entity_type}
+        onChange={(e) => set({ entity_type: e.target.value as PartyDraft["entity_type"] })}
+        options={[
+          { value: "natural_person", label: "Natural Person" },
+          { value: "business", label: "Business" },
+          { value: "trust", label: "Trust" },
+        ]}
+      />
+      {value.entity_type === "natural_person" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input label="First name(s)" value={value.first_name} onChange={(e) => set({ first_name: e.target.value })} />
+          <Input label="Surname" value={value.last_name} onChange={(e) => set({ last_name: e.target.value })} />
+          <Input label="ID number" value={value.id_number} onChange={(e) => set({ id_number: e.target.value })} />
+        </div>
+      ) : (
+        <Input label="Business / Trust name" value={value.business_name} onChange={(e) => set({ business_name: e.target.value })} />
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Email" type="email" value={value.email} onChange={(e) => set({ email: e.target.value })} />
+        <Input label="Cell" value={value.cell} onChange={(e) => set({ cell: e.target.value })} />
+      </div>
+    </div>
+  );
+}
+
 /** The transfer a matter is being created INSIDE (Jukka: the transfer is the primary object now). */
 export interface CreateInTransfer {
   id: string;
@@ -58,10 +128,13 @@ export default function CreateMatterForm({
   const [municipality, setMunicipality] = useState(transfer?.municipality || "COT");
   const [property, setProperty] = useState(transfer?.property_description || "");
   const [priority, setPriority] = useState<MatterPriority>("standard");
+  const [seller, setSeller] = useState<PartyDraft>(emptyParty());
+  const [buyer, setBuyer] = useState<PartyDraft>(emptyParty());
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<{ matterId: string; title: string; token: string } | null>(null);
 
   const svcCode = services.find((s) => s.id === serviceId)?.code ?? "";
+  const isCoo = svcCode.toUpperCase() === "COO";
   const clientName =
     mode === "new"
       ? (entityType === "natural_person" ? `${firstName} ${lastName}`.trim() : name)
@@ -86,6 +159,11 @@ export default function CreateMatterForm({
         business_name: entityType !== "natural_person" ? name : undefined,
         email, cell, service_id: serviceId, municipality, property_description: property, priority,
         transfer_id: transfer?.id,
+        // Only sent for COO — the API seeds both sides regardless, but an
+        // untouched side is left undefined so it gets a placeholder rather than
+        // a party row full of empty strings.
+        seller: isCoo ? partyPayload(seller) : undefined,
+        buyer: isCoo ? partyPayload(buyer) : undefined,
       }),
     });
     const json = await res.json();
@@ -216,6 +294,28 @@ export default function CreateMatterForm({
         <Input label="Property description" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="ERF 123 VALHALLA" />
         <Select label="Priority" value={priority} onChange={(e) => setPriority(e.target.value as MatterPriority)} options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))} />
       </div>
+
+      {/* A COO is a two-sided transaction: seller (current owner) and buyer (new
+          owner) are distinct parties with their own identity documents, and the
+          intake files documents against them by (matter, party, type). Capturing
+          them here means the matter is usable immediately; leaving a side blank
+          still creates its section, to be filled in on the matter or by the
+          client through the onboarding link. */}
+      {isCoo && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Parties to the transaction</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Optional now — both sections are created either way, and each side gets
+              its own document slots. Fill in what you have.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <PartyFields title="Seller (current owner)" value={seller} onChange={setSeller} />
+            <PartyFields title="Buyer (new owner)" value={buyer} onChange={setBuyer} />
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter title (auto)</p>

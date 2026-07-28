@@ -11,6 +11,17 @@ import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 
+/** One side of a COO transaction as captured on the create-matter form. */
+interface PartyInput {
+  entity_type?: "natural_person" | "business" | "trust";
+  first_name?: string;
+  last_name?: string;
+  business_name?: string;
+  id_number?: string;
+  email?: string;
+  cell?: string;
+}
+
 // Staff create a matter directly in the portal (portal-first; no Pipedrive needed).
 // Pick an existing client OR create a new one, then create the matter (Phase 1)
 // with the standard COT_COO_CLIENT_PROPERTY title + an onboarding link for docs.
@@ -42,6 +53,9 @@ export async function POST(request: Request) {
     priority?: string;
     notes?: string;
     transfer_id?: string;
+    /** COO only — the two sides of the transaction, captured at creation. */
+    seller?: PartyInput;
+    buyer?: PartyInput;
   };
   try { body = await request.json(); } catch { return NextResponse.json({ message: "Invalid JSON" }, { status: 400 }); }
 
@@ -136,6 +150,50 @@ export async function POST(request: Request) {
     transfer_id: transferId,
   }).select("id").single();
   if (mErr) return NextResponse.json({ message: mErr.message }, { status: 400 });
+
+  // A COO matter is a two-sided transaction: it always has a seller (current
+  // owner) and a buyer (new owner), each with their own identity documents and
+  // their own document slots keyed on (matter, party, type).
+  //
+  // Until now this route created NO matter_parties at all — only /onboard and
+  // the partner refer flow did. That was invisible while every matter arrived
+  // through one of those, but a staff-created COO matter came out with no
+  // parties, so the in-place intake rendered no buyer or seller section and
+  // there was nowhere to file either side's FICA. Seed the two shells here so
+  // the matter is usable the moment it is created; details are filled in via
+  // Edit on the parties card, or by the client through the onboarding link.
+  //
+  // The shells carry the role word as their name because `chk_party_name`
+  // rejects a nameless party. ⚠️ That placeholder is a real name field — if a
+  // council pack were generated before the party is captured it would read
+  // "Seller". Staff replace it via Edit on the parties card, and the buyer/seller
+  // details captured on the creation form (below) are written straight in, so a
+  // matter created with details never shows the placeholder at all.
+  if (serviceCode.toUpperCase() === "COO") {
+    const partyShell = (role: "seller" | "buyer", d?: PartyInput) => {
+      const et = d?.entity_type ?? "natural_person";
+      const person = composeFullName(d?.first_name, d?.last_name);
+      const business = (d?.business_name ?? "").trim();
+      const fallback = role === "seller" ? "Seller" : "Buyer";
+      return {
+        matter_id: matter.id,
+        role,
+        entity_type: et,
+        first_name: et === "natural_person" ? d?.first_name?.trim() || null : null,
+        last_name: et === "natural_person" ? d?.last_name?.trim() || null : null,
+        full_name: et === "natural_person" ? person || fallback : null,
+        business_name: et !== "natural_person" ? business || fallback : null,
+        id_number: d?.id_number?.trim() || null,
+        email: d?.email?.trim().toLowerCase() || null,
+        cell: d?.cell?.trim() || null,
+      };
+    };
+    const seed = [partyShell("seller", body.seller), partyShell("buyer", body.buyer)];
+    // Non-fatal: a matter without its party shells is recoverable (add them on
+    // the matter), but a 500 here would strand an already-created matter.
+    const { error: partyErr } = await admin.from("matter_parties").insert(seed);
+    if (partyErr) console.error("COO party seed failed for matter", matter.id, partyErr.message);
+  }
 
   // Onboarding link so staff can collect FICA docs immediately
   const token = randomUUID();
