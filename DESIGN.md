@@ -75,10 +75,28 @@ contacts** — where it is just a list. Same split the reference makes.
 6. Nothing critical behind hover.
 7. No nested cards. No modal where a page will do.
 
+## Callouts and panels
+
+**DECIDED 2026-08-04: tint + coloured heading. No side stripes.**
+
+A coloured panel is a soft background tint, a 1px border in the same hue, and a coloured uppercase
+label. The reference's thick left border is not used anywhere in the portal.
+
+```
+background: var(--cc-{role}-tint);
+border: 1px solid color-mix(in srgb, var(--cc-{role}) 26%, transparent);
+label:  var(--cc-{role}), 10px / 700 / 0.11em, uppercase, mono
+```
+
+Rationale: the colour-coding carries the meaning, the stripe was only one way to draw it. The tint also
+survives dark mode, where a 4px stripe against `#171b24` reads muddy rather than deliberate.
+
+⛔ **`border-left` / `border-right` wider than 1px as a coloured accent is banned** on cards, list items,
+callouts and alerts. If a panel needs to read as a category, use the tint, the label colour, or a
+leading icon.
+
 ## Open
 
-- **Side stripes.** Panels with a thick coloured left border are the reference's signature and are
-  banned by the house design guidance. Both rendered in the spec artifact, §04. Zewn's call, unresolved.
 - **Peer benchmark** ("Tshwane clearances averaging 74 workdays") is computable but needs volume.
   Do not ship a fabricated figure — an attorney will quote it to a client.
 - **"You checked 11d ago"** has no storage. Needs a column if wanted.
