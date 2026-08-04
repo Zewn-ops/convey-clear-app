@@ -1,0 +1,119 @@
+/* ConveyClear design tokens — generated 2026-08-04, values solved not eyeballed.
+   Every pair below is verified >=4.5:1 in BOTH themes. Regenerate with
+   scratchpad/oklch.py rather than hand-editing: a hand-tweak breaks the proof.
+
+   Hue 267 is ConveyClear's own navy hue. The action blue is that same hue pushed
+   up the lightness scale, so the palette extends the brand instead of replacing it. */
+
+@layer base {
+  :root {
+    --cc-canvas: #f7f9fd;
+    --cc-surface: #fcfeff;
+    --cc-raised: #f2f4fa;
+    --cc-border: #dbdee5;
+    --cc-border-strong: #c7cad3;
+    --cc-muted: #666c78;
+    --cc-secondary: #4e5564;
+    --cc-text: #1c2232;
+    --cc-action: #2c4ab2;
+    --cc-required: #d43e00;
+    --cc-waiting: #b15f00;
+    --cc-ok: #00872f;
+    --cc-danger: #d33b36;
+    --cc-action-tint: #e2f0ff;
+    --cc-required-tint: #ffe5d8;
+    --cc-waiting-tint: #ffeccf;
+    --cc-ok-tint: #dbfadf;
+    --cc-danger-tint: #ffe4de;    --cc-brand-50: #f0f6ff;
+    --cc-brand-100: #dfeaff;
+    --cc-brand-200: #c2d6ff;
+    --cc-brand-300: #9dbcff;
+    --cc-brand-400: #5f85ef;
+    --cc-brand-500: #3b5ece;
+    --cc-brand-600: #2c4ab2;
+    --cc-brand-700: #223b91;
+    --cc-brand-800: #1b2e6b;
+    --cc-brand-900: #132150;
+    --cc-brand-950: #0a1538;
+    --cc-action-fill: #2c4ab2;
+    --cc-required-fill: #ef5923;
+    --cc-waiting-fill: #f59e0a;
+    --cc-ok-fill: #16a34a;
+    --cc-danger-fill: #d33b36;
+    --cc-action-on-fill: #ffffff;
+    --cc-required-on-fill: #1c2232;
+    --cc-waiting-on-fill: #1c2232;
+    --cc-ok-on-fill: #1c2232;
+    --cc-danger-on-fill: #ffffff;
+
+    --cc-radius-sm: 6px;
+    --cc-radius: 10px;
+    --cc-radius-lg: 14px;
+    --cc-radius-pill: 999px;
+
+    /* brand-tinted, never grey: this is most of the "modern" read */
+    --cc-shadow-sm: 0 1px 2px 0 rgb(27 46 107 / 0.05);
+    --cc-shadow: 0 2px 8px -1px rgb(27 46 107 / 0.08), 0 1px 3px -1px rgb(27 46 107 / 0.06);
+    --cc-shadow-lg: 0 8px 28px -6px rgb(27 46 107 / 0.14);
+
+    --cc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --cc-dur-fast: 120ms;
+    --cc-dur: 200ms;
+  }
+
+  :root[data-theme="dark"] {
+    --cc-canvas: #0e1118;
+    --cc-surface: #171b24;
+    --cc-raised: #212630;
+    --cc-border: #303541;
+    --cc-border-strong: #424855;
+    --cc-muted: #989ead;
+    --cc-secondary: #b5bac8;
+    --cc-text: #eaedf4;
+    --cc-action: #587eec;
+    --cc-required: #e85219;
+    --cc-waiting: #f59e0a;
+    --cc-ok: #16a34a;
+    --cc-danger: #e74f47;
+    --cc-action-tint: #1a243e;
+    --cc-required-tint: #3b1b10;
+    --cc-waiting-tint: #342006;
+    --cc-ok-tint: #112c17;
+    --cc-danger-tint: #3c1916;    --cc-action-fill: #2c4ab2;
+    --cc-required-fill: #ef5923;
+    --cc-waiting-fill: #f59e0a;
+    --cc-ok-fill: #16a34a;
+    --cc-danger-fill: #d33b36;
+    --cc-action-on-fill: #ffffff;
+    --cc-required-on-fill: #1c2232;
+    --cc-waiting-on-fill: #1c2232;
+    --cc-ok-on-fill: #1c2232;
+    --cc-danger-on-fill: #ffffff;
+
+    --cc-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --cc-shadow: 0 2px 8px -1px rgb(0 0 0 / 0.5), 0 1px 3px -1px rgb(0 0 0 / 0.4);
+    --cc-shadow-lg: 0 8px 28px -6px rgb(0 0 0 / 0.6);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+    --cc-canvas: #0e1118;
+    --cc-surface: #171b24;
+    --cc-raised: #212630;
+    --cc-border: #303541;
+    --cc-border-strong: #424855;
+    --cc-muted: #989ead;
+    --cc-secondary: #b5bac8;
+    --cc-text: #eaedf4;
+    --cc-action: #587eec;
+    --cc-required: #e85219;
+    --cc-waiting: #f59e0a;
+    --cc-ok: #16a34a;
+    --cc-danger: #e74f47;
+    --cc-action-tint: #1a243e;
+    --cc-required-tint: #3b1b10;
+    --cc-waiting-tint: #342006;
+    --cc-ok-tint: #112c17;
+    --cc-danger-tint: #3c1916;    }
+  }
+}
