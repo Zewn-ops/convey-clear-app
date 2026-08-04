@@ -98,26 +98,18 @@
   --cc-shadow-lg: 0 8px 28px -6px rgb(0 0 0 / 0.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-  --cc-canvas: #0e1118;
-  --cc-surface: #171b24;
-  --cc-raised: #212630;
-  --cc-border: #303541;
-  --cc-border-strong: #424855;
-  --cc-muted: #989ead;
-  --cc-secondary: #b5bac8;
-  --cc-text: #eaedf4;
-  --cc-action: #587eec;
-  --cc-required: #e85219;
-  --cc-waiting: #f59e0a;
-  --cc-ok: #16a34a;
-  --cc-danger: #e74f47;
-  --cc-action-tint: #1a243e;
-  --cc-required-tint: #3b1b10;
-  --cc-waiting-tint: #342006;
-  --cc-ok-tint: #112c17;
-  --cc-danger-tint: #3c1916;
-  --cc-chrome: #0a1538;
-  --cc-on-chrome: #c2d6ff;    }
-}
+/* NO prefers-color-scheme block, deliberately.
+   Dark mode applies ONLY on an explicit :root[data-theme="dark"], which only
+   ThemeToggle sets, and ThemeToggle only exists on migrated surfaces.
+
+   42 of 59 page files still hardcode bg-white / bg-gray-50 / text-gray-900.
+   Auto-applying dark from the OS preference would hand every one of those a
+   dark canvas behind white cards -- a broken portal for any user whose laptop
+   is set to dark, with no action on their part.
+
+   Restore the media query in the same commit that finishes the migration:
+
+     @media (prefers-color-scheme: dark) {
+       :root:not([data-theme="light"]) { ...dark tokens... }
+     }
+*/

@@ -95,6 +95,25 @@ survives dark mode, where a 4px stripe against `#171b24` reads muddy rather than
 callouts and alerts. If a panel needs to read as a category, use the tint, the label colour, or a
 leading icon.
 
+## Rollout state (2026-08-04)
+
+Dark mode is **opt-in only**. `tokens.css` deliberately has no
+`prefers-color-scheme` block, and `ThemeToggle` appears only in the partner
+shell. **42 of 59 page files still hardcode `bg-white` / `bg-gray-50` /
+`text-gray-900`**; following the OS preference today would hand every one of
+those users a dark canvas behind white cards, with no action on their part.
+
+Restore the media query in the same commit that finishes the migration.
+
+| Surface | State |
+|---|---|
+| Partner dashboard (`/partner`) | ✅ tokens, primitives, both themes |
+| Partner shell (`layout.tsx`) | ✅ canvas token + toggle |
+| Rest of `/partner` (11 files) | ⬜ hardcoded greys |
+| `/admin` (22 files) | ⬜ hardcoded greys |
+| `/dashboard` (5 files) | ⬜ hardcoded greys |
+| `/onboard` (4 files) | ⬜ hardcoded greys |
+
 ## Open
 
 - **Peer benchmark** ("Tshwane clearances averaging 74 workdays") is computable but needs volume.

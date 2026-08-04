@@ -17,9 +17,10 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
     if (attr === "light" || attr === "dark") {
       setTheme(attr);
     } else {
-      setTheme(
-        window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-      );
+      // No attribute means light. tokens.css deliberately does not follow the OS
+      // preference yet, so reading matchMedia here would show a moon icon on a
+      // page that is actually light.
+      setTheme("light");
     }
   }, []);
 
