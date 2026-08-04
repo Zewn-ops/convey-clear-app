@@ -33,7 +33,7 @@ BEGIN
    LIMIT 1;
 
   SELECT bp.id INTO v_other_firm
-    FROM public.business_partners bp
+    FROM public.firms bp
    WHERE bp.id IS DISTINCT FROM v_partner_firm
    LIMIT 1;
 
