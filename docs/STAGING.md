@@ -25,7 +25,8 @@ Supabase dashboard → New project.
 |---|---|---|
 | Name | `convey-clear-staging` | |
 | Region | **West EU (Ireland), `eu-west-1`** | Must match prod. The POPIA §72 cross-border basis in `/privacy` is written for Ireland |
-| Plan | Free is fine | Staging may pause when idle; that is acceptable here and it is not a backup target |
+| Organisation | **A Quantra org, NOT the ConveyClear org** | ConveyClear's org is on Pro, where every extra project bills ~$10/mo compute. Pro projects do not consume free slots, so a Quantra org should still offer Free. Staging is a Quantra development tool, not a client asset, so it belongs on Quantra's books |
+| Plan | Free | Pauses after 7 days idle: the first preview after a quiet week fails until you unpause. Acceptable — staging is disposable and is not a backup target |
 
 Save the database password straight into Vaultwarden. Do not paste it into chat, this repo, or the vault.
 
@@ -77,8 +78,13 @@ Then create auth users in the staging dashboard with **the same emails** as the 
 rows: the `on_auth_user_created` trigger links them by email and preserves the seeded role. Use
 Add user → with password → auto-confirm.
 
-⚠️ **Do not restore a production dump.** It carries real client FICA documents into an environment with
-weaker access control and no deletion policy. Seed synthetic data instead.
+⚠️🔴 **Never restore a production dump into staging. This is a contractual line, not a preference.**
+Staging lives in a **Quantra** organisation, outside the environment ConveyClear has agreed their data
+sits in. A dump would put real client FICA records — certified IDs, proof of address — into a third
+party's Supabase org with weaker access control and no deletion policy. Seed synthetic data only.
+
+The same reasoning applies to the 93 MB of unencrypted FICA storage still sitting in
+`~/backups/conveyclear/storage-2026-07-28/`: do not use it to populate anything.
 
 ## 4. Point Previews at it
 
