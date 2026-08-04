@@ -1,6 +1,9 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // Our theme is set by data-theme on <html>, not by the OS preference, so the
+  // dark: variant has to follow the attribute or it fires at the wrong times.
+  darkMode: ["selector", '[data-theme="dark"]'],
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",

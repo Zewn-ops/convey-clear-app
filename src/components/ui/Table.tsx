@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-lg bg-surface shadow ring-1 ring-line/50">
+    <div className="overflow-hidden rounded-lg bg-surface shadow dark:ring-1 dark:ring-line">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">{children}</table>
       </div>

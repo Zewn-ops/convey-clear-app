@@ -36,7 +36,7 @@ export default function TransferCard({
   const stalled = live && open !== null && open > STALLED_WORKDAYS;
 
   return (
-    <li className="rounded-lg bg-surface p-6 shadow ring-1 ring-line/50 transition-shadow duration-200 ease-out hover:shadow-lg sm:p-7">
+    <li className="rounded-lg bg-surface p-6 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link

@@ -30,7 +30,7 @@ export default function StatTile({
   );
 
   const shell =
-    "rounded-lg bg-surface px-4 py-4 text-center shadow-sm ring-1 ring-line/50 transition-shadow duration-150 ease-out";
+    "rounded-lg bg-surface px-4 py-4 text-center shadow-sm transition-shadow dark:ring-1 dark:ring-line duration-150 ease-out";
 
   // A tile that filters the list below it should look and behave like a
   // control. A tile that is only a number should not pretend to be one.
