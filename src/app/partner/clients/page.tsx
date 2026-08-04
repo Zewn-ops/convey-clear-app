@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import { Table, THead, TH, TBody, TR, TD, TEmpty } from "@/components/ui/Table";
+import StatusPill from "@/components/ui/StatusPill";
 import { formatDate } from "@/lib/utils";
 import { clientDisplayName, type Client } from "@/types";
 
@@ -16,39 +16,38 @@ export default async function PartnerClients() {
   const clients = (data as Client[] | null) ?? [];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Your clients</h1>
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Email</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Added</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {clients.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-medium">
-                    <Link href={`/partner/clients/${c.id}`} className="text-[#1B2E6B] hover:underline">
-                      {clientDisplayName(c)}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3"><Badge label={c.entity_type.replace("_", " ")} variant="gray" /></td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{c.primary_email || "—"}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(c.created_at)}</td>
-                </tr>
-              ))}
-              {clients.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-10 text-center text-gray-500">No clients yet</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+    <div className="mx-auto max-w-5xl space-y-8">
+      <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Your clients</h1>
+
+      <Table>
+        <THead>
+          <TH>Client</TH>
+          <TH>Type</TH>
+          <TH hideBelow="md">Email</TH>
+          <TH hideBelow="md">Added</TH>
+        </THead>
+        <TBody>
+          {clients.map((c) => (
+            <TR key={c.id}>
+              <TD strong>
+                <Link href={`/partner/clients/${c.id}`} className="text-action hover:underline">
+                  {clientDisplayName(c)}
+                </Link>
+              </TD>
+              <TD>
+                <StatusPill tone="neutral">{c.entity_type.replace("_", " ")}</StatusPill>
+              </TD>
+              <TD hideBelow="md">{c.primary_email || "—"}</TD>
+              <TD hideBelow="md">{formatDate(c.created_at)}</TD>
+            </TR>
+          ))}
+          {clients.length === 0 && (
+            <TEmpty colSpan={4}>
+              No clients yet. They appear here once you refer a matter.
+            </TEmpty>
+          )}
+        </TBody>
+      </Table>
     </div>
   );
 }

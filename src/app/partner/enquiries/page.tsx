@@ -1,16 +1,22 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
+import EmptyState from "@/components/ui/EmptyState";
 import NewEnquiryForm from "@/components/partner/NewEnquiryForm";
 import { formatDateTime } from "@/lib/utils";
 import { ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryStatus } from "@/types";
+import { MessageSquare } from "lucide-react";
 
 export const metadata = { title: "Enquiries — ConveyClear Partner" };
 
-function statusVariant(s: EnquiryStatus): "info" | "success" | "warning" | "gray" {
-  return ({ open: "warning", assigned: "info", resolved: "success", closed: "gray" } as const)[s] ?? "gray";
-}
+// open = ConveyClear has not picked it up yet, which from the firm's side is
+// waiting on someone else. Resolved is the only "done" state.
+const STATUS_TONE: Record<string, StatusTone> = {
+  open: "waiting",
+  assigned: "action",
+  resolved: "ok",
+  closed: "neutral",
+};
 
 export default async function PartnerEnquiries() {
   const supabase = await createClient();
@@ -22,32 +28,43 @@ export default async function PartnerEnquiries() {
   const enquiries = (enquiryData as Enquiry[] | null) ?? [];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Enquiries</h1>
-        <p className="text-sm text-gray-500 mt-1">Ask ConveyClear about a matter — the team is notified and will respond here.</p>
+        <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Enquiries</h1>
+        <p className="mt-1 text-sm text-ink-3">Ask ConveyClear about a matter — the team is notified and will respond here.</p>
       </div>
 
       <NewEnquiryForm matters={matters} />
 
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3">Your enquiries</h2>
-        <Card padding="none">
-          <ul className="divide-y divide-gray-100">
+        <h2 className="mb-3 text-[15px] font-bold text-ink">Your enquiries</h2>
+        {enquiries.length === 0 ? (
+          <EmptyState title="No enquiries yet" icon={<MessageSquare className="h-6 w-6" />}>
+            Ask about a matter above. ConveyClear is notified and answers in the same thread, so the
+            question and its answer stay attached to the matter.
+          </EmptyState>
+        ) : (
+          <ul className="space-y-2.5">
             {enquiries.map((e) => (
               <li key={e.id}>
-                <Link href={`/partner/enquiries/${e.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                <Link
+                  href={`/partner/enquiries/${e.id}`}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface px-5 py-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow"
+                >
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{e.subject}</p>
-                    <p className="text-xs text-gray-500">Updated {formatDateTime(e.updated_at)}</p>
+                    <p className="truncate text-[14px] font-semibold text-ink">{e.subject}</p>
+                    <p className="mt-0.5 text-[12px] text-ink-3">
+                      Updated {formatDateTime(e.updated_at)}
+                    </p>
                   </div>
-                  <Badge label={ENQUIRY_STATUS_LABELS[e.status]} variant={statusVariant(e.status)} />
+                  <StatusPill tone={STATUS_TONE[e.status] ?? "neutral"}>
+                    {ENQUIRY_STATUS_LABELS[e.status as EnquiryStatus] ?? e.status}
+                  </StatusPill>
                 </Link>
               </li>
             ))}
-            {enquiries.length === 0 && <li className="px-5 py-10 text-center text-gray-500">No enquiries yet</li>}
           </ul>
-        </Card>
+        )}
       </div>
     </div>
   );

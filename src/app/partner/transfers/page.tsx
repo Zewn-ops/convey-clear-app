@@ -1,17 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
-import { formatDate, municipalityLabel } from "@/lib/utils";
-import { TRANSFER_STATUS_LABELS, type PropertyTransfer, type TransferStatus } from "@/types";
-import { Plus } from "lucide-react";
+import TransferCard from "@/components/transfers/TransferCard";
+import EmptyState from "@/components/ui/EmptyState";
+import { type PropertyTransfer } from "@/types";
+import { Plus, Building2 } from "lucide-react";
 
 export const metadata = { title: "Property Transfers — ConveyClear Partner" };
 export const dynamic = "force-dynamic";
-
-function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
-}
 
 // Read-only. RLS (property_transfers_read_scoped) already limits these rows to
 // the caller's own firm — no extra filter needed here.
@@ -37,67 +32,47 @@ export default async function PartnerTransfersPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Transfers</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Property transfers</h1>
+          <p className="mt-1 text-sm text-ink-3">
             {transfers.length} transfer{transfers.length === 1 ? "" : "s"} · every matter in one transaction, together
           </p>
         </div>
         <Link
           href="/partner/transfers/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#E8521A] px-3.5 py-2 text-sm font-medium text-white hover:bg-[#E8521A]/90"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
           <Plus className="h-4 w-4" /> New transfer
         </Link>
       </div>
 
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Reference</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Council</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matters</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Opened</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {transfers.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3">
-                    <Link href={`/partner/transfers/${t.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
-                      {t.reference}
-                    </Link>
-                    {t.property_description && <p className="text-xs text-gray-500 mt-0.5">{t.property_description}</p>}
-                  </td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{municipalityLabel(t.municipality)}</td>
-                  <td className="px-5 py-3 text-gray-600">{counts.get(t.id) ?? 0}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{formatDate(t.created_at)}</td>
-                  <td className="px-5 py-3">
-                    <Badge label={TRANSFER_STATUS_LABELS[t.status]} variant={statusVariant(t.status)} />
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <Link href={`/partner/transfers/${t.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">View</Link>
-                  </td>
-                </tr>
-              ))}
-              {transfers.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
-                    No property transfers yet. Use <span className="font-medium text-gray-500">New transfer</span> to group
-                    the matters of one transaction together.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {transfers.length === 0 ? (
+        <EmptyState
+          title="No property transfers yet"
+          icon={<Building2 className="h-6 w-6" />}
+          action={
+            <Link href="/partner/transfers/new" className="text-[12.5px] font-bold text-action hover:underline">
+              Create the first one
+            </Link>
+          }
+        >
+          A transfer groups every matter in one transaction, so the clearance, the change of ownership
+          and the refund sit together instead of side by side in a list.
+        </EmptyState>
+      ) : (
+        <ul className="space-y-4">
+          {transfers.map((t) => (
+            <TransferCard
+              key={t.id}
+              transfer={t}
+              href={`/partner/transfers/${t.id}`}
+              matterCount={counts.get(t.id) ?? 0}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
