@@ -57,7 +57,7 @@ export default function ForgotPasswordForm() {
         </p>
         <Link
           href="/auth/login"
-          className="block text-sm text-[#E8521A] font-medium hover:underline"
+          className="block text-sm text-action font-medium hover:underline"
         >
           Back to sign in
         </Link>
@@ -96,7 +96,7 @@ export default function ForgotPasswordForm() {
         </p>
       )}
       <p className="text-center text-sm text-ink-2">
-        <Link href="/auth/login" className="text-[#1B2E6B] hover:underline">
+        <Link href="/auth/login" className="text-action hover:underline">
           Back to sign in
         </Link>
       </p>

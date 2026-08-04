@@ -87,7 +87,7 @@ export default function SignatureBuilder() {
 
   const html = buildSignature({ name, title, phone, email, signoff });
   const input =
-    "w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
+    "w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function copySignature() {
     const text = new DOMParser().parseFromString(html, "text/html").body.innerText;
@@ -144,7 +144,7 @@ export default function SignatureBuilder() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
-          <Mail className="h-5 w-5 text-[#1B2E6B]" /> Email Signatures
+          <Mail className="h-5 w-5 text-action" /> Email Signatures
         </h1>
         <p className="text-sm text-ink-3 mt-1">
           Fill the fields, preview, copy, and paste into Gmail. Logo, tagline, website and offices are fixed.
@@ -208,13 +208,13 @@ export default function SignatureBuilder() {
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             onClick={copySignature}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#E8521A]/90"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:bg-action-fill/90"
           >
             <Copy className="h-4 w-4" /> Copy signature
           </button>
           <button
             onClick={() => setShowSource((s) => !s)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-gray-200"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-action hover:bg-line"
           >
             <Code2 className="h-4 w-4" /> {showSource ? "Hide" : "Show"} HTML source
           </button>
@@ -225,7 +225,7 @@ export default function SignatureBuilder() {
         <Card>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">HTML source (for the API deploy / advanced)</p>
-            <button onClick={copySource} className="text-xs font-medium text-[#1B2E6B] hover:underline">Copy source</button>
+            <button onClick={copySource} className="text-xs font-medium text-action hover:underline">Copy source</button>
           </div>
           <textarea readOnly value={html} rows={8} className="w-full rounded-lg border border-line p-3 font-mono text-[11px] text-ink-2" />
         </Card>

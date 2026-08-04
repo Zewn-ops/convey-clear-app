@@ -25,11 +25,11 @@ export default function ClientDocUpload({ matterId }: { matterId: string }) {
   };
 
   return (
-    <Card className="border-[#E8521A]/30 bg-[#E8521A]/5">
+    <Card className="border-line/30 bg-action-fill/5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-3">
-          <div className="rounded-lg bg-[#E8521A]/10 p-2.5">
-            <Upload className="h-5 w-5 text-[#E8521A]" />
+          <div className="rounded-lg bg-action-fill/10 p-2.5">
+            <Upload className="h-5 w-5 text-action" />
           </div>
           <div>
             <p className="font-semibold text-ink text-sm">Upload your documents</p>

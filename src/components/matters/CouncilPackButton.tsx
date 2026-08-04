@@ -45,7 +45,7 @@ export default function CouncilPackButton({ matterId }: { matterId: string }) {
       onClick={build}
       disabled={busy}
       title="Merge this matter's documents into one PDF, in council order"
-      className="inline-flex items-center gap-1.5 rounded-lg border border-[#1B2E6B]/30 px-3 py-1.5 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5 disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-line/30 px-3 py-1.5 text-sm font-medium text-action hover:bg-action-fill/5 disabled:opacity-50"
     >
       <FileStack className="h-4 w-4" /> {busy ? "Building…" : "Council pack (PDF)"}
     </button>

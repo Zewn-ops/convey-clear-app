@@ -25,7 +25,7 @@ export default function AuthLayout({
         <div className="w-full max-w-md">
           <div className="bg-surface rounded-2xl shadow-sm border border-line p-8">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-[#1B2E6B]">{title}</h1>
+              <h1 className="text-2xl font-bold text-action">{title}</h1>
               <p className="mt-1 text-sm text-ink-3">{subtitle}</p>
             </div>
             {children}

@@ -142,7 +142,7 @@ export default function TransferDocuments({
   return (
     <Card accent="service">
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <Files className="h-4 w-4 text-[#E8521A]" />
+        <Files className="h-4 w-4 text-action" />
         <h2 className="font-semibold text-ink">Transfer documents</h2>
         {/* Progress across the five NAMED transfer documents. "other" is excluded
             deliberately — it is an open-ended catch-all, so counting it would make
@@ -213,7 +213,7 @@ export default function TransferDocuments({
 
               <div className="flex shrink-0 items-center gap-2.5 text-xs">
                 {d.url && (
-                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#1B2E6B] hover:underline">
+                  <a href={d.url} target="_blank" rel="noopener noreferrer" className="font-medium text-action hover:underline">
                     View
                   </a>
                 )}
@@ -250,7 +250,7 @@ export default function TransferDocuments({
                         disabled={busy === d.id}
                         onClick={() => remove(d.id)}
                         title="Delete permanently (only if no matter uses it)"
-                        className="text-gray-300 hover:text-red-600 disabled:opacity-50"
+                        className="text-ink-3 hover:text-red-600 disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -280,7 +280,7 @@ export default function TransferDocuments({
             if (f) upload(f, type);
           }}
           className={`flex items-end gap-2 rounded-lg border border-dashed p-3 transition-colors ${
-            dragging ? "border-[#E8521A] bg-[#E8521A]/5" : "border-line"
+            dragging ? "border-line bg-action-fill/5" : "border-line"
           }`}
         >
           <label className="flex-1 text-xs font-medium text-ink-3">
@@ -312,7 +312,7 @@ export default function TransferDocuments({
             type="button"
             disabled={busy === "__new"}
             onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#E8521A] px-3 py-2 text-sm font-medium text-white hover:bg-[#E8521A]/90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-action-fill px-3 py-2 text-sm font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
           >
             <UploadCloud className="h-4 w-4" /> {busy === "__new" ? "Uploading…" : "Upload"}
           </button>
@@ -334,7 +334,7 @@ export default function TransferDocuments({
                   type="button"
                   disabled={busy === d.id}
                   onClick={() => patch(d.id, { status: "current" }, "Restored")}
-                  className="shrink-0 text-xs font-medium text-[#1B2E6B] hover:underline disabled:opacity-50"
+                  className="shrink-0 text-xs font-medium text-action hover:underline disabled:opacity-50"
                 >
                   Restore
                 </button>
@@ -371,7 +371,7 @@ function RenameDoc({
           setEditing(true);
         }}
         title="Rename"
-        className="text-ink-3 hover:text-[#1B2E6B] disabled:opacity-50"
+        className="text-ink-3 hover:text-action disabled:opacity-50"
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
@@ -396,7 +396,7 @@ function RenameDoc({
           if (e.key === "Escape") setEditing(false);
         }}
         disabled={busy}
-        className="w-44 rounded border border-line px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
+        className="w-44 rounded border border-line px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-action"
       />
       <button type="button" onClick={commit} disabled={busy} title="Save" className="text-green-600 hover:text-green-800">
         <Check className="h-3.5 w-3.5" />

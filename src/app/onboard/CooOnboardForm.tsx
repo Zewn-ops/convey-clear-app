@@ -167,8 +167,8 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
 
   if (submitted) {
     return (
-      <main className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center">
+      <main className="min-h-screen bg-raised flex flex-col">
+        <header className="bg-surface border-b border-line px-6 py-3 flex items-center">
           <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
         </header>
         <div className="flex-1 flex items-center justify-center p-6">
@@ -176,16 +176,16 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
             <div className="mx-auto mb-5 h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircle className="h-10 w-10 text-green-500" />
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Documents Submitted</h1>
-            <p className="text-gray-500 text-sm leading-relaxed mb-6">
+            <h1 className="text-2xl font-semibold text-ink mb-2">Documents Submitted</h1>
+            <p className="text-ink-3 text-sm leading-relaxed mb-6">
               Thank you. The supporting documents for this change-of-ownership matter have been securely received.
               Our team will be in touch shortly.
             </p>
           </div>
         </div>
-        <footer className="py-4 text-center border-t border-gray-100">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
+        <footer className="py-4 text-center border-t border-line">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-ink-3">
+            <ShieldCheck className="h-3.5 w-3.5 text-action" />
             <span>POPIA Compliant · South Africa</span>
           </div>
         </footer>
@@ -194,8 +194,8 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 shadow-sm px-6 py-3 sticky top-0 z-10 flex items-center">
+    <main className="min-h-screen bg-raised flex flex-col">
+      <header className="bg-surface border-b border-line shadow-sm px-6 py-3 sticky top-0 z-10 flex items-center">
         <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
       </header>
 
@@ -207,19 +207,19 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
               <div
                 className={
                   "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold " +
-                  (i < stage ? "bg-green-500 text-white" : i === stage ? "bg-[#1B2E6B] text-white" : "bg-gray-200 text-gray-500")
+                  (i < stage ? "bg-ok-fill text-[#1c2232]" : i === stage ? "bg-action-fill text-white" : "bg-line text-ink-3")
                 }
               >
                 {i < stage ? "✓" : i + 1}
               </div>
-              <span className={"text-xs hidden sm:block " + (i === stage ? "text-gray-900 font-medium" : "text-gray-500")}>{label}</span>
+              <span className={"text-xs hidden sm:block " + (i === stage ? "text-ink font-medium" : "text-ink-3")}>{label}</span>
             </div>
           ))}
         </div>
 
         {stage === 0 && (
           <>
-            <div className="rounded-xl bg-[#1B2E6B] text-white p-6">
+            <div className="rounded-xl bg-action-fill text-white p-6">
               <p className="text-blue-200 text-xs font-medium uppercase tracking-wider mb-1">{data.service_name || "Change of Ownership"}</p>
               <h1 className="text-xl font-semibold mb-2">Supporting documents</h1>
               <p className="text-blue-100 text-sm leading-relaxed">
@@ -228,14 +228,14 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
               </p>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <div className="bg-surface rounded-xl border border-line shadow-sm p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-gray-600">Required documents completed</span>
-                <span className="text-xs font-semibold text-[#1B2E6B]">{complete} / {requiredSlots.length}</span>
+                <span className="text-xs font-medium text-ink-2">Required documents completed</span>
+                <span className="text-xs font-semibold text-action">{complete} / {requiredSlots.length}</span>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-raised rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#E8521A] rounded-full transition-all duration-500"
+                  className="h-full bg-action-fill rounded-full transition-all duration-500"
                   style={{ width: `${requiredSlots.length > 0 ? (complete / requiredSlots.length) * 100 : 100}%` }}
                 />
               </div>
@@ -243,10 +243,10 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
 
             {sections.map((sec) => (
               <div key={sec.key} className="space-y-3">
-                <h2 className="text-sm font-semibold text-[#1B2E6B] pt-2">{sec.label}</h2>
+                <h2 className="text-sm font-semibold text-action pt-2">{sec.label}</h2>
                 {sec.slots.map((s) => (
                   <div key={s.key} className="space-y-1">
-                    {s.optional && <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Optional — not required</p>}
+                    {s.optional && <p className="text-[11px] font-medium uppercase tracking-wide text-ink-3">Optional — not required</p>}
                     <DocSlot
                       docType={s.docType}
                       allowNotAvailable={allowNotAvailable || s.optional}
@@ -255,7 +255,7 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
                     />
                   </div>
                 ))}
-                {sec.slots.length === 0 && <p className="text-sm text-gray-500">No documents listed for this party.</p>}
+                {sec.slots.length === 0 && <p className="text-sm text-ink-3">No documents listed for this party.</p>}
               </div>
             ))}
           </>
@@ -289,25 +289,25 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
 
         {stage === 2 && (
           <div className="space-y-3">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2 text-sm">
-              <h2 className="font-semibold text-gray-700 mb-2">Review</h2>
+            <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-2 text-sm">
+              <h2 className="font-semibold text-ink-2 mb-2">Review</h2>
               {sections.map((sec) => {
                 const done = sec.slots.filter(slotDone).length;
                 return (
                   <div key={sec.key} className="flex justify-between gap-4">
-                    <span className="text-gray-500">{sec.label}</span>
-                    <span className="text-gray-900 text-right">{done} / {sec.slots.length} provided</span>
+                    <span className="text-ink-3">{sec.label}</span>
+                    <span className="text-ink text-right">{done} / {sec.slots.length} provided</span>
                   </div>
                 );
               })}
               <div className="flex justify-between gap-4">
-                <span className="text-gray-500">Consents</span>
-                <span className="text-gray-900 text-right">POPIA ✓ Terms ✓{marketing ? " Marketing ✓" : ""}</span>
+                <span className="text-ink-3">Consents</span>
+                <span className="text-ink text-right">POPIA ✓ Terms ✓{marketing ? " Marketing ✓" : ""}</span>
               </div>
             </div>
-            <label className="flex items-start gap-3 cursor-pointer bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl border border-line shadow-sm p-4">
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#1B2E6B]" />
-              <span className="text-sm text-gray-700">I confirm the documents provided are correct and complete.</span>
+              <span className="text-sm text-ink-2">I confirm the documents provided are correct and complete.</span>
             </label>
             {submitError && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4">
@@ -338,12 +338,12 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
 
         <div className="space-y-3 pb-8 pt-2">
           <div className="flex items-center justify-center gap-2">
-            <Lock className="h-3 w-3 text-gray-500" />
-            <p className="text-xs text-gray-500">Encrypted in transit · Accessible to authorised staff only</p>
+            <Lock className="h-3 w-3 text-ink-3" />
+            <p className="text-xs text-ink-3">Encrypted in transit · Accessible to authorised staff only</p>
           </div>
           <div className="flex items-center justify-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
-            <p className="text-xs text-gray-500">POPIA Compliant · South Africa</p>
+            <ShieldCheck className="h-3.5 w-3.5 text-action" />
+            <p className="text-xs text-ink-3">POPIA Compliant · South Africa</p>
           </div>
         </div>
       </div>

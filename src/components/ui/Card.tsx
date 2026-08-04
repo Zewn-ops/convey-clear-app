@@ -20,7 +20,7 @@ const accentClasses: Record<CardAccent, string> = {
   client: "border-2 border-emerald-600/40",
   firm: "border-2 border-violet-600/40",
   service: "border-2 border-sky-600/40",
-  internal: "border-2 border-[#1B2E6B]/40",
+  internal: "border-2 border-line/40",
 };
 
 interface CardProps {

@@ -157,7 +157,7 @@ export default function TransferForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent"
         />
       </div>
 

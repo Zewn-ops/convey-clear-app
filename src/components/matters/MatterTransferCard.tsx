@@ -72,7 +72,7 @@ export default function MatterTransferCard({
       {transfer ? (
         <p className="text-sm text-ink-2">
           Part of{" "}
-          <Link href={`${basePath}/${transfer.id}`} className="font-medium text-[#1B2E6B] hover:underline">
+          <Link href={`${basePath}/${transfer.id}`} className="font-medium text-action hover:underline">
             {transfer.reference}
           </Link>
         </p>
@@ -87,7 +87,7 @@ export default function MatterTransferCard({
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
             >
               <option value="">— None (standalone) —</option>
               {options.map((o) => (
@@ -98,7 +98,7 @@ export default function MatterTransferCard({
           <button
             onClick={save}
             disabled={loading || selected === (transfer?.id ?? "")}
-            className="shrink-0 px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+            className="shrink-0 px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50"
           >
             {loading ? "Saving…" : "Save"}
           </button>

@@ -115,7 +115,7 @@ export default function SearchSelect({
           aria-expanded={open}
           className={cn(
             "flex w-full items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left text-sm",
-            "focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent",
+            "focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent",
             "disabled:cursor-not-allowed disabled:bg-raised disabled:opacity-60"
           )}
         >
@@ -132,7 +132,7 @@ export default function SearchSelect({
                   e.stopPropagation();
                   onChange("");
                 }}
-                className="text-gray-300 hover:text-ink-2"
+                className="text-ink-3 hover:text-ink-2"
               >
                 <X className="h-3.5 w-3.5" />
               </span>
@@ -167,7 +167,7 @@ export default function SearchSelect({
                     className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-ink-3 hover:bg-raised"
                   >
                     {emptyLabel}
-                    {!value && <Check className="h-3.5 w-3.5 text-[#1B2E6B]" />}
+                    {!value && <Check className="h-3.5 w-3.5 text-action" />}
                   </button>
                 </li>
               )}
@@ -186,7 +186,7 @@ export default function SearchSelect({
                       className={cn(
                         "flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-sm",
                         i === active ? "bg-raised" : "",
-                        o.value === value ? "text-[#1B2E6B]" : "text-ink"
+                        o.value === value ? "text-action" : "text-ink"
                       )}
                     >
                       <span className="min-w-0">

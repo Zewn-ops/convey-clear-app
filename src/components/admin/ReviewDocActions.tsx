@@ -103,7 +103,7 @@ export default function ReviewDocActions({
           href={viewUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-md px-2.5 py-1.5 text-xs font-medium text-[#1B2E6B] hover:underline"
+          className="rounded-md px-2.5 py-1.5 text-xs font-medium text-action hover:underline"
         >
           View
         </a>

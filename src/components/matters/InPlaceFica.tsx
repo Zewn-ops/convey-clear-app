@@ -62,7 +62,7 @@ export default function InPlaceFica({
   return (
     <Card accent="client">
       <div className="mb-1 flex items-center gap-2">
-        <ClipboardCheck className="h-4 w-4 text-[#1B2E6B]" />
+        <ClipboardCheck className="h-4 w-4 text-action" />
         <h2 className="font-semibold text-ink">Client details &amp; consent</h2>
       </div>
       <p className="mb-3 text-xs text-ink-3">
@@ -195,8 +195,8 @@ function SubjectSection({
           className={
             "shrink-0 rounded-lg text-xs font-medium transition-colors " +
             (open || (details.complete && consent.complete)
-              ? "px-2 py-1 text-[#1B2E6B] hover:underline"
-              : "bg-[#E8521A] px-3 py-1.5 text-white hover:bg-[#c94415]")
+              ? "px-2 py-1 text-action hover:underline"
+              : "bg-action-fill px-3 py-1.5 text-white hover:opacity-90")
           }
         >
           {open ? "Close" : details.complete && consent.complete ? "Review" : "Complete now"}
@@ -232,7 +232,7 @@ function SubjectSection({
               >
                 <span className="flex items-center gap-1">
                   {f.label}
-                  {f.required && <span className="text-[#E8521A]">*</span>}
+                  {f.required && <span className="text-action">*</span>}
                   {f.sensitive && <ShieldAlert className="h-3 w-3 text-amber-500" aria-label="Staff only" />}
                 </span>
                 {f.type === "textarea" ? (
@@ -241,7 +241,7 @@ function SubjectSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder={f.hint}
-                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   />
                 ) : (
                   <input
@@ -249,7 +249,7 @@ function SubjectSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder={f.hint}
-                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   />
                 )}
               </label>
@@ -271,7 +271,7 @@ function SubjectSection({
                       { full_name: "", surname: "", cell: "", work_number: "", email: "", designation: "" },
                     ])
                   }
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-action hover:underline"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add
                 </button>
@@ -298,14 +298,14 @@ function SubjectSection({
                           onChange={(e) =>
                             setDirectors((ds) => ds.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))
                           }
-                          className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
+                          className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-action"
                         />
                       ))}
                     </div>
                     <button
                       type="button"
                       onClick={() => setDirectors((ds) => ds.filter((_, j) => j !== i))}
-                      className="mt-1 shrink-0 text-gray-300 hover:text-red-600"
+                      className="mt-1 shrink-0 text-ink-3 hover:text-red-600"
                       aria-label="Remove"
                     >
                       <X className="h-4 w-4" />
@@ -342,11 +342,11 @@ function SubjectSection({
                 {(popia || terms || marketing) && (
                   <div className="mt-3 space-y-2">
                     <label className="block text-xs font-medium text-ink-3">
-                      How was consent obtained? <span className="text-[#E8521A]">*</span>
+                      How was consent obtained? <span className="text-action">*</span>
                       <select
                         value={method}
                         onChange={(e) => setMethod(e.target.value as CaptureMethod)}
-                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
                       >
                         <option value="">Select…</option>
                         {CAPTURE_METHODS.map((m) => (
@@ -368,7 +368,7 @@ function SubjectSection({
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="e.g. signed FICA pack dated 12 July, on file"
-                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
                       />
                     </label>
                   </div>
@@ -385,7 +385,7 @@ function SubjectSection({
               type="button"
               disabled={saving}
               onClick={save}
-              className="rounded-lg bg-[#1B2E6B] px-4 py-2 text-sm font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+              className="rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save"}
             </button>
@@ -422,11 +422,11 @@ function Tick({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-3.5 w-3.5 rounded border-line text-[#1B2E6B] focus:ring-[#1B2E6B]"
+        className="mt-0.5 h-3.5 w-3.5 rounded border-line text-action focus:ring-action"
       />
       <span>
         {label}
-        {required && <span className="ml-0.5 text-[#E8521A]">*</span>}
+        {required && <span className="ml-0.5 text-action">*</span>}
       </span>
     </label>
   );

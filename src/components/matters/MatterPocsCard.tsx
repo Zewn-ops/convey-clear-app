@@ -33,7 +33,7 @@ export default function MatterPocsCard({
   const linkedIds = useMemo(() => new Set(linked.map((p) => p.id)), [linked]);
   const assignable = useMemo(() => all.filter((p) => !linkedIds.has(p.id)), [all, linkedIds]);
 
-  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
+  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function assign() {
     if (!assignId) return;
@@ -92,7 +92,7 @@ export default function MatterPocsCard({
     <Card accent="internal">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold text-ink flex items-center gap-2">
-          <Landmark className="h-4 w-4 text-[#1B2E6B]" /> Council POC{linked.length === 1 ? "" : "s"} ({linked.length})
+          <Landmark className="h-4 w-4 text-action" /> Council POC{linked.length === 1 ? "" : "s"} ({linked.length})
         </h2>
       </div>
 
@@ -108,10 +108,10 @@ export default function MatterPocsCard({
               </div>
               <p className="text-xs text-ink-3 mt-0.5">{[p.council, p.department].filter(Boolean).join(" · ") || "—"}</p>
               <dl className="mt-2 space-y-1 text-xs">
-                {p.email && <dd><span className="text-ink-3">Email:</span> <a href={`mailto:${p.email}`} className="text-[#1B2E6B] hover:underline">{p.email}</a></dd>}
-                {p.cell && <dd><span className="text-ink-3">Cell:</span> <a href={`tel:${p.cell}`} className="text-[#1B2E6B] hover:underline">{p.cell}</a></dd>}
+                {p.email && <dd><span className="text-ink-3">Email:</span> <a href={`mailto:${p.email}`} className="text-action hover:underline">{p.email}</a></dd>}
+                {p.cell && <dd><span className="text-ink-3">Cell:</span> <a href={`tel:${p.cell}`} className="text-action hover:underline">{p.cell}</a></dd>}
               </dl>
-              <Link href={`/admin/council-pocs/${p.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-[#E8521A] hover:underline mt-2">
+              <Link href={`/admin/council-pocs/${p.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-action hover:underline mt-2">
                 <ExternalLink className="h-3 w-3" /> Contact card
               </Link>
             </div>
@@ -132,7 +132,7 @@ export default function MatterPocsCard({
               </option>
             ))}
           </select>
-          <button onClick={assign} disabled={busy || !assignId} className="px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 disabled:opacity-50">
+          <button onClick={assign} disabled={busy || !assignId} className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50">
             Assign
           </button>
         </div>
@@ -149,14 +149,14 @@ export default function MatterPocsCard({
           <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" className={input} />
           <input value={form.cell} onChange={(e) => setForm({ ...form, cell: e.target.value })} placeholder="Cell" className={input} />
           <div className="sm:col-span-2 flex gap-2">
-            <button type="submit" disabled={busy} className="px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 disabled:opacity-50">
+            <button type="submit" disabled={busy} className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50">
               {busy ? "Saving…" : "Add & link"}
             </button>
             <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 text-sm font-medium text-ink-3 hover:text-ink">Cancel</button>
           </div>
         </form>
       ) : (
-        <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1B2E6B] hover:underline">
+        <button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-action hover:underline">
           <Plus className="h-4 w-4" /> Add a new POC
         </button>
       )}

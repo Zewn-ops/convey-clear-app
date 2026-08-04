@@ -13,7 +13,7 @@ export function LegalSection({
 }) {
   return (
     <section className="mt-8 scroll-mt-20" id={`s${n}`}>
-      <h2 className="text-lg font-bold text-[#1B2E6B]">
+      <h2 className="text-lg font-bold text-action">
         {n}. {title}
       </h2>
       <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-ink-2">
@@ -47,7 +47,7 @@ export default function LegalShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-raised">
-      <header className="bg-[#1B2E6B] text-white">
+      <header className="bg-action-fill text-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link href="/" className="flex items-center">
             <img
@@ -73,7 +73,7 @@ export default function LegalShell({
             need confirmation.
           </div>
 
-          <h1 className="mt-6 text-3xl font-bold text-[#1B2E6B]">{title}</h1>
+          <h1 className="mt-6 text-3xl font-bold text-action">{title}</h1>
           <p className="mt-2 text-sm text-ink-3">
             Convey Clear (Pty) Ltd · Reg No. 2025/057574/07 · Last updated {lastUpdated}
           </p>
@@ -84,7 +84,7 @@ export default function LegalShell({
             <p className="font-medium text-ink-2">Convey Clear (Pty) Ltd</p>
             <p>9 Lauriston Place Street, Glen Lauriston, Centurion, 0185, South Africa</p>
             <p>
-              <a href="mailto:hello@conveyclear.co.za" className="text-[#1B2E6B] hover:underline">
+              <a href="mailto:hello@conveyclear.co.za" className="text-action hover:underline">
                 hello@conveyclear.co.za
               </a>{" "}
               · +27 (0)76 810 4790
@@ -93,7 +93,7 @@ export default function LegalShell({
         </div>
       </main>
 
-      <footer className="bg-[#1B2E6B] py-8 text-white/60">
+      <footer className="bg-action-fill py-8 text-white/60">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-3 px-4 text-sm sm:flex-row">
           <p>© {new Date().getFullYear()} ConveyClear. All rights reserved.</p>
           <div className="flex gap-4">

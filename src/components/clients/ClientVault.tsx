@@ -159,11 +159,11 @@ export default function ClientVault({
   // stylesheet-order fight and the vault renders with the default border.
   // (Confirmed live 2026-07-16: padlock showed, border didn't.)
   return (
-    <Card className="!border-2 !border-[#1B2E6B]">
+    <Card className="!border-2 !border-line">
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#1B2E6B]/10">
-            <Lock className="h-3.5 w-3.5 text-[#1B2E6B]" />
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-action-fill/10">
+            <Lock className="h-3.5 w-3.5 text-action" />
           </span>
           <h2 className="font-semibold text-ink">FICA vault</h2>
         </div>
@@ -204,7 +204,7 @@ export default function ClientVault({
               }}
               className={`rounded-lg border p-3 transition-colors ${
                 dragSlot === t
-                  ? "border-[#1B2E6B] bg-[#1B2E6B]/5"
+                  ? "border-line bg-action-fill/5"
                   : empty && !slot.rule.optional
                     ? "border-dashed border-line bg-raised/60"
                     : "border-line"
@@ -285,7 +285,7 @@ export default function ClientVault({
           <ul className="mt-2 space-y-1.5">
             {archived.map((d) => (
               <li key={d.id} className="flex items-center gap-3 py-1 text-sm">
-                <Archive className="h-3.5 w-3.5 shrink-0 text-gray-300" />
+                <Archive className="h-3.5 w-3.5 shrink-0 text-ink-3" />
                 <span className="min-w-0 flex-1 truncate text-ink-3">
                   {docLabel(d.document_type)} · {d.file_name || "—"}
                 </span>
@@ -293,7 +293,7 @@ export default function ClientVault({
                   type="button"
                   disabled={busy === d.id}
                   onClick={() => patch(d.id, { status: "current" }, "Restored to the vault")}
-                  className="shrink-0 text-xs font-medium text-[#1B2E6B] hover:underline disabled:opacity-50"
+                  className="shrink-0 text-xs font-medium text-action hover:underline disabled:opacity-50"
                 >
                   Restore
                 </button>
@@ -313,7 +313,7 @@ function VaultProgress({ held, total, complete }: { held: number; total: number;
     <div className="flex shrink-0 items-center gap-2">
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-raised">
         <div
-          className={`h-full rounded-full transition-all ${complete ? "bg-green-500" : "bg-[#1B2E6B]"}`}
+          className={`h-full rounded-full transition-all ${complete ? "bg-green-500" : "bg-action-fill"}`}
           style={{ width: `${total === 0 ? 100 : (held / total) * 100}%` }}
         />
       </div>
@@ -395,7 +395,7 @@ function DocRow({
           defaultValue={doc.expiry_date ?? ""}
           disabled={busy}
           onChange={(e) => onExpiry(e.target.value)}
-          className="rounded border border-line px-1.5 py-0.5 text-[11px] text-ink-2 focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
+          className="rounded border border-line px-1.5 py-0.5 text-[11px] text-ink-2 focus:outline-none focus:ring-1 focus:ring-action"
         />
       </label>
 
@@ -405,7 +405,7 @@ function DocRow({
             href={doc.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-[#1B2E6B] hover:underline"
+            className="font-medium text-action hover:underline"
           >
             View
           </a>
@@ -437,7 +437,7 @@ function DocRow({
             disabled={busy}
             onClick={onDelete}
             title="Delete permanently (only possible if no matter uses it)"
-            className="text-gray-300 hover:text-red-600 disabled:opacity-50"
+            className="text-ink-3 hover:text-red-600 disabled:opacity-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -483,7 +483,7 @@ function FilePick({
         className={
           small
             ? "inline-flex items-center gap-1 font-medium text-ink-3 hover:text-ink-2 hover:underline disabled:opacity-50"
-            : "inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1B2E6B] px-2.5 py-1.5 text-xs font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+            : "inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-action-fill px-2.5 py-1.5 text-xs font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
         }
       >
         <Icon className="h-3.5 w-3.5" />
@@ -518,7 +518,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
         >
           {allVaultDocTypes().map((t) => (
             <option key={t} value={t}>
@@ -543,7 +543,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
         type="button"
         disabled={busy}
         onClick={() => ref.current?.click()}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-[#1B2E6B] px-3 py-2 text-sm font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-action-fill px-3 py-2 text-sm font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
       >
         <UploadCloud className="h-4 w-4" /> {busy ? "Uploading…" : "Upload"}
       </button>

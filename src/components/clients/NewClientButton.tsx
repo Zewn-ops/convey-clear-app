@@ -22,7 +22,7 @@ export default function NewClientButton() {
   });
 
   const isPerson = form.entity_type === "natural_person";
-  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
+  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +48,7 @@ export default function NewClientButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 transition-colors shrink-0"
+        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 transition-colors shrink-0"
       >
         <Plus className="h-4 w-4" /> New client
       </button>
@@ -90,7 +90,7 @@ export default function NewClientButton() {
           <input value={form.primary_cell} onChange={(e) => setForm({ ...form, primary_cell: e.target.value })} className={`${input} w-full mt-1`} />
         </div>
         <div className="sm:col-span-2 flex gap-2 pt-1">
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50">
             {saving ? "Creating…" : "Create client"}
           </button>
           <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 text-sm font-medium text-ink-3 hover:text-ink">

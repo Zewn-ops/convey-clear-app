@@ -83,7 +83,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-action hover:underline"
           >
             <Pencil className="h-3.5 w-3.5" /> Edit
           </button>
@@ -133,7 +133,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
               setForm((cur) => ({ ...seed(next), ...cur }));
               setEntity(next);
             }}
-            className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
           >
             {ENTITY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -149,12 +149,12 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
         {showIdNumber && (
           <label className="text-xs font-medium text-ink-3">
             <span className="flex items-center gap-1">
-              ID number <span className="text-[#E8521A]">*</span>
+              ID number <span className="text-action">*</span>
             </span>
             <input
               value={form.id_number ?? ""}
               onChange={(e) => setForm((s) => ({ ...s, id_number: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
             />
           </label>
         )}
@@ -170,7 +170,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
           >
             <span className="flex items-center gap-1">
               {f.label}
-              {f.required && <span className="text-[#E8521A]">*</span>}
+              {f.required && <span className="text-action">*</span>}
               {f.sensitive && <ShieldAlert className="h-3 w-3 text-amber-500" aria-label="Sensitive" />}
             </span>
             {f.type === "textarea" ? (
@@ -179,7 +179,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
                 value={form[f.key] ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                 placeholder={f.hint}
-                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
               />
             ) : (
               <input
@@ -187,7 +187,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
                 value={form[f.key] ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                 placeholder={f.hint}
-                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
               />
             )}
           </label>
@@ -202,7 +202,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
           type="button"
           disabled={saving}
           onClick={save}
-          className="rounded-lg bg-[#1B2E6B] px-4 py-2 text-sm font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+          className="rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
@@ -226,7 +226,7 @@ function Field({
   return (
     <div className={wide ? "sm:col-span-2" : undefined}>
       <dt className="text-xs text-ink-3">{label}</dt>
-      <dd className={`mt-0.5 font-medium ${empty ? "text-gray-300" : ""}`}>
+      <dd className={`mt-0.5 font-medium ${empty ? "text-ink-3" : ""}`}>
         {empty ? (required ? "Not captured" : "—") : value}
       </dd>
     </div>

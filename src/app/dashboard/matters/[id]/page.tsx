@@ -66,16 +66,16 @@ export default async function MatterDetailPage({
     <div className="max-w-4xl mx-auto space-y-6">
       <Link
         href="/dashboard/matters"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#1B2E6B]"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-action"
       >
         <ArrowLeft className="h-4 w-4" /> All matters
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold text-[#1B2E6B]">
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">
           {matter.title || clientDisplayName(matter.clients) || "Matter"}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-ink-3 mt-1">
           {clientDisplayName(matter.clients)}
           {matter.municipality ? ` · ${matter.municipality}` : ""}
         </p>
@@ -83,7 +83,7 @@ export default async function MatterDetailPage({
 
       {/* 4-phase progress */}
       <Card>
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Progress</p>
+        <p className="text-xs font-medium text-ink-3 uppercase tracking-wide mb-3">Progress</p>
         <div className="flex gap-2">
           {phases.map((p) => {
             const active = matter.current_phase === p;
@@ -92,10 +92,10 @@ export default async function MatterDetailPage({
               <div key={p} className="flex-1">
                 <div
                   className={`h-1.5 rounded-full ${
-                    active ? "bg-[#E8521A]" : done ? "bg-[#1B2E6B]" : "bg-gray-200"
+                    active ? "bg-action-fill" : done ? "bg-action-fill" : "bg-line"
                   }`}
                 />
-                <p className={`mt-1.5 text-[11px] ${active ? "text-[#E8521A] font-medium" : "text-gray-500"}`}>
+                <p className={`mt-1.5 text-[11px] ${active ? "text-action font-medium" : "text-ink-3"}`}>
                   {PHASE_LABELS[p]}
                 </p>
               </div>
@@ -124,18 +124,18 @@ export default async function MatterDetailPage({
 
       {/* Documents */}
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3">Documents</h2>
+        <h2 className="font-semibold text-ink mb-3">Documents</h2>
         {documents.length > 0 ? (
           <Card padding="none">
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-line">
               {documents.map((doc) => (
                 <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className="h-4 w-4 text-gray-500 shrink-0" />
+                  <FileText className="h-4 w-4 text-ink-3 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
+                    <p className="text-sm font-medium text-ink truncate">
                       {doc.file_name || doc.document_type}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-ink-3">
                       {doc.document_type} · {formatDate(doc.created_at)}
                     </p>
                   </div>
@@ -143,9 +143,9 @@ export default async function MatterDetailPage({
                     <span className="text-xs text-green-600 font-medium shrink-0">Verified</span>
                   )}
                   {doc.storage_path && signedUrls[doc.storage_path] ? (
-                    <a href={signedUrls[doc.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                    <a href={signedUrls[doc.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-action hover:underline shrink-0">View</a>
                   ) : doc.drive_file_id ? (
-                    <a href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                    <a href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-action hover:underline shrink-0">View</a>
                   ) : null}
                 </li>
               ))}
@@ -153,7 +153,7 @@ export default async function MatterDetailPage({
           </Card>
         ) : (
           <Card className="text-center py-8">
-            <p className="text-gray-500 text-sm">No documents yet</p>
+            <p className="text-ink-3 text-sm">No documents yet</p>
           </Card>
         )}
       </div>
@@ -164,8 +164,8 @@ export default async function MatterDetailPage({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className="text-gray-800 mt-0.5">{value}</dd>
+      <dt className="text-xs text-ink-3">{label}</dt>
+      <dd className="text-ink mt-0.5">{value}</dd>
     </div>
   );
 }

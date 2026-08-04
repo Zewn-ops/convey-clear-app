@@ -79,7 +79,7 @@ export default function FirmDetailsForm({
     <div className="space-y-6">
       <Card className="space-y-4">
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-[#1B2E6B]" />
+          <Building2 className="h-4 w-4 text-action" />
           <h2 className="font-semibold text-ink">{firmName}</h2>
         </div>
         <p className="text-xs text-ink-3 -mt-2">
@@ -89,7 +89,7 @@ export default function FirmDetailsForm({
 
       <Card className="space-y-4">
         <div className="flex items-center gap-2">
-          <Landmark className="h-4 w-4 text-[#1B2E6B]" />
+          <Landmark className="h-4 w-4 text-action" />
           <h2 className="font-semibold text-ink">Business account</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -112,7 +112,7 @@ export default function FirmDetailsForm({
 
       <Card className="space-y-4">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[#1B2E6B]" />
+          <ShieldCheck className="h-4 w-4 text-action" />
           <h2 className="font-semibold text-ink">Trust account</h2>
         </div>
         <p className="text-xs text-ink-3 -mt-2">The section-86(4) trust account, where client funds are held.</p>
@@ -130,7 +130,7 @@ export default function FirmDetailsForm({
           <button
             type="button"
             onClick={() => setBps((prev) => [...prev, { municipality: "", bp_number: "" }])}
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#E8521A] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-action hover:underline"
           >
             <Plus className="h-3.5 w-3.5" /> Add a municipality
           </button>
@@ -166,7 +166,7 @@ export default function FirmDetailsForm({
                 <button
                   type="button"
                   onClick={() => setBps((prev) => prev.filter((_, j) => j !== i))}
-                  className="mb-2 text-gray-300 hover:text-red-600"
+                  className="mb-2 text-ink-3 hover:text-red-600"
                   title="Remove"
                 >
                   <Trash2 className="h-4 w-4" />

@@ -32,13 +32,13 @@ export default function EnquiryReply({ enquiryId }: { enquiryId: string }) {
         onChange={(e) => setBody(e.target.value)}
         rows={2}
         placeholder="Write a reply…"
-        className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
+        className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action resize-none"
       />
       <button
         type="button"
         onClick={send}
         disabled={loading || !body.trim()}
-        className="self-end px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 disabled:opacity-50"
+        className="self-end px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50"
       >
         {loading ? "Sending…" : "Reply"}
       </button>

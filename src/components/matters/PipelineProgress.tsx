@@ -50,12 +50,12 @@ export default function PipelineProgress({
               <div
                 className={
                   "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold " +
-                  (done ? "bg-green-500 text-white" : active ? "bg-[#1B2E6B] text-white" : "bg-gray-200 text-ink-3")
+                  (done ? "bg-green-500 text-white" : active ? "bg-action-fill text-white" : "bg-line text-ink-3")
                 }
               >
                 {done ? <CheckCircle2 className="h-5 w-5" /> : i}
               </div>
-              <p className={"mt-2 text-[11px] leading-tight " + (active ? "font-semibold text-[#1B2E6B]" : "text-ink-3")}>
+              <p className={"mt-2 text-[11px] leading-tight " + (active ? "font-semibold text-action" : "text-ink-3")}>
                 {s.name}
               </p>
             </div>
@@ -74,10 +74,10 @@ export default function PipelineProgress({
               const active = st.key === currentStage;
               return (
                 <li key={st.key} className="flex items-center gap-2 text-sm">
-                  <span className={"h-1.5 w-1.5 rounded-full shrink-0 " + (active ? "bg-[#E8521A]" : "bg-gray-300")} />
+                  <span className={"h-1.5 w-1.5 rounded-full shrink-0 " + (active ? "bg-action-fill" : "bg-line")} />
                   <span className={active ? "font-medium text-ink" : "text-ink-2"}>{st.name}</span>
                   {!isClient && !st.clientVisible && (
-                    <span className="inline-flex items-center gap-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-ink-3" title="Admin-only — not shown to the client">
+                    <span className="inline-flex items-center gap-1 rounded bg-line px-1.5 py-0.5 text-[10px] font-semibold text-ink-3" title="Admin-only — not shown to the client">
                       <EyeOff className="h-3 w-3" /> Internal
                     </span>
                   )}

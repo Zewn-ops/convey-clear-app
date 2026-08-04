@@ -49,7 +49,7 @@ export default function CreateLoginButton({
     <Card>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-[#1B2E6B]" />
+          <KeyRound className="h-4 w-4 text-action" />
           <h2 className="font-semibold text-ink">Portal access</h2>
         </div>
         {hasLogin ? (
@@ -61,7 +61,7 @@ export default function CreateLoginButton({
             onClick={create}
             disabled={busy || !clientEmail}
             title={!clientEmail ? "Add an email to this client first" : undefined}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50"
           >
             <KeyRound className="h-4 w-4" /> {busy ? "Creating…" : "Create login"}
           </button>
@@ -77,7 +77,7 @@ export default function CreateLoginButton({
       </p>
 
       {result && (
-        <div className="mt-3 rounded-lg border border-[#1B2E6B]/20 bg-[#1B2E6B]/5 p-3 text-sm">
+        <div className="mt-3 rounded-lg border border-line/20 bg-action-fill/5 p-3 text-sm">
           <p className="font-medium text-ink">Login created for {result.email}</p>
           {result.temp_password && (
             <p className="mt-1 text-ink-2">

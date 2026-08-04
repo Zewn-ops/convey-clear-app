@@ -66,15 +66,15 @@ export default function CreatePartyAccount({ partyId, partyName }: { partyId: st
       <button
         onClick={() => create("contact")}
         disabled={loading !== null}
-        className="text-xs font-medium text-[#1B2E6B] hover:underline disabled:opacity-50"
+        className="text-xs font-medium text-action hover:underline disabled:opacity-50"
       >
         {loading === "contact" ? "Creating…" : "Create contact"}
       </button>
-      <span className="text-gray-300">·</span>
+      <span className="text-ink-3">·</span>
       <button
         onClick={() => create("login")}
         disabled={loading !== null}
-        className="text-xs font-medium text-[#1B2E6B] hover:underline disabled:opacity-50"
+        className="text-xs font-medium text-action hover:underline disabled:opacity-50"
       >
         {loading === "login" ? "Creating…" : "Create login"}
       </button>

@@ -60,7 +60,7 @@ export default function TransferFeed({
   return (
     <Card accent="firm">
       <div className="mb-1 flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 text-[#1B2E6B]" />
+        <MessageSquare className="h-4 w-4 text-action" />
         <h2 className="font-semibold text-ink">Transfer feed</h2>
       </div>
       <p className="mb-4 text-xs text-ink-3">
@@ -75,13 +75,13 @@ export default function TransferFeed({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Add a note about this transfer…"
-            className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
           />
           <button
             type="button"
             disabled={busy || !text.trim()}
             onClick={post}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1B2E6B] px-3 py-2 text-sm font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-action-fill px-3 py-2 text-sm font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
           >
             <Send className="h-3.5 w-3.5" /> {busy ? "…" : "Post"}
           </button>
@@ -111,8 +111,8 @@ export default function TransferFeed({
 
 function Icon({ type }: { type: string }) {
   const cls = "mt-0.5 h-3.5 w-3.5 shrink-0";
-  if (type === "matter_linked" || type === "matter_unlinked") return <Link2 className={`${cls} text-[#E8521A]`} />;
+  if (type === "matter_linked" || type === "matter_unlinked") return <Link2 className={`${cls} text-action`} />;
   if (type === "document_upload") return <FileText className={`${cls} text-ink-3`} />;
   if (type === "status_change") return <Settings2 className={`${cls} text-ink-3`} />;
-  return <MessageSquare className={`${cls} text-[#1B2E6B]`} />;
+  return <MessageSquare className={`${cls} text-action`} />;
 }

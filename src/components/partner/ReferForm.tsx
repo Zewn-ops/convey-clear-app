@@ -274,7 +274,7 @@ export default function ReferForm({
         <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any context for ConveyClear" />
 
         {isCoo && (
-          <p className="text-xs text-[#1B2E6B] bg-[#1B2E6B]/5 border border-[#1B2E6B]/10 rounded-lg px-3 py-2">
+          <p className="text-xs text-action bg-action-fill/5 border border-line/10 rounded-lg px-3 py-2">
             Change of Ownership has two sides — capture both the <strong>seller</strong> (current owner) and the{" "}
             <strong>buyer</strong> (new owner / Open Rates Account) below.
           </p>

@@ -52,7 +52,7 @@ export default function ReuseTransferDoc({
   if (options.length === 0) return null;
 
   const btn =
-    "inline-flex items-center gap-1 rounded-lg border border-[#E8521A]/40 px-2.5 py-1.5 text-xs font-medium text-[#E8521A] hover:bg-[#E8521A]/5 disabled:opacity-50";
+    "inline-flex items-center gap-1 rounded-lg border border-line/40 px-2.5 py-1.5 text-xs font-medium text-action hover:bg-action-fill/5 disabled:opacity-50";
 
   if (options.length === 1) {
     return (

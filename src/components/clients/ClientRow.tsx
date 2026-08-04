@@ -28,7 +28,7 @@ export default function ClientRow({
         }
       }}
       tabIndex={0}
-      className="cursor-pointer transition-colors hover:bg-raised focus:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1B2E6B]"
+      className="cursor-pointer transition-colors hover:bg-raised focus:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action"
     >
       {children}
     </tr>

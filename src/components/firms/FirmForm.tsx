@@ -108,7 +108,7 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent"
         />
       </div>
 
@@ -119,7 +119,7 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
               type="checkbox"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-line text-[#E8521A] focus:ring-[#1B2E6B]"
+              className="mt-1 h-4 w-4 rounded border-line text-action focus:ring-action"
             />
             <span>
               <span className="text-sm font-medium text-ink-2">Active</span>

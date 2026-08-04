@@ -45,23 +45,23 @@ export default async function DashboardPage() {
   const isClient = profile?.role === "client";
 
   const stats = [
-    { label: "Matters", value: matters.length, icon: Briefcase, tone: "text-[#1B2E6B] bg-[#1B2E6B]/10" },
+    { label: "Matters", value: matters.length, icon: Briefcase, tone: "text-action bg-action-fill/10" },
     { label: "Active", value: activeCount, icon: Clock, tone: "text-amber-600 bg-amber-100" },
     { label: "Completed", value: completedCount, icon: CheckCircle, tone: "text-green-600 bg-green-100" },
-    { label: "Documents", value: documents.length, icon: FolderOpen, tone: "text-[#E8521A] bg-[#E8521A]/10" },
+    { label: "Documents", value: documents.length, icon: FolderOpen, tone: "text-action bg-action-fill/10" },
   ];
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2E6B]">Welcome back, {firstName}</h1>
-          <p className="text-sm text-gray-500 mt-1">Here&apos;s a summary of your matters.</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">Welcome back, {firstName}</h1>
+          <p className="text-sm text-ink-3 mt-1">Here&apos;s a summary of your matters.</p>
         </div>
         {isClient && (
           <Link
             href="/dashboard/request"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415] shrink-0"
+            className="inline-flex items-center gap-2 rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:opacity-90 shrink-0"
           >
             <PlusCircle className="h-4 w-4" /> Request a service
           </Link>
@@ -75,8 +75,8 @@ export default async function DashboardPage() {
               <Icon className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1B2E6B]">{value}</p>
-              <p className="text-xs text-gray-500">{label}</p>
+              <p className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">{value}</p>
+              <p className="text-xs text-ink-3">{label}</p>
             </div>
           </Card>
         ))}
@@ -84,8 +84,8 @@ export default async function DashboardPage() {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Recent Matters</h2>
-          <Link href="/dashboard/matters" className="text-sm text-[#E8521A] hover:underline">
+          <h2 className="font-semibold text-ink">Recent Matters</h2>
+          <Link href="/dashboard/matters" className="text-sm text-action hover:underline">
             View all
           </Link>
         </div>
@@ -93,18 +93,18 @@ export default async function DashboardPage() {
           <div className="space-y-3">
             {matters.map((m) => (
               <Link key={m.id} href={`/dashboard/matters/${m.id}`}>
-                <Card className="hover:border-[#1B2E6B]/30 transition-colors">
+                <Card className="hover:border-line/30 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
+                      <p className="font-medium text-ink truncate">
                         {m.title || clientDisplayName(m.clients) || "Untitled matter"}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-ink-3 mt-0.5">
                         {clientDisplayName(m.clients)} · opened {formatDate(m.created_at)}
                       </p>
                     </div>
                     {m.current_phase && (
-                      <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-[#1B2E6B]/10 text-[#1B2E6B]">
+                      <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-action-fill/10 text-action">
                         Phase {m.current_phase}: {PHASE_LABELS[m.current_phase as MatterPhase]}
                       </span>
                     )}
@@ -115,12 +115,12 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <Card className="text-center py-10">
-            <Briefcase className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">No matters yet</p>
+            <Briefcase className="h-10 w-10 text-ink-3 mx-auto mb-3" />
+            <p className="text-ink-3 text-sm">No matters yet</p>
             {isClient && (
               <Link
                 href="/dashboard/request"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:opacity-90"
               >
                 <PlusCircle className="h-4 w-4" /> Request a service
               </Link>
@@ -131,17 +131,17 @@ export default async function DashboardPage() {
 
       {documents.length > 0 && (
         <div>
-          <h2 className="font-semibold text-gray-900 mb-3">Recent Documents</h2>
+          <h2 className="font-semibold text-ink mb-3">Recent Documents</h2>
           <Card padding="none">
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-line">
               {documents.map((doc) => (
                 <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className="h-4 w-4 text-gray-500 shrink-0" />
+                  <FileText className="h-4 w-4 text-ink-3 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
+                    <p className="text-sm font-medium text-ink truncate">
                       {doc.file_name || doc.document_type}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-ink-3">
                       {doc.document_type} · {formatDate(doc.created_at)}
                     </p>
                   </div>

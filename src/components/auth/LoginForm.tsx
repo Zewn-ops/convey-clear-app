@@ -93,7 +93,7 @@ export default function LoginForm() {
       <div className="flex items-center justify-end">
         <Link
           href="/auth/forgot-password"
-          className="text-sm text-[#1B2E6B] hover:underline"
+          className="text-sm text-action hover:underline"
         >
           Forgot password?
         </Link>
@@ -117,15 +117,15 @@ export default function LoginForm() {
       )}
 
       <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-gray-200" />
+        <span className="h-px flex-1 bg-line" />
         <span className="text-xs text-ink-3">or</span>
-        <span className="h-px flex-1 bg-gray-200" />
+        <span className="h-px flex-1 bg-line" />
       </div>
       <GoogleSignInButton />
 
       <p className="text-center text-sm text-ink-2">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="text-[#E8521A] font-medium hover:underline">
+        <Link href="/auth/signup" className="text-action font-medium hover:underline">
           Create account
         </Link>
       </p>

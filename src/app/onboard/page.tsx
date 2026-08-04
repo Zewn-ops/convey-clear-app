@@ -120,8 +120,8 @@ function ErrorPage({
   const canRequest = Boolean(token) && reason !== "missing" && !requested;
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 shadow-sm px-6 py-3 flex items-center">
+    <main className="min-h-screen bg-raised flex flex-col">
+      <header className="bg-surface border-b border-line shadow-sm px-6 py-3 flex items-center">
         <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
       </header>
       <div className="flex-1 flex items-center justify-center p-6">
@@ -133,8 +133,8 @@ function ErrorPage({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900 mb-2">Request sent</h1>
-              <p className="text-gray-500 text-sm leading-relaxed">
+              <h1 className="text-xl font-semibold text-ink mb-2">Request sent</h1>
+              <p className="text-ink-3 text-sm leading-relaxed">
                 We&apos;ve let ConveyClear know. They&apos;ll email you a fresh onboarding link shortly — no need to do anything else.
               </p>
             </>
@@ -149,8 +149,8 @@ function ErrorPage({
                   />
                 </svg>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900 mb-2">{copy.heading}</h1>
-              <p className="text-gray-500 text-sm leading-relaxed">{copy.message}</p>
+              <h1 className="text-xl font-semibold text-ink mb-2">{copy.heading}</h1>
+              <p className="text-ink-3 text-sm leading-relaxed">{copy.message}</p>
 
               {requested === "nomatch" && (
                 <p className="mt-4 text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
@@ -163,16 +163,16 @@ function ErrorPage({
                   <input type="hidden" name="token" value={token} />
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center rounded-lg bg-[#1B2E6B] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#16255a] transition-colors"
+                    className="inline-flex items-center justify-center rounded-lg bg-action-fill px-5 py-2.5 text-sm font-medium text-white hover:bg-action-fill transition-colors"
                   >
                     Request a fresh link
                   </button>
                 </form>
               )}
 
-              <p className="mt-6 text-xs text-gray-500">
+              <p className="mt-6 text-xs text-ink-3">
                 If you believe this is an error, contact ConveyClear at{" "}
-                <a href="mailto:hello@conveyclear.co.za" className="text-[#1B2E6B] underline">
+                <a href="mailto:hello@conveyclear.co.za" className="text-action underline">
                   hello@conveyclear.co.za
                 </a>
               </p>

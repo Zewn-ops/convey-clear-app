@@ -16,12 +16,12 @@ export default async function RequestServicePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink-2">
         <ArrowLeft className="h-4 w-4" /> Back
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-[#1B2E6B]">Request a service</h1>
-        <p className="text-sm text-gray-500 mt-1">Tell us what you need and we&apos;ll get started.</p>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">Request a service</h1>
+        <p className="text-sm text-ink-3 mt-1">Tell us what you need and we&apos;ll get started.</p>
       </div>
       <RequestServiceForm services={(services as { id: string; code: string; name: string }[] | null) ?? []} />
     </div>

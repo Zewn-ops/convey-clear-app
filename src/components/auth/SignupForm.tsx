@@ -155,8 +155,8 @@ export default function SignupForm() {
       />
 
       {/* POPIA Data Handling Notice */}
-      <div className="rounded-lg border border-[#1B2E6B]/20 bg-[#1B2E6B]/5 p-4 space-y-2">
-        <p className="text-xs font-semibold text-[#1B2E6B] uppercase tracking-wide">
+      <div className="rounded-lg border border-line/20 bg-action-fill/5 p-4 space-y-2">
+        <p className="text-xs font-semibold text-action uppercase tracking-wide">
           POPIA — Data Handling Notice
         </p>
         <p className="text-xs text-ink-2 leading-relaxed">
@@ -168,7 +168,7 @@ export default function SignupForm() {
           For queries, contact{" "}
           <a
             href="mailto:privacy@conveyclear.co.za"
-            className="text-[#1B2E6B] underline"
+            className="text-action underline"
           >
             privacy@conveyclear.co.za
           </a>
@@ -177,7 +177,7 @@ export default function SignupForm() {
         <label className="flex items-start gap-2 cursor-pointer">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-line text-[#1B2E6B] focus:ring-[#1B2E6B]"
+            className="mt-0.5 h-4 w-4 rounded border-line text-action focus:ring-action"
             {...register("popia_consent")}
           />
           <span className="text-xs text-ink-2">
@@ -208,9 +208,9 @@ export default function SignupForm() {
       )}
 
       <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-gray-200" />
+        <span className="h-px flex-1 bg-line" />
         <span className="text-xs text-ink-3">or</span>
-        <span className="h-px flex-1 bg-gray-200" />
+        <span className="h-px flex-1 bg-line" />
       </div>
       <GoogleSignInButton label="Sign up with Google" />
 
@@ -218,7 +218,7 @@ export default function SignupForm() {
         Already have an account?{" "}
         <Link
           href="/auth/login"
-          className="text-[#E8521A] font-medium hover:underline"
+          className="text-action font-medium hover:underline"
         >
           Sign in
         </Link>

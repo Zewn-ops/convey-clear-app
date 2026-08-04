@@ -54,7 +54,7 @@ export default function ReuseVaultDoc({
         type="button"
         disabled={busy}
         onClick={() => attach(options[0].id)}
-        className="inline-flex items-center gap-1 rounded-lg border border-[#1B2E6B]/30 px-2.5 py-1.5 text-xs font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5 disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-lg border border-line/30 px-2.5 py-1.5 text-xs font-medium text-action hover:bg-action-fill/5 disabled:opacity-50"
         title="Reuse this client's existing document"
       >
         <RefreshCw className="h-3.5 w-3.5" /> {busy ? "…" : "Reuse"}
@@ -67,7 +67,7 @@ export default function ReuseVaultDoc({
       <select
         value={sel}
         onChange={(e) => setSel(e.target.value)}
-        className="rounded-lg border border-line px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+        className="rounded-lg border border-line px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-action"
       >
         {options.map((o) => (
           <option key={o.id} value={o.id}>{o.file_name || "Document"}</option>
@@ -77,7 +77,7 @@ export default function ReuseVaultDoc({
         type="button"
         disabled={busy}
         onClick={() => attach(sel)}
-        className="inline-flex items-center gap-1 rounded-lg border border-[#1B2E6B]/30 px-2.5 py-1.5 text-xs font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5 disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-lg border border-line/30 px-2.5 py-1.5 text-xs font-medium text-action hover:bg-action-fill/5 disabled:opacity-50"
       >
         <RefreshCw className="h-3.5 w-3.5" /> {busy ? "…" : "Reuse"}
       </button>

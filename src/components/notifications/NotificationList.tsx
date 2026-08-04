@@ -84,7 +84,7 @@ export default function NotificationList({
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-line bg-surface px-4 py-12 text-center">
-          <Inbox className="mx-auto h-8 w-8 text-gray-300" />
+          <Inbox className="mx-auto h-8 w-8 text-ink-3" />
           <p className="mt-2 text-sm text-ink-3">
             {filter === "unread" ? "Nothing unread — you're all caught up." : "No notifications yet."}
           </p>
@@ -92,7 +92,7 @@ export default function NotificationList({
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
           {items.map((n) => (
-            <li key={n.id} className={n.read_at ? "" : "bg-[#1B2E6B]/5"}>
+            <li key={n.id} className={n.read_at ? "" : "bg-action-fill/5"}>
               <div className="flex items-start gap-3 px-4 py-3">
                 <Link
                   href={linkFor(n)}
@@ -101,7 +101,7 @@ export default function NotificationList({
                 >
                   <p className="flex items-center gap-2 text-sm font-medium text-ink">
                     {!n.read_at && (
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-[#E8521A]" aria-label="Unread" />
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-action-fill" aria-label="Unread" />
                     )}
                     <span className="truncate">{n.title}</span>
                   </p>
@@ -115,7 +115,7 @@ export default function NotificationList({
                     type="button"
                     disabled={busy}
                     onClick={() => markRead([n.id])}
-                    className="shrink-0 text-xs font-medium text-ink-3 hover:text-[#1B2E6B] disabled:opacity-50"
+                    className="shrink-0 text-xs font-medium text-ink-3 hover:text-action disabled:opacity-50"
                     aria-label={`Mark "${n.title}" as read`}
                   >
                     Mark read
@@ -136,7 +136,7 @@ function TabLink({ href, active, label }: { href: string; active: boolean; label
       href={href}
       className={
         active
-          ? "rounded-lg bg-[#1B2E6B]/10 px-3 py-1.5 text-sm font-semibold text-[#1B2E6B]"
+          ? "rounded-lg bg-action-fill/10 px-3 py-1.5 text-sm font-semibold text-action"
           : "rounded-lg px-3 py-1.5 text-sm font-medium text-ink-3 hover:bg-raised"
       }
     >

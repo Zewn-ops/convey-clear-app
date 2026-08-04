@@ -200,8 +200,8 @@ export default function CreateMatterForm({
   return (
     <Card className="space-y-4">
       {transfer && (
-        <div className="flex items-start gap-2 rounded-lg border border-[#E8521A]/30 bg-[#E8521A]/[0.04] px-3 py-2.5">
-          <Home className="mt-0.5 h-4 w-4 shrink-0 text-[#E8521A]" />
+        <div className="flex items-start gap-2 rounded-lg border border-line/30 bg-action-fill/[0.04] px-3 py-2.5">
+          <Home className="mt-0.5 h-4 w-4 shrink-0 text-action" />
           <div className="min-w-0 text-xs">
             <p className="font-medium text-ink">Creating a matter inside transfer {transfer.reference}</p>
             <p className="mt-0.5 text-ink-3">
@@ -216,14 +216,14 @@ export default function CreateMatterForm({
         <button
           type="button"
           onClick={() => setMode("existing")}
-          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "existing" ? "bg-[#1B2E6B] text-white" : "bg-raised text-ink-2")}
+          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "existing" ? "bg-action-fill text-white" : "bg-raised text-ink-2")}
         >
           Existing client
         </button>
         <button
           type="button"
           onClick={() => setMode("new")}
-          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "new" ? "bg-[#1B2E6B] text-white" : "bg-raised text-ink-2")}
+          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "new" ? "bg-action-fill text-white" : "bg-raised text-ink-2")}
         >
           New client
         </button>
@@ -245,8 +245,8 @@ export default function CreateMatterForm({
                   className={
                     "rounded-full border px-2.5 py-1 text-xs font-medium " +
                     (clientId === p.id
-                      ? "border-[#1B2E6B] bg-[#1B2E6B] text-white"
-                      : "border-line text-ink-2 hover:border-[#1B2E6B]/40")
+                      ? "border-line bg-action-fill text-white"
+                      : "border-line text-ink-2 hover:border-line/40")
                   }
                 >
                   {p.label} <span className="opacity-70">· {p.role}</span>
@@ -319,7 +319,7 @@ export default function CreateMatterForm({
 
       <div className="rounded-lg bg-raised border border-line p-3">
         <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter title (auto)</p>
-        <p className="text-sm font-mono text-[#1B2E6B] mt-1">{previewTitle}</p>
+        <p className="text-sm font-mono text-action mt-1">{previewTitle}</p>
       </div>
 
       <Button onClick={submit} loading={loading} size="lg">Create matter</Button>

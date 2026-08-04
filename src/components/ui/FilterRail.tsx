@@ -88,7 +88,7 @@ export default function FilterRail({
         <SlidersHorizontal className="h-4 w-4" />
         Filters
         {activeCount > 0 && (
-          <span className="rounded-full bg-[#E8521A] px-1.5 py-0.5 text-[11px] font-semibold text-white">
+          <span className="rounded-full bg-action-fill px-1.5 py-0.5 text-[11px] font-semibold text-white">
             {activeCount}
           </span>
         )}
@@ -108,7 +108,7 @@ export default function FilterRail({
             onChange={(e) => setQ(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder}
-            className="w-full rounded-lg border border-line py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="w-full rounded-lg border border-line py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
           />
         </form>
 
@@ -116,7 +116,7 @@ export default function FilterRail({
           <button
             type="button"
             onClick={clearAll}
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#E8521A] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-action hover:underline"
           >
             <X className="h-3 w-3" /> Clear all filters ({activeCount})
           </button>
@@ -143,7 +143,7 @@ export default function FilterRail({
                         className={cn(
                           "flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm transition-colors",
                           isActive
-                            ? "bg-[#1B2E6B]/10 font-medium text-[#1B2E6B]"
+                            ? "bg-action-fill/10 font-medium text-action"
                             : "text-ink-2 hover:bg-raised"
                         )}
                       >

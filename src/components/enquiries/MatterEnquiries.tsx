@@ -82,7 +82,7 @@ export default function MatterEnquiries({
         </p>
         <button
           onClick={() => setComposing((c) => !c)}
-          className="inline-flex items-center gap-1 text-xs font-medium text-[#E8521A] hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-action hover:underline"
         >
           <Plus className="h-3.5 w-3.5" /> {composing ? "Cancel" : "New enquiry"}
         </button>
@@ -100,19 +100,19 @@ export default function MatterEnquiries({
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Subject — e.g. Clearance figures query"
-            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
           />
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={3}
             placeholder="What do you need?"
-            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action resize-none"
           />
           <button
             onClick={create}
             disabled={loading || !subject.trim() || !message.trim()}
-            className="px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50"
           >
             {loading ? "Sending…" : "Send enquiry"}
           </button>
@@ -166,7 +166,7 @@ export default function MatterEnquiries({
               </div>
 
               {audience === "staff" && (
-                <Link href={`/admin/enquiries/${t.id}`} className="inline-block text-xs font-medium text-[#1B2E6B] hover:underline">
+                <Link href={`/admin/enquiries/${t.id}`} className="inline-block text-xs font-medium text-action hover:underline">
                   Open full enquiry (assign, change status) →
                 </Link>
               )}

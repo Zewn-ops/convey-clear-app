@@ -16,33 +16,33 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B2E6B]">Profile</h1>
-        <p className="text-sm text-gray-500 mt-1">Your account details</p>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">Profile</h1>
+        <p className="text-sm text-ink-3 mt-1">Your account details</p>
       </div>
 
       <Card className="flex items-center gap-4">
-        <div className="h-16 w-16 rounded-full bg-[#1B2E6B] flex items-center justify-center text-white text-xl font-bold shrink-0">
+        <div className="h-16 w-16 rounded-full bg-action-fill flex items-center justify-center text-white text-xl font-bold shrink-0">
           {getInitials(profile.full_name ?? "")}
         </div>
         <div>
-          <p className="font-semibold text-gray-900">{profile.full_name ?? "—"}</p>
-          <p className="text-sm text-gray-500">{profile.email}</p>
-          <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-[#1B2E6B] bg-[#1B2E6B]/10 rounded-full px-2 py-0.5 capitalize">
+          <p className="font-semibold text-ink">{profile.full_name ?? "—"}</p>
+          <p className="text-sm text-ink-3">{profile.email}</p>
+          <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-action bg-action-fill/10 rounded-full px-2 py-0.5 capitalize">
             <ShieldCheck className="h-3 w-3" />
             {ROLE_LABELS[profile.role]}
           </span>
         </div>
       </Card>
 
-      <Card className="bg-[#1B2E6B]/5 border-[#1B2E6B]/20">
-        <p className="text-xs font-semibold text-[#1B2E6B] uppercase tracking-wide mb-2">
+      <Card className="bg-action-fill/5 border-line/20">
+        <p className="text-xs font-semibold text-action uppercase tracking-wide mb-2">
           Your Data Rights (POPIA)
         </p>
-        <p className="text-xs text-gray-600 leading-relaxed">
+        <p className="text-xs text-ink-2 leading-relaxed">
           Under the Protection of Personal Information Act (POPIA), you have the
           right to access, correct, and request deletion of your personal
           information. Contact{" "}
-          <a href="mailto:privacy@conveyclear.co.za" className="text-[#1B2E6B] underline">
+          <a href="mailto:privacy@conveyclear.co.za" className="text-action underline">
             privacy@conveyclear.co.za
           </a>{" "}
           to exercise these rights.

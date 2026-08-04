@@ -181,9 +181,9 @@ export default function InPlaceIntake({
           is reachable regardless of what the service's slot matrix happens to
           contain — attached at matter level (no party). */}
       {transferDocs.length > 0 && (
-        <div className="rounded-lg border border-[#E8521A]/30 bg-[#E8521A]/[0.03] p-3">
+        <div className="rounded-lg border border-line/30 bg-action-fill/[0.03] p-3">
           <div className="mb-2 flex items-center gap-1.5">
-            <Link2 className="h-3.5 w-3.5 text-[#E8521A]" />
+            <Link2 className="h-3.5 w-3.5 text-action" />
             <h3 className="text-xs font-semibold text-ink">From this property transfer</h3>
           </div>
           <p className="mb-2.5 text-xs text-ink-3">
@@ -252,9 +252,9 @@ export default function InPlaceIntake({
                   {doc ? (
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
                   ) : isUnavailable ? (
-                    <Ban className="h-4 w-4 shrink-0 text-gray-300" />
+                    <Ban className="h-4 w-4 shrink-0 text-ink-3" />
                   ) : (
-                    <Circle className={`h-4 w-4 shrink-0 ${s.optional ? "text-gray-200" : "text-gray-300"}`} />
+                    <Circle className={`h-4 w-4 shrink-0 ${s.optional ? "text-ink-3" : "text-ink-3"}`} />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-ink">
@@ -295,7 +295,7 @@ export default function InPlaceIntake({
                           <input type="hidden" name="matter_id" value={matterId} />
                           <input type="hidden" name="doc_key" value={key} />
                           <input type="hidden" name="make" value="0" />
-                          <SubmitButton pendingLabel="…" className="text-xs text-[#1B2E6B] hover:underline">
+                          <SubmitButton pendingLabel="…" className="text-xs text-action hover:underline">
                             Undo
                           </SubmitButton>
                         </form>

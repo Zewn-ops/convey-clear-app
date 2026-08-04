@@ -255,7 +255,7 @@ export default function UserManager({
       {/* Create user */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
-          <UserPlus className="h-5 w-5 text-[#1B2E6B]" />
+          <UserPlus className="h-5 w-5 text-action" />
           <h2 className="font-semibold text-ink">Create a login</h2>
         </div>
 
@@ -314,11 +314,11 @@ export default function UserManager({
       <Card>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-[#1B2E6B]" />
+            <Building2 className="h-5 w-5 text-action" />
             <h2 className="font-semibold text-ink">Partner firms</h2>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/admin/firms" className="text-xs font-medium text-[#E8521A] hover:underline">
+            <Link href="/admin/firms" className="text-xs font-medium text-action hover:underline">
               Manage firms
             </Link>
             <Button size="sm" variant="ghost" onClick={() => setShowPartnerForm((s) => !s)}>
@@ -404,7 +404,7 @@ export default function UserManager({
                         )}
                         <button
                           onClick={() => toggleActive(u)}
-                          className="text-xs font-medium text-[#E8521A] hover:underline"
+                          className="text-xs font-medium text-action hover:underline"
                         >
                           {u.active ? "Deactivate" : "Activate"}
                         </button>

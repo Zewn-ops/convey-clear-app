@@ -123,7 +123,7 @@ export default function NotificationBell({ base }: { base: string }) {
       >
         <Bell className="h-4 w-4 text-ink-2" />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#E8521A] text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-action-fill text-white text-[10px] font-bold flex items-center justify-center">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -145,7 +145,7 @@ export default function NotificationBell({ base }: { base: string }) {
                     <Link
                       href={linkFor(n)}
                       onClick={() => setOpen(false)}
-                      className={"block px-4 py-3 hover:bg-raised " + (n.read_at ? "" : "bg-[#1B2E6B]/5")}
+                      className={"block px-4 py-3 hover:bg-raised " + (n.read_at ? "" : "bg-action-fill/5")}
                     >
                       <p className="text-sm font-medium text-ink">{n.title}</p>
                       {n.body && <p className="text-xs text-ink-3 mt-0.5 line-clamp-2">{n.body}</p>}
