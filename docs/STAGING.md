@@ -1,0 +1,106 @@
+# Standing up staging
+
+**Why this exists:** Vercel Preview deploys have been broken since 2026-07-13. The five Preview
+environment variables are scoped to a single git branch (`feature/sprint-1`), so a preview built from
+any other branch gets no Supabase config and dies at prerender with
+`@supabase/ssr: Your project's URL and API key are required`. Every Preview row in `vercel ls` has been
+● Error for weeks while Production stays ● Ready, which is why nobody noticed: **the standing
+"feature branch → staging → review → merge" rule has silently not been running.**
+
+The cheap fix — re-scope the vars to all Preview branches — points every preview at the **production**
+database with the service_role key, on URLs that are public unless Deployment Protection is on. That is
+worse than no staging. Hence a separate project.
+
+Decided 2026-08-04. This is P0: the multi-entity work in Section 1 changes who can see whose data, in a
+system holding real FICA records, while Bert Smith are using it. Proving that safe by testing against
+production is not a plan.
+
+---
+
+## 1. Create the project
+
+Supabase dashboard → New project.
+
+| Setting | Value | Why |
+|---|---|---|
+| Name | `convey-clear-staging` | |
+| Region | **West EU (Ireland), `eu-west-1`** | Must match prod. The POPIA §72 cross-border basis in `/privacy` is written for Ireland |
+| Plan | Free is fine | Staging may pause when idle; that is acceptable here and it is not a backup target |
+
+Save the database password straight into Vaultwarden. Do not paste it into chat, this repo, or the vault.
+
+## 2. Load the schema
+
+```bash
+cd ~/projects/convey-clear/convey-clear-app
+./scripts/apply-migrations.sh "postgresql://postgres.<staging-ref>:<pw>@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
+```
+
+Always the **pooler** host. `db.<ref>.supabase.co` resolves IPv6 only and is unreachable from the VPS
+containers and often from the laptop. The pooler user must carry the project ref
+(`postgres.<staging-ref>`), never a bare `postgres`.
+
+The script refuses to run against the production ref. It replays seeds and backfill `UPDATE`s, which is
+right for an empty database and destructive on a live one.
+
+This is only possible because the migrations went into git on 2026-08-04. Before that they were 45 loose
+files in `cc-notes and stuff/sql/`, and "stand up a second environment" meant finding them on one laptop.
+
+## 3. Seed something to look at
+
+```bash
+psql "$STAGING_URL" -f supabase/scripts/seed_dryrun_data.sql
+```
+
+Then create auth users in the staging dashboard with **the same emails** as the seeded `public.users`
+rows: the `on_auth_user_created` trigger links them by email and preserves the seeded role. Use
+Add user → with password → auto-confirm.
+
+⚠️ **Do not restore a production dump.** It carries real client FICA documents into an environment with
+weaker access control and no deletion policy. Seed synthetic data instead.
+
+## 4. Point Previews at it
+
+Vercel → `convey-clear-app` → Settings → Environment Variables. For each of the five, set the **Preview**
+value to the staging project and change the scope from `feature/sprint-1` to **All Preview branches**:
+
+- `NEXT_PUBLIC_SUPABASE_URL` → `https://<staging-ref>.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → staging publishable key
+- `SUPABASE_SERVICE_ROLE_KEY` → staging secret key
+- `NEXT_PUBLIC_APP_URL` → leave Vercel's preview URL
+- `N8N_WEBHOOK_URL` → leave, or point at a dead host so previews cannot fire real workflows
+
+⚠️ `NEXT_PUBLIC_*` vars are inlined at **build** time. A preview built before this change keeps the old
+values; push a new commit rather than redeploying the old one.
+
+## 5. Prove it works
+
+Push any branch and check the Preview row goes ● Ready rather than ● Error. Then confirm the preview is
+talking to staging and not prod:
+
+```bash
+curl -s https://<preview-url>/_next/static/chunks/*.js | grep -o '<staging-ref>' | head -1
+```
+
+Seeing the **staging** ref in the bundle is the check that matters. A green build only proves the app
+compiled; it says nothing about which database it points at. That distinction is exactly what went wrong
+on 2026-05-31, when `NEXT_PUBLIC_SUPABASE_URL` was empty for thirteen days and the bundle silently fell
+back to `placeholder.supabase.co`.
+
+## 6. Keeping it current
+
+Staging drifts the moment a migration lands on prod. Apply new migrations to **staging first**, then
+prod — that ordering is the entire point.
+
+```bash
+./scripts/apply-migrations.sh "$STAGING_URL" 048
+```
+
+## What this does not cover
+
+- **Storage buckets are not created by the migrations.** `matter-documents`, `transfer-documents` and
+  `client-documents` need creating by hand in the staging dashboard, private, before any upload flow is
+  testable.
+- **Auth settings** (SMTP, redirect URLs, CAPTCHA, MFA) are per-project and are not in the migrations.
+  Redirect URLs at minimum, or login on a preview will bounce.
+- **n8n** points at prod. Leave it that way; a staging workflow set is not worth the maintenance.
