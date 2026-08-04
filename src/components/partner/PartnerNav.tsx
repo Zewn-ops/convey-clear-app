@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
@@ -85,7 +86,7 @@ export default function PartnerNav({
 
   if (variant === "desktop") {
     return (
-      <aside className="flex flex-col h-full w-64 bg-[#1B2E6B] text-white">
+      <aside className="flex flex-col h-full w-64 bg-chrome text-white">
         <div className="flex flex-col px-6 py-4 border-b border-white/10 gap-1.5">
           <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-10 w-auto self-start" />
           <div className="flex items-center gap-1 text-xs text-white/60">
@@ -110,13 +111,16 @@ export default function PartnerNav({
             Sign out
           </button>
         </div>
+        <div className="border-t border-white/10 px-4 pb-4 pt-3">
+          <ThemeToggle variant="row" />
+        </div>
       </aside>
     );
   }
 
   return (
     <>
-      <header className="flex items-center justify-between bg-[#1B2E6B] px-4 py-4 md:hidden">
+      <header className="flex items-center justify-between bg-chrome px-4 py-4 md:hidden">
         <Link href="/partner" className="flex items-center gap-2">
           <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-8 w-auto" />
           <span className="text-white/60 text-xs">{firmName}</span>
@@ -126,7 +130,7 @@ export default function PartnerNav({
         </button>
       </header>
       {open && (
-        <nav className="md:hidden bg-[#1B2E6B] border-t border-white/10 px-4 pb-4 space-y-1 pt-3">
+        <nav className="md:hidden bg-chrome border-t border-white/10 px-4 pb-4 space-y-1 pt-3">
           {links(() => setOpen(false))}
           <button
             onClick={signOut}
@@ -135,6 +139,7 @@ export default function PartnerNav({
             <LogOut className="h-4 w-4 shrink-0" />
             Sign out
           </button>
+          <ThemeToggle variant="row" className="border-t border-white/10 mt-2 pt-4" />
         </nav>
       )}
     </>

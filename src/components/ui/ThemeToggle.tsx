@@ -9,7 +9,13 @@ type Theme = "light" | "dark";
  * again. The script in layout.tsx runs before paint and is the single source of
  * truth; this component only reflects and changes it.
  */
-export default function ThemeToggle({ className = "" }: { className?: string }) {
+export default function ThemeToggle({
+  className = "",
+  variant = "icon",
+}: {
+  className?: string;
+  variant?: "icon" | "row";
+}) {
   const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
@@ -38,10 +44,45 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
   // Render nothing until mounted: server-rendered markup cannot know the
   // client's theme, and guessing produces a hydration mismatch plus a flicker.
   if (theme === null) {
-    return <div className={`h-9 w-9 ${className}`} aria-hidden="true" />;
+    return (
+      <div
+        className={variant === "row" ? `h-[42px] ${className}` : `h-9 w-9 ${className}`}
+        aria-hidden="true"
+      />
+    );
   }
 
   const next: Theme = theme === "dark" ? "light" : "dark";
+
+  const glyph =
+    theme === "dark" ? (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
+      </svg>
+    ) : (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20.5 14.6A8.6 8.6 0 1 1 9.4 3.5a6.9 6.9 0 0 0 11.1 11.1Z" />
+      </svg>
+    );
+
+  // Sidebar row: sits on the navy chrome with the other nav items, so it
+  // inherits their colours rather than the page tokens.
+  if (variant === "row") {
+    return (
+      <button
+        type="button"
+        onClick={() => apply(next)}
+        aria-label={`Switch to ${next} theme`}
+        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+                    text-white/70 transition-colors hover:bg-white/10 hover:text-white
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${className}`}
+      >
+        <span className="shrink-0">{glyph}</span>
+        {theme === "dark" ? "Light mode" : "Dark mode"}
+      </button>
+    );
+  }
 
   return (
     <button

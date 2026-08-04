@@ -2,32 +2,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import StatTile from "@/components/ui/StatTile";
-import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
-import MetaChip from "@/components/ui/MetaChip";
-import PhaseProgress from "@/components/ui/PhaseProgress";
+import MatterCard from "@/components/matters/MatterCard";
 import EmptyState from "@/components/ui/EmptyState";
-import { formatDate } from "@/lib/utils";
-import { workdaysSince, relativeDays } from "@/lib/elapsed";
-import {
-  clientDisplayName,
-  MATTER_STATUS_LABELS,
-  type Matter,
-  type MatterStatus,
-} from "@/types";
-import { getPipeline, phaseLabel, phaseOrder, phaseSteps } from "@/lib/pipelines";
+import { type Matter } from "@/types";
 import { ArrowRight, PlusCircle, Phone, Mail, MessageSquare, Briefcase } from "lucide-react";
 import { CONVEYCLEAR_PHONE, CONVEYCLEAR_EMAIL, telHref } from "@/lib/contact";
 
 export const metadata = { title: "Partner Overview — ConveyClear" };
-
-const STATUS_TONE: Record<string, StatusTone> = {
-  new: "waiting",
-  open: "action",
-  on_hold: "waiting",
-  won: "ok",
-  lost: "danger",
-  archived: "neutral",
-};
 
 export default async function PartnerOverview() {
   const supabase = await createClient();
@@ -144,75 +125,14 @@ export default async function PartnerOverview() {
           </EmptyState>
         ) : (
           <ul className="space-y-4">
-            {matters.map((m) => {
-              const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-              const steps = pl ? phaseSteps(pl) : [];
-              const idx = pl ? phaseOrder(pl, m.current_phase) : -1;
-              const open = workdaysSince(m.created_at);
-              const seen = relativeDays((m as { updated_at?: string }).updated_at);
-              const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
-              const stalled = open !== null && open > 60;
-
-              return (
-                <li
-                  key={m.id}
-                  className="rounded-lg border border-line bg-surface p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow sm:p-6"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/partner/matters/${m.id}`}
-                        className="flex items-center gap-2 text-[15.5px] font-bold tracking-[-0.015em] text-ink hover:text-action hover:underline"
-                      >
-                        {unread.has(m.id) && (
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full bg-required-fill"
-                            title="New activity"
-                          />
-                        )}
-                        <span className="truncate">
-                          {m.title || clientDisplayName(m.clients) || "Untitled matter"}
-                        </span>
-                      </Link>
-                      {serviceLabel(m) && (
-                        <p className="mt-1 text-[12.5px] text-ink-3">
-                          {serviceLabel(m)}
-                          {m.municipality ? ` · ${m.municipality}` : ""}
-                        </p>
-                      )}
-                    </div>
-                    {m.status && (
-                      <StatusPill tone={tone}>
-                        {MATTER_STATUS_LABELS[m.status as MatterStatus] ?? m.status}
-                      </StatusPill>
-                    )}
-                  </div>
-
-                  {pl && idx >= 0 && (
-                    <div className="mt-4">
-                      <PhaseProgress
-                        phase={idx + 1}
-                        total={steps.length}
-                        label={phaseLabel(pl, m.current_phase, true)}
-                        done={idx === steps.length - 1}
-                      />
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {open !== null && (
-                      <MetaChip
-                        label="Open"
-                        value={`${open} workday${open === 1 ? "" : "s"}`}
-                        tone={stalled ? "waiting" : "neutral"}
-                      />
-                    )}
-                    {seen && <MetaChip label="Last update" value={seen} />}
-                    <MetaChip label="Opened" value={formatDate(m.created_at)} />
-                  </div>
-                </li>
-              );
-            })}
+            {matters.map((m) => (
+              <MatterCard
+                key={m.id}
+                matter={m}
+                href={`/partner/matters/${m.id}`}
+                unread={unread.has(m.id)}
+              />
+            ))}
           </ul>
         )}
       </div>

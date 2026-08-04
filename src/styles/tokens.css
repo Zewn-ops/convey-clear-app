@@ -63,24 +63,24 @@
 }
 
 :root[data-theme="dark"] {
-  --cc-canvas: #0e1118;
-  --cc-surface: #171b24;
-  --cc-raised: #212630;
-  --cc-border: #303541;
-  --cc-border-strong: #424855;
-  --cc-muted: #989ead;
-  --cc-secondary: #b5bac8;
-  --cc-text: #eaedf4;
-  --cc-action: #587eec;
-  --cc-required: #e85219;
+  --cc-canvas: #171c25;
+  --cc-surface: #212631;
+  --cc-raised: #2c313e;
+  --cc-border: #3b414f;
+  --cc-border-strong: #4c5261;
+  --cc-muted: #9ea5b4;
+  --cc-secondary: #b9bfcd;
+  --cc-text: #ebeef5;
+  --cc-action: #6289f7;
+  --cc-required: #f45d28;
   --cc-waiting: #f59e0a;
-  --cc-ok: #16a34a;
-  --cc-danger: #e74f47;
-  --cc-action-tint: #1a243e;
-  --cc-required-tint: #3b1b10;
-  --cc-waiting-tint: #342006;
-  --cc-ok-tint: #112c17;
-  --cc-danger-tint: #3c1916;
+  --cc-ok: #17a44b;
+  --cc-danger: #f35a50;
+  --cc-action-tint: #24304f;
+  --cc-required-tint: #4b261a;
+  --cc-waiting-tint: #442c0d;
+  --cc-ok-tint: #1a3a21;
+  --cc-danger-tint: #4c2521;
   --cc-chrome: #0a1538;
   --cc-on-chrome: #c2d6ff;    --cc-action-fill: #2c4ab2;
   --cc-required-fill: #ef5923;
