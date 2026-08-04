@@ -145,7 +145,7 @@ export default async function AdminClientDetailPage({
                 <Card className="hover:border-[#1B2E6B]/30 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <Briefcase className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                      <Briefcase className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">
                           {m.title || "Untitled matter"}
@@ -176,7 +176,7 @@ export default async function AdminClientDetailPage({
           </div>
         ) : (
           <Card className="text-center py-8">
-            <p className="text-sm text-gray-400">No matters yet</p>
+            <p className="text-sm text-gray-500">No matters yet</p>
           </Card>
         )}
       </div>

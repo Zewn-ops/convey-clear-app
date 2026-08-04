@@ -202,14 +202,14 @@ export default function SignupForm() {
         Create account
       </Button>
       {TURNSTILE_ENABLED && !captchaToken && (
-        <p className="text-center text-xs text-gray-400 -mt-2">
+        <p className="text-center text-xs text-gray-500 -mt-2">
           Complete the verification above to continue.
         </p>
       )}
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400">or</span>
+        <span className="text-xs text-gray-500">or</span>
         <span className="h-px flex-1 bg-gray-200" />
       </div>
       <GoogleSignInButton label="Sign up with Google" />

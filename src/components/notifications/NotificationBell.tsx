@@ -137,7 +137,7 @@ export default function NotificationBell({ base }: { base: string }) {
               <p className="text-sm font-semibold text-gray-900">Notifications</p>
             </div>
             {items.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gray-400">Nothing yet.</p>
+              <p className="px-4 py-6 text-center text-sm text-gray-500">Nothing yet.</p>
             ) : (
               <ul className="divide-y divide-gray-50">
                 {items.map((n) => (
@@ -149,7 +149,7 @@ export default function NotificationBell({ base }: { base: string }) {
                     >
                       <p className="text-sm font-medium text-gray-900">{n.title}</p>
                       {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
-                      <p className="text-[11px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleString("en-ZA")}</p>
+                      <p className="text-[11px] text-gray-500 mt-1">{new Date(n.created_at).toLocaleString("en-ZA")}</p>
                     </Link>
                   </li>
                 ))}

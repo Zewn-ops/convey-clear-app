@@ -43,7 +43,7 @@ export default async function PartnerClients() {
                 </tr>
               ))}
               {clients.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-10 text-center text-gray-400">No clients yet</td></tr>
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-gray-500">No clients yet</td></tr>
               )}
             </tbody>
           </table>

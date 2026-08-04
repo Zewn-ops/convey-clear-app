@@ -110,7 +110,7 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
             <button
               disabled={enquiry.status === st}
               className={`text-xs px-3 py-1.5 rounded-lg border font-medium ${
-                enquiry.status === st ? "bg-gray-100 text-gray-400 cursor-default" : "border-gray-200 text-gray-600 hover:border-gray-400"
+                enquiry.status === st ? "bg-gray-100 text-gray-500 cursor-default" : "border-gray-200 text-gray-600 hover:border-gray-400"
               }`}
             >
               {ENQUIRY_STATUS_LABELS[st]}
@@ -121,12 +121,12 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
 
       <Card className="space-y-4">
         <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-          <p className="text-xs text-gray-400 mb-1">{enquiry.business_partners?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
+          <p className="text-xs text-gray-500 mb-1">{enquiry.business_partners?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
           <p className="text-sm text-gray-800 whitespace-pre-wrap">{enquiry.message}</p>
         </div>
         {messages.map((m) => (
           <div key={m.id} className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-400 mb-1">{m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}</p>
+            <p className="text-xs text-gray-500 mb-1">{m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}</p>
             <p className="text-sm text-gray-800 whitespace-pre-wrap">{m.body}</p>
           </div>
         ))}

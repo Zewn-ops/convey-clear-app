@@ -168,7 +168,7 @@ export default async function AdminFirmsPage({
               ))}
               {firms.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
                     {filtering
                       ? "No firms match your filters — try clearing them."
                       : "No partner firms yet. Create one, then add its partner users under Users & Access."}

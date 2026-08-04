@@ -117,7 +117,7 @@ export default function MfaCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-1">
-        {verified.length > 0 ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <ShieldAlert className="h-5 w-5 text-gray-400" />}
+        {verified.length > 0 ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <ShieldAlert className="h-5 w-5 text-gray-500" />}
         <h2 className="font-semibold text-gray-900">Two-factor authentication</h2>
       </div>
       <p className="text-xs text-gray-500 mb-4">
@@ -125,7 +125,7 @@ export default function MfaCard() {
       </p>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-gray-500">Loading…</p>
       ) : enrolling ? (
         <div className="space-y-3">
           <p className="text-sm text-gray-700">Scan this with your authenticator app, then enter the 6-digit code it shows.</p>
@@ -154,14 +154,14 @@ export default function MfaCard() {
           {verified.map((f) => (
             <div key={f.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
               <span className="flex items-center gap-2 text-sm text-gray-800">
-                <Smartphone className="h-4 w-4 text-gray-400" /> Authenticator app <span className="text-xs text-green-600 font-medium">· active</span>
+                <Smartphone className="h-4 w-4 text-gray-500" /> Authenticator app <span className="text-xs text-green-600 font-medium">· active</span>
               </span>
               <button onClick={() => remove(f.id)} className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:underline">
                 <Trash2 className="h-3.5 w-3.5" /> Remove
               </button>
             </div>
           ))}
-          <p className="text-xs text-gray-400 pt-1">Two-factor authentication is on. You&rsquo;ll be asked for a code each sign-in.</p>
+          <p className="text-xs text-gray-500 pt-1">Two-factor authentication is on. You&rsquo;ll be asked for a code each sign-in.</p>
         </div>
       ) : (
         <Button onClick={startEnroll} loading={busy}>

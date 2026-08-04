@@ -33,7 +33,7 @@ export default function AuthLayout({
         </div>
       </main>
 
-      <footer className="py-4 text-center text-xs text-gray-400">
+      <footer className="py-4 text-center text-xs text-gray-500">
         © {new Date().getFullYear()} ConveyClear. All rights reserved. POPIA
         compliant.
       </footer>

@@ -194,10 +194,10 @@ export default function InPlaceIntake({
               const attached = documents.some((d) => d.transfer_document_id === t.id);
               return (
                 <li key={t.id} className="flex items-center gap-2.5">
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-gray-500" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-gray-800">{docLabel(t.document_type)}</p>
-                    <p className="truncate text-[11px] text-gray-400">{t.file_name || "—"}</p>
+                    <p className="truncate text-[11px] text-gray-500">{t.file_name || "—"}</p>
                   </div>
                   {attached ? (
                     <span className="shrink-0 text-xs font-medium text-green-600">On this matter</span>
@@ -219,7 +219,7 @@ export default function InPlaceIntake({
         <div key={g.key} className="rounded-lg border border-gray-100">
           <div className="border-b border-gray-100 bg-gray-50 px-4 py-2">
             <p className="text-sm font-medium text-gray-800">{g.title}</p>
-            {g.subtitle && <p className="text-xs text-gray-400">{g.subtitle}</p>}
+            {g.subtitle && <p className="text-xs text-gray-500">{g.subtitle}</p>}
           </div>
           {g.missingParty && (
             <p className="px-4 py-3 text-sm text-gray-500">
@@ -259,14 +259,14 @@ export default function InPlaceIntake({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-gray-800">
                       {docLabel(s.docType)}
-                      {s.optional && <span className="ml-1.5 text-xs text-gray-400">(optional)</span>}
+                      {s.optional && <span className="ml-1.5 text-xs text-gray-500">(optional)</span>}
                     </p>
                     {doc && (
-                      <p className="flex items-center gap-1 truncate text-xs text-gray-400">
+                      <p className="flex items-center gap-1 truncate text-xs text-gray-500">
                         <FileText className="h-3 w-3 shrink-0" /> {doc.file_name || "Uploaded"}
                       </p>
                     )}
-                    {isUnavailable && <p className="text-xs text-gray-400">Marked not available</p>}
+                    {isUnavailable && <p className="text-xs text-gray-500">Marked not available</p>}
                   </div>
                   <div className="shrink-0">
                     {doc ? (
@@ -319,7 +319,7 @@ export default function InPlaceIntake({
                             <input type="hidden" name="matter_id" value={matterId} />
                             <input type="hidden" name="doc_key" value={key} />
                             <input type="hidden" name="make" value="1" />
-                            <SubmitButton pendingLabel="…" className="text-xs text-gray-400 hover:text-gray-600 hover:underline">
+                            <SubmitButton pendingLabel="…" className="text-xs text-gray-500 hover:text-gray-600 hover:underline">
                               Not available
                             </SubmitButton>
                           </form>

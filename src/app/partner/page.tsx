@@ -139,7 +139,7 @@ export default async function PartnerOverview() {
                           {m.title || clientDisplayName(m.clients) || "—"}
                         </Link>
                       </span>
-                      {serviceLabel(m) && <p className="text-xs font-normal text-gray-400 mt-0.5">{serviceLabel(m)}</p>}
+                      {serviceLabel(m) && <p className="text-xs font-normal text-gray-500 mt-0.5">{serviceLabel(m)}</p>}
                     </td>
                     <td className="px-5 py-3 text-gray-600">
                       {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
@@ -153,7 +153,7 @@ export default async function PartnerOverview() {
                   );
                 })}
                 {matters.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters yet — refer your first client.</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-500">No matters yet — refer your first client.</td></tr>
                 )}
               </tbody>
             </table>

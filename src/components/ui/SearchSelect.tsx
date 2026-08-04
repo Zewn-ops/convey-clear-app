@@ -119,7 +119,7 @@ export default function SearchSelect({
             "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60"
           )}
         >
-          <span className={cn("truncate", selected ? "text-gray-900" : "text-gray-400")}>
+          <span className={cn("truncate", selected ? "text-gray-900" : "text-gray-500")}>
             {selected ? selected.label : (emptyLabel ?? placeholder)}
           </span>
           <span className="flex shrink-0 items-center gap-1">
@@ -137,14 +137,14 @@ export default function SearchSelect({
                 <X className="h-3.5 w-3.5" />
               </span>
             )}
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-gray-500" />
           </span>
         </button>
 
         {open && (
           <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
             <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-              <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+              <Search className="h-3.5 w-3.5 shrink-0 text-gray-500" />
               <input
                 ref={inputRef}
                 value={query}
@@ -173,7 +173,7 @@ export default function SearchSelect({
               )}
 
               {matches.length === 0 ? (
-                <li className="px-3 py-3 text-sm text-gray-400">No match for “{query}”</li>
+                <li className="px-3 py-3 text-sm text-gray-500">No match for “{query}”</li>
               ) : (
                 matches.map((o, i) => (
                   <li key={o.value}>
@@ -191,7 +191,7 @@ export default function SearchSelect({
                     >
                       <span className="min-w-0">
                         <span className="block truncate">{o.label}</span>
-                        {o.hint && <span className="block truncate text-xs text-gray-400">{o.hint}</span>}
+                        {o.hint && <span className="block truncate text-xs text-gray-500">{o.hint}</span>}
                       </span>
                       {o.value === value && <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
                     </button>

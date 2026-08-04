@@ -214,7 +214,7 @@ export default function ClientVault({
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900">
                     {docLabel(t)}
-                    {slot.rule.optional && <span className="ml-1.5 text-xs font-normal text-gray-400">optional</span>}
+                    {slot.rule.optional && <span className="ml-1.5 text-xs font-normal text-gray-500">optional</span>}
                   </p>
                   {empty && (
                     <p className="mt-0.5 text-xs text-gray-500">
@@ -255,7 +255,7 @@ export default function ClientVault({
       {/* Anything on file that isn't expected for this entity type. */}
       {summary.extras.length > 0 && (
         <div className="mt-4 border-t border-gray-100 pt-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Other documents</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Other documents</p>
           <ul className="space-y-1.5">
             {summary.extras.map((d) => (
               <DocRow
@@ -279,14 +279,14 @@ export default function ClientVault({
 
       {archived.length > 0 && (
         <details className="mt-3 border-t border-gray-100 pt-3">
-          <summary className="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-600">
+          <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-600">
             Archived ({archived.length})
           </summary>
           <ul className="mt-2 space-y-1.5">
             {archived.map((d) => (
               <li key={d.id} className="flex items-center gap-3 py-1 text-sm">
                 <Archive className="h-3.5 w-3.5 shrink-0 text-gray-300" />
-                <span className="min-w-0 flex-1 truncate text-gray-400">
+                <span className="min-w-0 flex-1 truncate text-gray-500">
                   {docLabel(d.document_type)} · {d.file_name || "—"}
                 </span>
                 <button
@@ -372,7 +372,7 @@ function DocRow({
 
   return (
     <li className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1 ${busy ? "opacity-50" : ""}`}>
-      <FileText className={`h-4 w-4 shrink-0 ${expired ? "text-red-400" : "text-gray-400"}`} />
+      <FileText className={`h-4 w-4 shrink-0 ${expired ? "text-red-400" : "text-gray-500"}`} />
 
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 truncate text-sm text-gray-800">
@@ -381,14 +381,14 @@ function DocRow({
           {verified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Verified" />}
           <ExpiryBadge expiry={doc.expiry_date} />
         </p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Added {formatDate(doc.created_at)}
           {doc.supersedes_id ? " · replaced an earlier version" : ""}
         </p>
       </div>
 
       {/* Expiry is editable in place — chasing a stale FICA doc is the whole point. */}
-      <label className="flex shrink-0 items-center gap-1 text-[11px] text-gray-400">
+      <label className="flex shrink-0 items-center gap-1 text-[11px] text-gray-500">
         Expires
         <input
           type="date"
@@ -415,7 +415,7 @@ function DocRow({
           type="button"
           disabled={busy}
           onClick={() => onVerify(!verified)}
-          className={`font-medium hover:underline disabled:opacity-50 ${verified ? "text-gray-400" : "text-green-700"}`}
+          className={`font-medium hover:underline disabled:opacity-50 ${verified ? "text-gray-500" : "text-green-700"}`}
         >
           {verified ? "Unverify" : "Verify"}
         </button>
@@ -426,7 +426,7 @@ function DocRow({
           type="button"
           disabled={busy}
           onClick={onArchive}
-          className="font-medium text-gray-400 hover:text-gray-600 hover:underline disabled:opacity-50"
+          className="font-medium text-gray-500 hover:text-gray-600 hover:underline disabled:opacity-50"
         >
           Archive
         </button>
@@ -482,7 +482,7 @@ function FilePick({
         onClick={() => ref.current?.click()}
         className={
           small
-            ? "inline-flex items-center gap-1 font-medium text-gray-400 hover:text-gray-700 hover:underline disabled:opacity-50"
+            ? "inline-flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
             : "inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1B2E6B] px-2.5 py-1.5 text-xs font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
         }
       >
@@ -504,7 +504,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-700"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
       >
         <Plus className="h-3.5 w-3.5" /> Add another kind of document
       </button>
@@ -547,7 +547,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
       >
         <UploadCloud className="h-4 w-4" /> {busy ? "Uploading…" : "Upload"}
       </button>
-      <button type="button" onClick={() => setOpen(false)} className="px-1 text-xs text-gray-400 hover:text-gray-600">
+      <button type="button" onClick={() => setOpen(false)} className="px-1 text-xs text-gray-500 hover:text-gray-600">
         Cancel
       </button>
     </div>

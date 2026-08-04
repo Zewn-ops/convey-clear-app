@@ -139,7 +139,7 @@ export default function FirmDetailsForm({
           Your firm&apos;s council-assigned BP number for each municipality — used on clearance applications.
         </p>
         {bps.length === 0 ? (
-          <p className="text-sm text-gray-400">None captured yet.</p>
+          <p className="text-sm text-gray-500">None captured yet.</p>
         ) : (
           <div className="space-y-2">
             {bps.map((row, i) => (

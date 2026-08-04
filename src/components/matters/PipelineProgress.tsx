@@ -66,7 +66,7 @@ export default function PipelineProgress({
       {/* Stages of the current phase */}
       {currentPhaseDef && stages.length > 0 && (
         <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
             {currentStep.name} — stages
           </p>
           <ul className="space-y-1.5">

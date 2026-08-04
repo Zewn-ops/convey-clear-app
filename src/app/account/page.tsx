@@ -91,7 +91,7 @@ export default async function AccountPage() {
             </button>
           </form>
           {isStaffRole(profile?.role) && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-gray-500 mt-2">
               This is the number the enquiry &ldquo;Call&rdquo; button dials when an enquiry is assigned to you.
             </p>
           )}
@@ -108,7 +108,7 @@ export default async function AccountPage() {
               <input type="checkbox" name="notify_email" defaultChecked={notifyEmail} className="h-4 w-4 mt-0.5 accent-[#1B2E6B]" />
               <span>
                 Email me when a matter changes phase
-                <span className="block text-xs text-gray-400">Phase changes only — not every stage update.</span>
+                <span className="block text-xs text-gray-500">Phase changes only — not every stage update.</span>
               </span>
             </label>
             {isStaffRole(profile?.role) && (
@@ -124,7 +124,7 @@ export default async function AccountPage() {
           <div className="mt-4 border-t border-gray-100 pt-4">
             <NotifyVolumeControl />
           </div>
-          <p className="text-xs text-gray-400 mt-2">Red dots always show; the chime needs one click anywhere first (browser audio rule).</p>
+          <p className="text-xs text-gray-500 mt-2">Red dots always show; the chime needs one click anywhere first (browser audio rule).</p>
         </Card>
 
         <Card>

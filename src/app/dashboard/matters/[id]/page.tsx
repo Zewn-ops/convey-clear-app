@@ -95,7 +95,7 @@ export default async function MatterDetailPage({
                     active ? "bg-[#E8521A]" : done ? "bg-[#1B2E6B]" : "bg-gray-200"
                   }`}
                 />
-                <p className={`mt-1.5 text-[11px] ${active ? "text-[#E8521A] font-medium" : "text-gray-400"}`}>
+                <p className={`mt-1.5 text-[11px] ${active ? "text-[#E8521A] font-medium" : "text-gray-500"}`}>
                   {PHASE_LABELS[p]}
                 </p>
               </div>
@@ -130,12 +130,12 @@ export default async function MatterDetailPage({
             <ul className="divide-y divide-gray-100">
               {documents.map((doc) => (
                 <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                  <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
                       {doc.file_name || doc.document_type}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {doc.document_type} · {formatDate(doc.created_at)}
                     </p>
                   </div>
@@ -164,7 +164,7 @@ export default async function MatterDetailPage({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-gray-400">{label}</dt>
+      <dt className="text-xs text-gray-500">{label}</dt>
       <dd className="text-gray-800 mt-0.5">{value}</dd>
     </div>
   );

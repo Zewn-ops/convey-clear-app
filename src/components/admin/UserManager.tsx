@@ -350,14 +350,14 @@ export default function UserManager({
         )}
 
         {partners.length === 0 ? (
-          <p className="text-sm text-gray-400">No partner firms yet.</p>
+          <p className="text-sm text-gray-500">No partner firms yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {partners.map((p) => (
               <span key={p.id} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
-                <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                <Building2 className="h-3.5 w-3.5 text-gray-500" />
                 {p.name}
-                <span className="text-xs text-gray-400">{p.partner_type}</span>
+                <span className="text-xs text-gray-500">{p.partner_type}</span>
               </span>
             ))}
           </div>
@@ -431,7 +431,7 @@ export default function UserManager({
                           <Button size="sm" variant="outline" onClick={() => resetPassword(u)}>
                             <RotateCcw className="h-4 w-4" /> Reset password
                           </Button>
-                          <span className="text-xs text-gray-400">Reset issues a new temp password shown once above.</span>
+                          <span className="text-xs text-gray-500">Reset issues a new temp password shown once above.</span>
                         </div>
                       </td>
                     </tr>
@@ -439,7 +439,7 @@ export default function UserManager({
                 </Fragment>
               ))}
               {initialUsers.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No users yet</td></tr>
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-500">No users yet</td></tr>
               )}
             </tbody>
           </table>

@@ -39,13 +39,13 @@ export default async function PartnerEnquiries() {
                 <Link href={`/partner/enquiries/${e.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
                   <div className="min-w-0">
                     <p className="font-medium text-gray-900 truncate">{e.subject}</p>
-                    <p className="text-xs text-gray-400">Updated {formatDateTime(e.updated_at)}</p>
+                    <p className="text-xs text-gray-500">Updated {formatDateTime(e.updated_at)}</p>
                   </div>
                   <Badge label={ENQUIRY_STATUS_LABELS[e.status]} variant={statusVariant(e.status)} />
                 </Link>
               </li>
             ))}
-            {enquiries.length === 0 && <li className="px-5 py-10 text-center text-gray-400">No enquiries yet</li>}
+            {enquiries.length === 0 && <li className="px-5 py-10 text-center text-gray-500">No enquiries yet</li>}
           </ul>
         </Card>
       </div>

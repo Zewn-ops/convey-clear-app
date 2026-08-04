@@ -170,7 +170,7 @@ function ErrorPage({
                 </form>
               )}
 
-              <p className="mt-6 text-xs text-gray-400">
+              <p className="mt-6 text-xs text-gray-500">
                 If you believe this is an error, contact ConveyClear at{" "}
                 <a href="mailto:hello@conveyclear.co.za" className="text-[#1B2E6B] underline">
                   hello@conveyclear.co.za

@@ -116,7 +116,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
     <Card>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold text-gray-900">Edit details</h2>
-        <button type="button" onClick={cancel} className="text-xs text-gray-400 hover:text-gray-700">
+        <button type="button" onClick={cancel} className="text-xs text-gray-500 hover:text-gray-700">
           Cancel
         </button>
       </div>
@@ -141,7 +141,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
               </option>
             ))}
           </select>
-          <span className="mt-1 block text-[11px] font-normal text-gray-400">
+          <span className="mt-1 block text-[11px] font-normal text-gray-500">
             Changes which documents the FICA vault asks for.
           </span>
         </label>
@@ -225,7 +225,7 @@ function Field({
   const empty = value == null || String(value).trim() === "";
   return (
     <div className={wide ? "sm:col-span-2" : undefined}>
-      <dt className="text-xs text-gray-400">{label}</dt>
+      <dt className="text-xs text-gray-500">{label}</dt>
       <dd className={`mt-0.5 font-medium ${empty ? "text-gray-300" : ""}`}>
         {empty ? (required ? "Not captured" : "—") : value}
       </dd>

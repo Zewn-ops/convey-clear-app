@@ -65,7 +65,7 @@ type LinkedMatter = Matter & {
 function PartyRow({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div>
-      <dt className="text-xs text-gray-400">{label}</dt>
+      <dt className="text-xs text-gray-500">{label}</dt>
       <dd className="text-gray-800 mt-0.5">
         {href ? (
           <Link href={href} className="text-[#1B2E6B] hover:underline">{value}</Link>
@@ -223,21 +223,21 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       <Card accent="service">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-gray-400">Status</dt>
+            <dt className="text-xs text-gray-500">Status</dt>
             <dd className="text-gray-800 mt-0.5">{TRANSFER_STATUS_LABELS[transfer.status]}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Council</dt>
+            <dt className="text-xs text-gray-500">Council</dt>
             <dd className="text-gray-800 mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Opened</dt>
+            <dt className="text-xs text-gray-500">Opened</dt>
             <dd className="text-gray-800 mt-0.5">{formatDate(transfer.created_at)}</dd>
           </div>
         </dl>
         {transfer.notes && (
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <dt className="text-xs text-gray-400 mb-1">Notes</dt>
+            <dt className="text-xs text-gray-500 mb-1">Notes</dt>
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{transfer.notes}</p>
           </div>
         )}
@@ -270,7 +270,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
                       <Link href={`/admin/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
                         {m.title || "Untitled"}
                       </Link>
-                      {m.services?.name && <p className="text-xs text-gray-400 mt-0.5">{m.services.name}</p>}
+                      {m.services?.name && <p className="text-xs text-gray-500 mt-0.5">{m.services.name}</p>}
                     </td>
                     <td className="px-5 py-3 text-gray-600 hidden md:table-cell">
                       {m.current_phase ? (pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase) : "—"}
@@ -289,7 +289,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
               })}
               {linked.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-500">
                     No matters linked yet.
                   </td>
                 </tr>

@@ -135,19 +135,19 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Transaction</p>
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-gray-400">Seller</dt>
+            <dt className="text-xs text-gray-500">Seller</dt>
             <dd className="text-gray-800 mt-0.5">{transfer.seller ? clientDisplayName(transfer.seller) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Buyer</dt>
+            <dt className="text-xs text-gray-500">Buyer</dt>
             <dd className="text-gray-800 mt-0.5">{transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Council</dt>
+            <dt className="text-xs text-gray-500">Council</dt>
             <dd className="text-gray-800 mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Opened</dt>
+            <dt className="text-xs text-gray-500">Opened</dt>
             <dd className="text-gray-800 mt-0.5">{formatDate(transfer.created_at)}</dd>
           </div>
         </dl>
@@ -179,7 +179,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
                       <Link href={`/partner/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
                         {m.title || "Untitled"}
                       </Link>
-                      {m.services?.name && <p className="text-xs text-gray-400 mt-0.5">{m.services.name}</p>}
+                      {m.services?.name && <p className="text-xs text-gray-500 mt-0.5">{m.services.name}</p>}
                     </td>
                     <td className="px-5 py-3 text-gray-600 hidden md:table-cell">
                       {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
@@ -204,7 +204,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               })}
               {linked.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-500">
                     No matters linked yet. Refer a matter, then attach it here to build up the transaction.
                   </td>
                 </tr>

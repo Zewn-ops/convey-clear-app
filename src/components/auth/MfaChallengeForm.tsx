@@ -61,7 +61,7 @@ export default function MfaChallengeForm() {
     window.location.assign("/auth/login");
   };
 
-  if (!ready) return <p className="text-sm text-gray-400">Checking…</p>;
+  if (!ready) return <p className="text-sm text-gray-500">Checking…</p>;
 
   return (
     <form onSubmit={submit} className="space-y-4">

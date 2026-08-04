@@ -136,12 +136,12 @@ export default async function DashboardPage() {
             <ul className="divide-y divide-gray-100">
               {documents.map((doc) => (
                 <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
-                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                  <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
                       {doc.file_name || doc.document_type}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {doc.document_type} · {formatDate(doc.created_at)}
                     </p>
                   </div>

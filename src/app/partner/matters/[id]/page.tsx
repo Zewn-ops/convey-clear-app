@@ -202,7 +202,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       {/* Council rates account number (read-only for partners) */}
       {typeof sd.rates_account_no === "string" && sd.rates_account_no && (
         <Card>
-          <p className="text-xs text-gray-400">Rates account number</p>
+          <p className="text-xs text-gray-500">Rates account number</p>
           <p className="mt-0.5 text-sm font-medium text-gray-900">{sd.rates_account_no}</p>
         </Card>
       )}
@@ -255,7 +255,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
             <StorageUpload matterId={matter.id} />
           </div>
           {docs.length === 0 ? (
-            <p className="text-sm text-gray-400">No documents yet.</p>
+            <p className="text-sm text-gray-500">No documents yet.</p>
           ) : (
             <div className="space-y-4">
               {([
@@ -263,14 +263,14 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                 { title: "ConveyClear uploads", list: docs.filter((d) => !["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
               ] as const).map((grp) => (
                 <div key={grp.title}>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{grp.title} ({grp.list.length})</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{grp.title} ({grp.list.length})</p>
                   {grp.list.length === 0 ? (
-                    <p className="text-sm text-gray-400">None.</p>
+                    <p className="text-sm text-gray-500">None.</p>
                   ) : (
                     <ul className="space-y-2">
                       {grp.list.map((d) => (
                         <li key={d.id} className="flex items-center gap-2 text-sm">
-                          <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                          <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                           <span className="flex-1 text-gray-700 truncate">{d.file_name || d.document_type}</span>
                           {d.storage_path && signedUrls[d.storage_path] ? (
                             <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
@@ -293,7 +293,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <Card>
         <h2 className="font-semibold text-gray-900 mb-3">Activity</h2>
         {activities.length === 0 ? (
-          <p className="text-sm text-gray-400">No activity yet.</p>
+          <p className="text-sm text-gray-500">No activity yet.</p>
         ) : (
           <ul className="space-y-3">
             {activities.map((a) => (
@@ -301,7 +301,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                 <div className="mt-1 h-2 w-2 rounded-full bg-[#1B2E6B] shrink-0" />
                 <div>
                   <p className="text-gray-700">{a.body}</p>
-                  <p className="text-xs text-gray-400">{formatDate(a.created_at)}</p>
+                  <p className="text-xs text-gray-500">{formatDate(a.created_at)}</p>
                 </div>
               </li>
             ))}

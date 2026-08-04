@@ -43,12 +43,12 @@ export default function MatterFilters() {
         }}
         className="relative flex-1 min-w-[180px]"
       >
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search title, ref, firm…"
-          className="w-full rounded-lg border border-gray-300 pl-8 pr-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+          className="w-full rounded-lg border border-gray-300 pl-8 pr-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
         />
       </form>
       <select
