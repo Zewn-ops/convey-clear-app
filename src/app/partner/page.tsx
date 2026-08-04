@@ -41,7 +41,7 @@ export default async function PartnerOverview() {
       supabase.from("clients").select("id", { count: "exact", head: true }),
       supabase
         .from("matters")
-        .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code, name)")
+        .select("id, title, current_phase, status, municipality, service_subtype, created_at, updated_at, clients(full_name, business_name), services(code, name)")
         .in("status", ["open", "on_hold"])
         .order("created_at", { ascending: false })
         .limit(6),
@@ -59,31 +59,26 @@ export default async function PartnerOverview() {
 
   // Per-row unread dots, and the last time anything happened on each matter.
   // Both are single queries over the listed ids rather than one per row.
+  // Unread dots only. "Last update" deliberately comes from matters.updated_at,
+  // NOT matter_activities: that table's RLS hides staff notes from partners
+  // (activities_read_scoped allows non-staff only status_change,
+  // document_upload, phase_transition and poa_signed), so a chip driven by it
+  // renders blank for exactly the people reading this page. updated_at also
+  // avoids leaking that an internal note was written, since notes do not touch
+  // the matters row.
   const meId = (await getSessionProfile())?.profile?.id ?? null;
   const unread = new Set<string>();
-  const lastActivity = new Map<string, string>();
 
-  if (ids.length) {
-    const [{ data: notes }, { data: acts }] = await Promise.all([
-      meId
-        ? supabase.from("notifications").select("matter_id").eq("user_id", meId).is("read_at", null).in("matter_id", ids)
-        : Promise.resolve({ data: [] as { matter_id: string | null }[] }),
-      supabase
-        .from("matter_activities")
-        .select("matter_id, created_at")
-        .in("matter_id", ids)
-        .order("created_at", { ascending: false })
-        .limit(200),
-    ]);
-
+  if (ids.length && meId) {
+    const { data: notes } = await supabase
+      .from("notifications")
+      .select("matter_id")
+      .eq("user_id", meId)
+      .is("read_at", null)
+      .in("matter_id", ids);
     (notes ?? []).forEach((n) => {
       const id = (n as { matter_id: string | null }).matter_id;
       if (id) unread.add(id);
-    });
-    // Ordered desc, so the first row seen for a matter is its latest.
-    (acts ?? []).forEach((a) => {
-      const row = a as { matter_id: string; created_at: string };
-      if (!lastActivity.has(row.matter_id)) lastActivity.set(row.matter_id, row.created_at);
     });
   }
 
@@ -154,7 +149,7 @@ export default async function PartnerOverview() {
               const steps = pl ? phaseSteps(pl) : [];
               const idx = pl ? phaseOrder(pl, m.current_phase) : -1;
               const open = workdaysSince(m.created_at);
-              const seen = relativeDays(lastActivity.get(m.id));
+              const seen = relativeDays((m as { updated_at?: string }).updated_at);
               const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
               const stalled = open !== null && open > 60;
 

@@ -62,6 +62,13 @@ if [[ "$STAGING_DB_URL" == *"$PROD_REF"* ]]; then
   exit 1
 fi
 
+if [ "$ARG" = "extra" ]; then
+  echo "→ seeding staging-only extra fixtures"
+  psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -q -f "$REMOTE/scripts/seed_staging_extra.sql"
+  psql "$STAGING_DB_URL" -q -A -F' | ' -c "SELECT coalesce(current_phase,'(none)') AS phase, status, count(*)::text FROM matters GROUP BY 1,2 ORDER BY 1,2;"
+  exit 0
+fi
+
 if [ "$ARG" = "seed" ]; then
   echo "→ seeding dry-run data"
   psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -q -f "$REMOTE/scripts/seed_dryrun_data.sql"
