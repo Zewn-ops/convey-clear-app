@@ -22,6 +22,7 @@ import {
   Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const baseNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -107,6 +108,9 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
           <LogOut className="h-4 w-4 shrink-0" />
           Sign out
         </button>
+      </div>
+      <div className="border-t border-white/10 px-4 pb-4 pt-3">
+        <ThemeToggle variant="row" />
       </div>
     </aside>
   );

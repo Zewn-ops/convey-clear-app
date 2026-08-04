@@ -12,6 +12,7 @@ import {
   LogOut,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -50,8 +51,8 @@ export default function Sidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-surface/15 text-white"
-                  : "text-white/70 hover:bg-surface/10 hover:text-white"
+                  ? "bg-white/15 text-white"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -65,18 +66,21 @@ export default function Sidebar() {
       <div className="px-4 pb-4 border-t border-white/10 pt-4 space-y-1">
         <Link
           href="/account"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-surface/10 hover:text-white transition-colors"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
         >
           <UserCircle className="h-4 w-4 shrink-0" />
           Account
         </Link>
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-surface/10 hover:text-white transition-colors"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
         >
           <LogOut className="h-4 w-4 shrink-0" />
           Sign out
         </button>
+      </div>
+      <div className="border-t border-white/10 px-4 pb-4 pt-3">
+        <ThemeToggle variant="row" />
       </div>
     </aside>
   );

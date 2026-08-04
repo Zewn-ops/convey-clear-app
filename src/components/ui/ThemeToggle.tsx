@@ -75,7 +75,7 @@ export default function ThemeToggle({
         onClick={() => apply(next)}
         aria-label={`Switch to ${next} theme`}
         className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
-                    text-white/70 transition-colors hover:bg-surface/10 hover:text-white
+                    text-white/70 transition-colors hover:bg-white/10 hover:text-white
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${className}`}
       >
         <span className="shrink-0">{glyph}</span>

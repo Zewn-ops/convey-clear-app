@@ -28,22 +28,17 @@ Design system: `DESIGN.md`. Tokens: `src/styles/tokens.css`.
 
 ## Route status
 
-| Route | State | Notes |
+| Area | State | Notes |
 |---|---|---|
-| `partner/layout.tsx` | ✅ | Canvas token, `bg-chrome` sidebar, theme toggle at sidebar foot (desktop + mobile) |
-| `partner/page.tsx` | ✅ | Rebuilt on `MatterCard`. Stat tiles link to filtered lists |
-| `partner/matters/page.tsx` | ✅ | Table → cards, `showStage`, real empty state, selects `updated_at` |
-| `partner/transfers/page.tsx` | ✅ | Table → `TransferCard`. Zero-matter transfers flag in the required tone |
-| `partner/clients/page.tsx` | ✅ | Stays a table, on the new `Table` shell |
-| `partner/enquiries/page.tsx` | ✅ | Card rows + real empty state |
-| `partner/matters/[id]` | 🟡 | Inherits primitives + neutral sweep; layout not reworked |
-| `partner/transfers/[id]` | 🟡 | Same |
-| `partner/clients/[id]` | 🟡 | Same |
-| `partner/enquiries/[id]` | 🟡 | Same |
-| `partner/firm`, `refer`, `transfers/new` | 🟡 | Same |
-| `/admin` (25 files) | 🟡 | Primitives only, deliberately not swept |
-| `/dashboard` (10 files) | ⬜ | Not started |
-| `/onboard` (4 files) | ⬜ | Not started |
+| `/partner` — all 13 routes | ✅ | 0 hardcoded greys, 0 brand hex, 0 legacy Badge |
+| `/admin` — 25 files | ✅ | Same. Badge kept but reshaped to match StatusPill |
+| `/dashboard` — 10 files | ✅ | Swept |
+| `/onboard` — 4 files | ✅ | Swept, incl. the step rails |
+| `/auth` | ✅ | Swept |
+| Shared components | ✅ | 47 files swept |
+| Nav shells (5) | ⬛ excluded | PartnerNav, AdminSidebar, AdminMobileNav, dashboard Sidebar + MobileNav sit on a dark ground and use white/opacity deliberately |
+
+Theme toggle now in all three sidebars (partner, admin, client dashboard).
 
 ---
 
@@ -105,5 +100,11 @@ worse than a consistently weekend-only one. Verified against seven hand-counted 
 - **Peer benchmark** ("Tshwane clearances averaging X days") is computable but needs volume. Do not ship
   a fabricated figure — an attorney will quote it to a client.
 - **"You checked N days ago"** has no storage. Needs a column if wanted.
-- **Dark mode is opt-in** and only correct on migrated surfaces. Restore the
-  `prefers-color-scheme` block in `tokens.css` in the same commit that finishes the migration.
+- **Dark mode is still opt-in, deliberately.** The whole app is now on tokens, so it *should* be
+  correct everywhere — but that is a mechanical sweep, not an observed fact. Nobody has looked at admin,
+  the client dashboard or onboarding in dark. Restore the `prefers-color-scheme` block in `tokens.css`
+  only after someone has, or an OS preference will hand users a theme no one has checked.
+
+- **A sweep regression worth remembering:** `bg-white/10` on the dark nav shells became `bg-surface/10`,
+  which in dark theme is a *dark* overlay, so the hover state vanished. Opacity overlays on a fixed dark
+  ground must stay white. Caught in three files; look for it if any nav hover feels dead.
