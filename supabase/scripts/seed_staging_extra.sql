@@ -77,3 +77,37 @@ COMMIT;
 --   DELETE FROM matters WHERE id::text LIKE 'ee000000%';
 --   DELETE FROM clients WHERE id::text LIKE 'ee000000%';
 -- ============================================================================
+
+-- ── property transfers ──────────────────────────────────────────────────────
+-- The transfers list had zero rows, so the redesigned cards had nothing to
+-- render. Spread across statuses and ages, with one carrying no matters at all
+-- so the "0 matters" required-tone chip has a live case.
+BEGIN;
+
+DELETE FROM public.property_transfers WHERE id::text LIKE 'ee000000%';
+
+INSERT INTO public.property_transfers
+  (id, reference, property_description, municipality, status, business_partner_id,
+   seller_client_id, buyer_client_id, created_at)
+SELECT v.id, v.ref, v.descr, v.muni, v.status, f.id, v.seller, v.buyer, v.created
+FROM (VALUES
+  ('ee000000-0000-0000-0000-00000000b001'::uuid,'SH-2026-0417','Erf 1234 Waterkloof, Pretoria','COT','open',
+   'ee000000-0000-0000-0000-00000000c001'::uuid,'ee000000-0000-0000-0000-00000000c002'::uuid, now() - interval '47 days'),
+  ('ee000000-0000-0000-0000-00000000b002'::uuid,'SH-2026-0388','Erf 903 Parkview, Johannesburg','COJ','open',
+   'ee000000-0000-0000-0000-00000000c003'::uuid,'ee000000-0000-0000-0000-00000000c001'::uuid, now() - interval '132 days'),
+  ('ee000000-0000-0000-0000-00000000b003'::uuid,'SH-2026-0501','Erf 77 Garsfontein, Pretoria','COT','on_hold',
+   'ee000000-0000-0000-0000-00000000c001'::uuid, NULL, now() - interval '9 days'),
+  ('ee000000-0000-0000-0000-00000000b004'::uuid,'SH-2025-0912','Erf 5 Bedfordview, Ekurhuleni','COE','registered',
+   'ee000000-0000-0000-0000-00000000c002'::uuid,'ee000000-0000-0000-0000-00000000c003'::uuid, now() - interval '214 days')
+) AS v(id, ref, descr, muni, status, seller, buyer, created)
+CROSS JOIN LATERAL (SELECT id FROM public.firms LIMIT 1) f;
+
+-- Link some matters so the "Matters" chip varies. b003 stays empty on purpose.
+UPDATE public.matters SET transfer_id='ee000000-0000-0000-0000-00000000b001'
+ WHERE id IN ('ee000000-0000-0000-0000-00000000a001','ee000000-0000-0000-0000-00000000a002');
+UPDATE public.matters SET transfer_id='ee000000-0000-0000-0000-00000000b002'
+ WHERE id='ee000000-0000-0000-0000-00000000a003';
+UPDATE public.matters SET transfer_id='ee000000-0000-0000-0000-00000000b004'
+ WHERE id='ee000000-0000-0000-0000-00000000a005';
+
+COMMIT;

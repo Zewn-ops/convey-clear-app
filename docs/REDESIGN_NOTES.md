@@ -33,17 +33,15 @@ Design system: `DESIGN.md`. Tokens: `src/styles/tokens.css`.
 | `partner/layout.tsx` | ✅ | Canvas token, `bg-chrome` sidebar, theme toggle at sidebar foot (desktop + mobile) |
 | `partner/page.tsx` | ✅ | Rebuilt on `MatterCard`. Stat tiles link to filtered lists |
 | `partner/matters/page.tsx` | ✅ | Table → cards, `showStage`, real empty state, selects `updated_at` |
-| `partner/matters/[id]` | ⬜ | 316 lines, the big one |
-| `partner/transfers/page.tsx` | ⬜ | |
-| `partner/transfers/[id]` | ⬜ | 229 lines |
-| `partner/transfers/new` | ⬜ | |
-| `partner/clients/page.tsx` | ⬜ | Stays a table per the density decision |
-| `partner/clients/[id]` | ⬜ | |
-| `partner/enquiries/page.tsx` | ⬜ | |
-| `partner/enquiries/[id]` | ⬜ | |
-| `partner/firm` | ⬜ | |
-| `partner/refer` | ⬜ | |
-| `/admin` (25 files) | ⬜ | Not started |
+| `partner/transfers/page.tsx` | ✅ | Table → `TransferCard`. Zero-matter transfers flag in the required tone |
+| `partner/clients/page.tsx` | ✅ | Stays a table, on the new `Table` shell |
+| `partner/enquiries/page.tsx` | ✅ | Card rows + real empty state |
+| `partner/matters/[id]` | 🟡 | Inherits primitives + neutral sweep; layout not reworked |
+| `partner/transfers/[id]` | 🟡 | Same |
+| `partner/clients/[id]` | 🟡 | Same |
+| `partner/enquiries/[id]` | 🟡 | Same |
+| `partner/firm`, `refer`, `transfers/new` | 🟡 | Same |
+| `/admin` (25 files) | 🟡 | Primitives only, deliberately not swept |
 | `/dashboard` (10 files) | ⬜ | Not started |
 | `/onboard` (4 files) | ⬜ | Not started |
 
@@ -52,6 +50,15 @@ Design system: `DESIGN.md`. Tokens: `src/styles/tokens.css`.
 ## Changes worth a second look
 
 Things where I made a judgement call rather than a mechanical swap.
+
+### Shared primitives were tokenised, so unmigrated pages moved too
+`Card` (50 files), `Button` (25), `Badge` (20), `Input` (18), `Select` (10) now read tokens. This makes
+dark mode correct wherever they appear and shifts light mode only slightly, since the tokens were
+derived from the brand colours already in use. Pages marked 🟡 above got this for free without their
+layout being reworked.
+
+`Button` outline lost its navy border for a neutral one: on a page where orange means "you must act", a
+navy outline on every secondary control competed with the one control that needed attention.
 
 ### Contrast sweep — 242 changes, 65 files, app-wide
 `text-gray-400` measured **2.54:1** on white, failing WCAG AA (4.5) and even the 3:1 large-text bar.
@@ -84,6 +91,14 @@ function is called `workdaysSince` and means it, because a wrong number a firm r
 worse than a consistently weekend-only one. Verified against seven hand-counted cases.
 
 ---
+
+## Staging fixtures
+
+`supabase/scripts/seed_staging_extra.sql`, applied with `./scripts/staging-bootstrap.sh extra`.
+
+- 3 firm-linked clients (natural person, business, trust) so the firm → client RLS path is exercised
+- 8 matters across five phases, backdated 3 to 201 days
+- 4 transfers across open / on hold / registered, one with **zero matters** so that chip has a live case
 
 ## Known gaps
 
