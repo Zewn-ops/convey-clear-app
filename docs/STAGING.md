@@ -31,25 +31,46 @@ Save the database password straight into Vaultwarden. Do not paste it into chat,
 
 ## 2. Load the schema
 
+**From the VPS, not the laptop.** The laptop has no `psql`; docker there needs `sudo`, the daemon is
+stopped, and `sudo` cannot run through a non-tty shell — which covers both Claude's Bash tool and the
+`!` prefix (confirmed 2026-06-30). The VPS already has `postgresql-client-16` and already reaches
+Supabase over the IPv4 pooler.
+
+**Put the connection string on the VPS.** It never touches the laptop, this repo, the vault or chat —
+same convention as the existing `/root/.supabase-backup.env`:
+
 ```bash
-cd ~/projects/convey-clear/convey-clear-app
-./scripts/apply-migrations.sh "postgresql://postgres.<staging-ref>:<pw>@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
+ssh root@187.124.112.180
+umask 077
+cat > /root/.conveyclear-staging.env <<'EOF'
+STAGING_DB_URL="postgresql://postgres.<staging-ref>:<password>@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
+EOF
+chmod 600 /root/.conveyclear-staging.env
 ```
 
-Always the **pooler** host. `db.<ref>.supabase.co` resolves IPv6 only and is unreachable from the VPS
-containers and often from the laptop. The pooler user must carry the project ref
-(`postgres.<staging-ref>`), never a bare `postgres`.
+Always the **pooler** host. `db.<ref>.supabase.co` resolves IPv6 only. The pooler user must carry the
+project ref (`postgres.<staging-ref>`), never a bare `postgres`.
 
-The script refuses to run against the production ref. It replays seeds and backfill `UPDATE`s, which is
-right for an empty database and destructive on a live one.
+**Then from the laptop:**
 
-This is only possible because the migrations went into git on 2026-08-04. Before that they were 45 loose
-files in `cc-notes and stuff/sql/`, and "stand up a second environment" meant finding them on one laptop.
+```bash
+cd ~/projects/convey-clear/convey-clear-app
+./scripts/staging-bootstrap.sh
+```
+
+Syncs the SQL to the VPS, applies every migration in order, prints a shape check. Refuses the production
+ref on both sides of the ssh boundary, because it replays seeds and backfill `UPDATE`s — correct on an
+empty database, destructive on a live one. Resume after a failure with `./scripts/staging-bootstrap.sh <number>`.
+
+`scripts/apply-migrations.sh` is the direct-psql equivalent, for a machine that has psql locally.
+
+Only possible because the migrations went into git on 2026-08-04. Before that, standing up a second
+environment meant finding 45 loose files in `cc-notes and stuff/sql/` on one laptop.
 
 ## 3. Seed something to look at
 
 ```bash
-psql "$STAGING_URL" -f supabase/scripts/seed_dryrun_data.sql
+./scripts/staging-bootstrap.sh seed
 ```
 
 Then create auth users in the staging dashboard with **the same emails** as the seeded `public.users`
@@ -93,7 +114,7 @@ Staging drifts the moment a migration lands on prod. Apply new migrations to **s
 prod — that ordering is the entire point.
 
 ```bash
-./scripts/apply-migrations.sh "$STAGING_URL" 048
+./scripts/staging-bootstrap.sh 048
 ```
 
 ## What this does not cover
