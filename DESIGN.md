@@ -60,6 +60,23 @@ Two radii (`10px`, `14px`), not the **six** currently shipped. Shadows are navy-
 (`rgb(27 46 107 / .08)`), never grey — this carries most of the modern read. Motion:
 `cubic-bezier(.22,1,.36,1)`, 120ms and 200ms, no bounce.
 
+## Card spacing
+
+Locked 2026-08-05 after review. The first cut felt clustered.
+
+| | Value |
+|---|---|
+| Card padding | `p-5`, `sm:p-6` |
+| Between cards | `space-y-4` |
+| Between layers inside a card | `mt-4` |
+| Chip row | `gap-2`, chips `px-2.5 py-1.5` |
+| Card title | 15.5px / 700 / -0.015em |
+| Section rhythm | `space-y-8` |
+
+Deliberately not one flat value everywhere: the gap between cards is larger
+than the gap between layers inside a card, so a card reads as one object rather
+than as five evenly-spaced rows.
+
 ## Density
 
 **Rich cards for transfers and matters** — where the anxiety is. **Tables for clients, firms and council

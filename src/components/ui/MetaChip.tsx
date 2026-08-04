@@ -27,7 +27,7 @@ export default function MetaChip({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm border px-2 py-1
+      className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5
                   text-[11.5px] tabular-nums ${toned}`}
     >
       {icon}

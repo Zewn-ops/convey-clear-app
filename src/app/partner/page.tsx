@@ -86,7 +86,7 @@ export default async function PartnerOverview() {
     "inline-flex items-center gap-2 rounded border border-line px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors duration-150 ease-out hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-7">
+    <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Your matters</h1>
@@ -111,7 +111,7 @@ export default async function PartnerOverview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile value={totalMatters ?? 0} label="Total" href="/partner/matters" />
         <StatTile value={activeMatters ?? 0} label="Active" tone="ok" href="/partner/matters?status=open" />
         <StatTile value={onHold ?? 0} label="On hold" tone="waiting" href="/partner/matters?status=on_hold" />
@@ -143,7 +143,7 @@ export default async function PartnerOverview() {
             running, and whatever is holding it up.
           </EmptyState>
         ) : (
-          <ul className="space-y-2.5">
+          <ul className="space-y-4">
             {matters.map((m) => {
               const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
               const steps = pl ? phaseSteps(pl) : [];
@@ -156,13 +156,13 @@ export default async function PartnerOverview() {
               return (
                 <li
                   key={m.id}
-                  className="rounded-lg border border-line bg-surface p-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow"
+                  className="rounded-lg border border-line bg-surface p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow sm:p-6"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <Link
                         href={`/partner/matters/${m.id}`}
-                        className="flex items-center gap-2 text-[14.5px] font-bold tracking-[-0.01em] text-ink hover:text-action hover:underline"
+                        className="flex items-center gap-2 text-[15.5px] font-bold tracking-[-0.015em] text-ink hover:text-action hover:underline"
                       >
                         {unread.has(m.id) && (
                           <span
@@ -175,7 +175,7 @@ export default async function PartnerOverview() {
                         </span>
                       </Link>
                       {serviceLabel(m) && (
-                        <p className="mt-0.5 text-[12px] text-ink-3">
+                        <p className="mt-1 text-[12.5px] text-ink-3">
                           {serviceLabel(m)}
                           {m.municipality ? ` · ${m.municipality}` : ""}
                         </p>
@@ -189,7 +189,7 @@ export default async function PartnerOverview() {
                   </div>
 
                   {pl && idx >= 0 && (
-                    <div className="mt-3">
+                    <div className="mt-4">
                       <PhaseProgress
                         phase={idx + 1}
                         total={steps.length}
@@ -199,7 +199,7 @@ export default async function PartnerOverview() {
                     </div>
                   )}
 
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {open !== null && (
                       <MetaChip
                         label="Open"
