@@ -36,17 +36,17 @@ export default function TransferCard({
   const stalled = live && open !== null && open > STALLED_WORKDAYS;
 
   return (
-    <li className="rounded-lg border border-line bg-surface p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow sm:p-6">
+    <li className="rounded-lg bg-surface p-6 shadow ring-1 ring-line/50 transition-shadow duration-200 ease-out hover:shadow-lg sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link
             href={href}
-            className="block truncate text-[15.5px] font-bold tracking-[-0.015em] text-ink hover:text-action hover:underline"
+            className="block truncate text-[17px] font-semibold tracking-[-0.018em] text-ink hover:text-action hover:underline"
           >
             {t.reference}
           </Link>
           {t.property_description && (
-            <p className="mt-1 text-[12.5px] text-ink-3">{t.property_description}</p>
+            <p className="mt-1.5 text-[13px] font-medium text-ink-3">{t.property_description}</p>
           )}
         </div>
         <StatusPill tone={STATUS_TONE[t.status] ?? "neutral"}>
@@ -54,7 +54,7 @@ export default function TransferCard({
         </StatusPill>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         <MetaChip
           label="Matters"
           value={matterCount}

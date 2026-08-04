@@ -85,12 +85,12 @@ export default function MatterCard({
       : null;
 
   return (
-    <li className="rounded-lg border border-line bg-surface p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow sm:p-6">
+    <li className="rounded-lg bg-surface p-6 shadow ring-1 ring-line/50 transition-shadow duration-200 ease-out hover:shadow-lg sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link
             href={href}
-            className="flex items-center gap-2 text-[15.5px] font-bold tracking-[-0.015em] text-ink hover:text-action hover:underline"
+            className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.018em] text-ink hover:text-action hover:underline"
           >
             {unread && (
               <span
@@ -102,7 +102,7 @@ export default function MatterCard({
               {m.title || clientDisplayName(m.clients) || "Untitled matter"}
             </span>
           </Link>
-          {subtitle && <p className="mt-1 text-[12.5px] text-ink-3">{subtitle}</p>}
+          {subtitle && <p className="mt-1.5 text-[13px] font-medium text-ink-3">{subtitle}</p>}
         </div>
         {m.status && (
           <StatusPill tone={tone}>
@@ -112,7 +112,7 @@ export default function MatterCard({
       </div>
 
       {pl && idx >= 0 && (
-        <div className="mt-4">
+        <div className="mt-5">
           <PhaseProgress
             phase={idx + 1}
             total={steps.length}
@@ -122,7 +122,7 @@ export default function MatterCard({
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         {open !== null && (
           <MetaChip
             label="Open"

@@ -21,11 +21,11 @@ export default function PhaseProgress({
 
   return (
     <div>
-      <p className={`text-[12.5px] font-bold ${done ? "text-ok" : "text-action"}`}>
+      <p className={`text-[13.5px] font-semibold ${done ? "text-ok" : "text-action"}`}>
         Phase {phase} of {safeTotal} &middot; {label}
       </p>
       <div
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-line"
+        className="mt-2.5 h-2 overflow-hidden rounded-full bg-line"
         role="progressbar"
         aria-valuenow={pct}
         aria-valuemin={0}

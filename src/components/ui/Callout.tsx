@@ -20,10 +20,10 @@ export default function Callout({
   action?: ReactNode;
 }) {
   const toned = {
-    required: "bg-required-tint border-required/25",
-    waiting: "bg-waiting-tint border-waiting/25",
-    action: "bg-action-tint border-action/25",
-    ok: "bg-ok-tint border-ok/25",
+    required: "bg-required-tint ring-required/20",
+    waiting: "bg-waiting-tint ring-waiting/20",
+    action: "bg-action-tint ring-action/20",
+    ok: "bg-ok-tint ring-ok/20",
   }[tone];
 
   const labelTone = {
@@ -34,11 +34,11 @@ export default function Callout({
   }[tone];
 
   return (
-    <div className={`rounded border px-3.5 py-3 ${toned}`}>
-      <p className={`text-[10px] font-bold uppercase tracking-[0.11em] ${labelTone}`}>
+    <div className={`rounded-lg px-4 py-3.5 ring-1 ring-inset ${toned}`}>
+      <p className={`text-[10.5px] font-semibold uppercase tracking-[0.1em] ${labelTone}`}>
         {label}
       </p>
-      <div className="mt-1 text-[13px] text-ink-2">{children}</div>
+      <div className="mt-1.5 text-[13.5px] font-medium text-ink-2">{children}</div>
       {action ? <div className="mt-2.5">{action}</div> : null}
     </div>
   );

@@ -37,7 +37,7 @@ export default async function NewPartnerTransferPage() {
         <ArrowLeft className="h-4 w-4" /> Back to transfers
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-ink">New property transfer</h1>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">New property transfer</h1>
         <p className="text-sm text-ink-3 mt-1">
           Group the matters of one transaction together. Your firm owns it; ConveyClear can see it.
         </p>

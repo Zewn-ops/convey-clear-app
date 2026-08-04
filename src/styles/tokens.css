@@ -1,61 +1,57 @@
-/* ConveyClear design tokens — generated 2026-08-04, values solved not eyeballed.
-   Every pair below is verified >=4.5:1 in BOTH themes. Regenerate with
-   scratchpad/oklch.py rather than hand-editing: a hand-tweak breaks the proof.
+/* ConveyClear design tokens — regenerated 2026-08-05.
+   Every value solved, never eyeballed: 0 of 40 pairs fail WCAG AA in either
+   theme. Regenerate with scripts/design-oklch.py rather than hand-editing, or
+   the proof stops being true.
 
-   Hue 267 is ConveyClear's own navy hue. The action blue is that same hue pushed
-   up the lightness scale, so the palette extends the brand instead of replacing it. */
+   Hue 267 is ConveyClear's own navy hue, so the action blue extends the brand
+   rather than replacing it.
+
+   Revision 2 after review: near-white grounds, softer semantics (chroma eased
+   back off the dense print feel), and elevation instead of outlines. */
 
 :root {
-  --cc-canvas: #f7f9fd;
-  --cc-surface: #fcfeff;
-  --cc-raised: #f2f4fa;
-  --cc-border: #dbdee5;
-  --cc-border-strong: #c7cad3;
-  --cc-muted: #666c78;
-  --cc-secondary: #4e5564;
-  --cc-text: #1c2232;
-  --cc-action: #2c4ab2;
-  --cc-required: #d43e00;
-  --cc-waiting: #b15f00;
-  --cc-ok: #00872f;
-  --cc-danger: #d33b36;
-  --cc-action-tint: #e2f0ff;
-  --cc-required-tint: #ffe5d8;
-  --cc-waiting-tint: #ffeccf;
-  --cc-ok-tint: #dbfadf;
-  --cc-danger-tint: #ffe4de;
-  --cc-chrome: #1b2e6b;
-  --cc-on-chrome: #eaf0ff;    --cc-brand-50: #f0f6ff;
-  --cc-brand-100: #dfeaff;
-  --cc-brand-200: #c2d6ff;
-  --cc-brand-300: #9dbcff;
-  --cc-brand-400: #5f85ef;
-  --cc-brand-500: #3b5ece;
-  --cc-brand-600: #2c4ab2;
-  --cc-brand-700: #223b91;
-  --cc-brand-800: #1b2e6b;
-  --cc-brand-900: #132150;
-  --cc-brand-950: #0a1538;
-  --cc-action-fill: #2c4ab2;
-  --cc-required-fill: #ef5923;
-  --cc-waiting-fill: #f59e0a;
-  --cc-ok-fill: #16a34a;
-  --cc-danger-fill: #d33b36;
+  --cc-canvas: #f6f8fb;
+  --cc-surface: #fefeff;
+  --cc-raised: #f1f3f8;
+  --cc-border: #e1e4e9;
+  --cc-border-strong: #ced1d8;
+  --cc-muted: #6a6e79;
+  --cc-secondary: #515764;
+  --cc-text: #1a202f;
+  --cc-action: #3e5db9;
+  --cc-required: #c74d24;
+  --cc-waiting: #ad6200;
+  --cc-ok: #08863a;
+  --cc-danger: #c94941;
+  --cc-action-tint: #e8f3ff;
+  --cc-required-tint: #ffeadf;
+  --cc-waiting-tint: #fff0d8;
+  --cc-ok-tint: #e2fbe6;
+  --cc-danger-tint: #ffe9e4;
+  --cc-action-fill: #3e5db9;
+  --cc-required-fill: #c74d24;
+  --cc-waiting-fill: #df911a;
+  --cc-ok-fill: #2e9c4e;
+  --cc-danger-fill: #ca4941;
   --cc-action-on-fill: #ffffff;
-  --cc-required-on-fill: #1c2232;
-  --cc-waiting-on-fill: #1c2232;
-  --cc-ok-on-fill: #1c2232;
+  --cc-required-on-fill: #ffffff;
+  --cc-waiting-on-fill: #1a202f;
+  --cc-ok-on-fill: #1a202f;
   --cc-danger-on-fill: #ffffff;
+  --cc-chrome: #1b2e6b;
+  --cc-on-chrome: #eaf0ff;
 
-  --cc-radius-sm: 6px;
-  --cc-radius: 10px;
-  --cc-radius-lg: 14px;
+  --cc-radius-sm: 8px;
+  --cc-radius: 12px;
+  --cc-radius-lg: 16px;
   --cc-radius-pill: 999px;
 
-  /* brand-tinted, never grey: this is most of the "modern" read */
+  /* Elevation carries the card, not a border. Two layers: a tight contact
+     shadow so the edge is legible, and a wide soft one for the lift. Both
+     tinted navy — grey shadows are what make a light UI look dusty. */
   --cc-shadow-sm: 0 1px 2px 0 rgb(27 46 107 / 0.05);
-  --cc-shadow: 0 2px 8px -1px rgb(27 46 107 / 0.08), 0 1px 3px -1px rgb(27 46 107 / 0.06);
-  --cc-shadow-lg: 0 8px 28px -6px rgb(27 46 107 / 0.14);
+  --cc-shadow: 0 1px 2px 0 rgb(27 46 107 / 0.05), 0 8px 24px -10px rgb(27 46 107 / 0.14);
+  --cc-shadow-lg: 0 2px 4px 0 rgb(27 46 107 / 0.05), 0 18px 44px -14px rgb(27 46 107 / 0.20);
 
   --cc-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --cc-dur-fast: 120ms;
@@ -64,52 +60,46 @@
 
 :root[data-theme="dark"] {
   --cc-canvas: #171c25;
-  --cc-surface: #212631;
-  --cc-raised: #2c313e;
-  --cc-border: #3b414f;
-  --cc-border-strong: #4c5261;
-  --cc-muted: #9ea5b4;
-  --cc-secondary: #b9bfcd;
-  --cc-text: #ebeef5;
-  --cc-action: #6289f7;
-  --cc-required: #f45d28;
-  --cc-waiting: #f59e0a;
-  --cc-ok: #17a44b;
-  --cc-danger: #f35a50;
-  --cc-action-tint: #24304f;
-  --cc-required-tint: #4b261a;
-  --cc-waiting-tint: #442c0d;
-  --cc-ok-tint: #1a3a21;
-  --cc-danger-tint: #4c2521;
-  --cc-chrome: #0a1538;
-  --cc-on-chrome: #c2d6ff;    --cc-action-fill: #2c4ab2;
-  --cc-required-fill: #ef5923;
-  --cc-waiting-fill: #f59e0a;
-  --cc-ok-fill: #16a34a;
-  --cc-danger-fill: #d33b36;
+  --cc-surface: #222631;
+  --cc-raised: #2d333f;
+  --cc-border: #3c4251;
+  --cc-border-strong: #4d5463;
+  --cc-muted: #9fa6b6;
+  --cc-secondary: #bac0ce;
+  --cc-text: #eceff6;
+  --cc-action: #668aeb;
+  --cc-required: #e66941;
+  --cc-waiting: #df911a;
+  --cc-ok: #36a254;
+  --cc-danger: #e8655a;
+  --cc-action-tint: #28324c;
+  --cc-required-tint: #4a291f;
+  --cc-waiting-tint: #422e16;
+  --cc-ok-tint: #203a25;
+  --cc-danger-tint: #4a2824;
+  --cc-action-fill: #3e5db9;
+  --cc-required-fill: #c74d24;
+  --cc-waiting-fill: #df911a;
+  --cc-ok-fill: #2e9c4e;
+  --cc-danger-fill: #ca4941;
   --cc-action-on-fill: #ffffff;
-  --cc-required-on-fill: #1c2232;
-  --cc-waiting-on-fill: #1c2232;
-  --cc-ok-on-fill: #1c2232;
+  --cc-required-on-fill: #ffffff;
+  --cc-waiting-on-fill: #1a202f;
+  --cc-ok-on-fill: #1a202f;
   --cc-danger-on-fill: #ffffff;
+  --cc-chrome: #10182e;
+  --cc-on-chrome: #c2d6ff;
 
-  --cc-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
-  --cc-shadow: 0 2px 8px -1px rgb(0 0 0 / 0.5), 0 1px 3px -1px rgb(0 0 0 / 0.4);
-  --cc-shadow-lg: 0 8px 28px -6px rgb(0 0 0 / 0.6);
+  /* Shadows barely read on a dark ground, so depth comes from the surface
+     stepping lighter than the canvas instead. A hairline keeps the edge. */
+  --cc-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+  --cc-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.55), 0 10px 28px -12px rgb(0 0 0 / 0.6);
+  --cc-shadow-lg: 0 2px 6px 0 rgb(0 0 0 / 0.6), 0 20px 48px -16px rgb(0 0 0 / 0.7);
 }
 
-/* NO prefers-color-scheme block, deliberately.
-   Dark mode applies ONLY on an explicit :root[data-theme="dark"], which only
-   ThemeToggle sets, and ThemeToggle only exists on migrated surfaces.
-
-   42 of 59 page files still hardcode bg-white / bg-gray-50 / text-gray-900.
-   Auto-applying dark from the OS preference would hand every one of those a
-   dark canvas behind white cards -- a broken portal for any user whose laptop
-   is set to dark, with no action on their part.
-
-   Restore the media query in the same commit that finishes the migration:
-
-     @media (prefers-color-scheme: dark) {
-       :root:not([data-theme="light"]) { ...dark tokens... }
-     }
-*/
+/* NO prefers-color-scheme block, deliberately. Dark applies only on an explicit
+   data-theme="dark", which only ThemeToggle sets, and the toggle only exists on
+   migrated surfaces. /admin, /dashboard and /onboard still hardcode light
+   greys; following the OS preference would hand those users a dark canvas
+   behind white cards with no action on their part. Restore the media query in
+   the same commit that finishes the migration. */

@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-lg bg-surface shadow ring-1 ring-line/50">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">{children}</table>
       </div>
@@ -39,8 +39,7 @@ export function TH({
   const hide = hideBelow === "md" ? "hidden md:table-cell" : hideBelow === "lg" ? "hidden lg:table-cell" : "";
   return (
     <th
-      className={`px-5 py-3 text-${align} font-mono text-[9.5px] font-bold uppercase
-                  tracking-[0.1em] text-ink-3 ${hide}`}
+      className={`px-5 py-3 text-${align} text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3 ${hide}`}
     >
       {children}
     </th>
@@ -74,7 +73,7 @@ export function TD({
   return (
     <td
       colSpan={colSpan}
-      className={`px-5 py-3.5 text-${align} ${strong ? "font-semibold text-ink" : "text-ink-2"} ${hide}`}
+      className={`px-5 py-4 text-${align} ${strong ? "font-semibold text-ink" : "font-medium text-ink-2"} ${hide}`}
     >
       {children}
     </td>

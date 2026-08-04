@@ -49,7 +49,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{clientDisplayName(client)}</h1>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{clientDisplayName(client)}</h1>
           <p className="text-sm text-ink-3 mt-1">
             {client.entity_type.replace("_", " ")}
             {client.registration_no ? ` · ${client.registration_no}` : ""} · added {formatDate(client.created_at)}
@@ -58,7 +58,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
       </div>
 
       <Card>
-        <h2 className="font-semibold text-ink mb-3">Contact</h2>
+        <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Contact</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-ink-3" />
@@ -89,7 +89,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
       </Card>
 
       <div>
-        <h2 className="font-semibold text-ink mb-3">Matters ({matters.length})</h2>
+        <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Matters ({matters.length})</h2>
         <Card padding="none">
           <ul className="divide-y divide-line">
             {matters.map((m) => (

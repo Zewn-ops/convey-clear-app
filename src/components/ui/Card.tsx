@@ -46,8 +46,8 @@ export default function Card({
   return (
     <div
       className={cn(
-        "rounded-lg bg-surface shadow-sm",
-        accent ? accentClasses[accent] : "border border-line",
+        "rounded-lg bg-surface shadow",
+        accent ? accentClasses[accent] : "ring-1 ring-line/60 dark:ring-line",
         paddingClasses[padding],
         className
       )}

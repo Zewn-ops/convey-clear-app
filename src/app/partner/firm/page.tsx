@@ -38,7 +38,7 @@ export default async function PartnerFirmPage() {
         <ArrowLeft className="h-4 w-4" /> Back
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-ink">Firm details</h1>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Firm details</h1>
         <p className="text-sm text-ink-3 mt-1">
           Banking, trust account and municipality BP numbers for your firm. Firm administrators only.
         </p>

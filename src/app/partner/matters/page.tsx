@@ -55,8 +55,8 @@ export default async function PartnerMatters({
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Matters</h1>
-          <p className="mt-1 text-sm text-ink-3">{total} matter{total === 1 ? "" : "s"}</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Matters</h1>
+          <p className="mt-2.5 text-[15px] font-medium text-ink-3">{total} matter{total === 1 ? "" : "s"}</p>
         </div>
         <Link
           href="/partner/refer"

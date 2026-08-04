@@ -70,8 +70,8 @@ export default async function PartnerOverview() {
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Your matters</h1>
-          <p className="mt-1 text-sm text-ink-3">Matters ConveyClear is handling for your clients.</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Your matters</h1>
+          <p className="mt-2.5 text-[15px] font-medium text-ink-3">Matters ConveyClear is handling for your clients.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a href={`mailto:${CONVEYCLEAR_EMAIL}`} className={actionLink}>
@@ -101,7 +101,7 @@ export default async function PartnerOverview() {
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-bold text-ink">Active matters</h2>
+          <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Active matters</h2>
           <Link
             href="/partner/matters"
             className="flex items-center gap-1 text-sm font-medium text-action hover:underline"

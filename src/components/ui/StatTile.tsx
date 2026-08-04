@@ -20,24 +20,24 @@ export default function StatTile({
 
   const body = (
     <>
-      <span className={`block text-[21px] font-extrabold tracking-[-0.02em] tabular-nums ${toned}`}>
+      <span className={`block text-[26px] font-semibold tracking-[-0.025em] tabular-nums ${toned}`}>
         {value}
       </span>
-      <span className="block text-[9.5px] font-bold uppercase tracking-[0.1em] text-ink-3">
+      <span className="block mt-0.5 block text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">
         {label}
       </span>
     </>
   );
 
   const shell =
-    "rounded border border-line bg-raised px-3 py-2.5 text-center transition-colors duration-150 ease-out";
+    "rounded-lg bg-surface px-4 py-4 text-center shadow-sm ring-1 ring-line/50 transition-shadow duration-150 ease-out";
 
   // A tile that filters the list below it should look and behave like a
   // control. A tile that is only a number should not pretend to be one.
   return href ? (
     <a
       href={href}
-      className={`${shell} block hover:border-line-strong focus-visible:outline-none
+      className={`${shell} block hover:shadow focus-visible:outline-none
                   focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2
                   focus-visible:ring-offset-canvas`}
     >

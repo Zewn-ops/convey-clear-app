@@ -158,7 +158,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{matter.title || clientDisplayName(client) || "Matter"}</h1>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{matter.title || clientDisplayName(client) || "Matter"}</h1>
           <p className="text-sm text-ink-3 mt-1">
             {matter.municipality || "—"} · Opened {formatDate(matter.created_at)}
             {matter.partner_file_ref ? ` · Your ref: ${matter.partner_file_ref}` : ""}
@@ -238,7 +238,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         {/* Client (single-client matters only) */}
         {client && (
         <Card>
-          <h2 className="font-semibold text-ink mb-3">Client</h2>
+          <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Client</h2>
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between"><dt className="text-ink-3">Name</dt><dd className="text-ink">{clientDisplayName(client)}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-3">Type</dt><dd className="text-ink">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
@@ -291,7 +291,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       {/* Activity */}
       <Card>
-        <h2 className="font-semibold text-ink mb-3">Activity</h2>
+        <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Activity</h2>
         {activities.length === 0 ? (
           <p className="text-sm text-ink-3">No activity yet.</p>
         ) : (

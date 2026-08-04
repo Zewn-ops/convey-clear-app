@@ -41,7 +41,7 @@ export default async function PartnerEnquiryDetail({ params }: { params: { id: s
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{enquiry.subject}</h1>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{enquiry.subject}</h1>
           {enquiry.matter_id && (
             <p className="text-sm text-ink-3 mt-1">
               Re:{" "}

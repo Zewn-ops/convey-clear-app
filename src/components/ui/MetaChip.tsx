@@ -20,18 +20,17 @@ export default function MetaChip({
 }) {
   const toned =
     tone === "waiting"
-      ? "border-waiting/30 bg-waiting-tint text-waiting"
+      ? "ring-waiting/25 bg-waiting-tint text-waiting"
       : tone === "required"
-        ? "border-required/30 bg-required-tint text-required"
-        : "border-line bg-raised text-ink-2";
+        ? "ring-required/25 bg-required-tint text-required"
+        : "ring-line/70 bg-raised text-ink-2";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5
-                  text-[11.5px] tabular-nums ${toned}`}
+      className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-[12px] font-medium tabular-nums ring-1 ring-inset ${toned}`}
     >
       {icon}
-      {label} <b className="font-bold text-ink">{value}</b>
+      {label} <b className="font-semibold text-ink">{value}</b>
     </span>
   );
 }

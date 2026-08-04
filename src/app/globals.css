@@ -12,6 +12,12 @@
   body {
     background:var(--cc-canvas);
     color:var(--cc-text);
+    /* 15px/500 base rather than 14px/400. Reads heavier and more current, and
+       matches the reference set where UI text sits at 500-600 while the big
+       display type stays light. */
+    font-size:15px;
+    font-weight:500;
+    letter-spacing:-0.005em;
   }
 }
 

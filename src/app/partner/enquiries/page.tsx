@@ -30,14 +30,14 @@ export default async function PartnerEnquiries() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Enquiries</h1>
-        <p className="mt-1 text-sm text-ink-3">Ask ConveyClear about a matter — the team is notified and will respond here.</p>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Enquiries</h1>
+        <p className="mt-2.5 text-[15px] font-medium text-ink-3">Ask ConveyClear about a matter — the team is notified and will respond here.</p>
       </div>
 
       <NewEnquiryForm matters={matters} />
 
       <div>
-        <h2 className="mb-3 text-[15px] font-bold text-ink">Your enquiries</h2>
+        <h2 className="mb-3 text-[19px] font-semibold tracking-[-0.015em] text-ink">Your enquiries</h2>
         {enquiries.length === 0 ? (
           <EmptyState title="No enquiries yet" icon={<MessageSquare className="h-6 w-6" />}>
             Ask about a matter above. ConveyClear is notified and answers in the same thread, so the
