@@ -44,7 +44,7 @@ Fill in your Supabase credentials from the [Supabase Dashboard](https://supabase
 
 > ⚠️ **The `supabase/migrations/001_initial.sql` and `002_storage_policies.sql` files in this app are STALE scaffold** for an old schema (`profiles`/`service_requests`) and are slated for deletion. **Do not run them.**
 >
-> The live schema is maintained in `../cc-notes and stuff/sql/` (`001`–`006`): base schema, seed, deal-sync, 4-phase schema sprint, auth wiring + business partners, and RLS. The DB is already provisioned on Supabase (project `yhgriqagrhyblhmloctc`, eu-west-1) with RLS enabled on all tables. Central table is `matters`; auth maps `auth.users` → `public.users` via `users.auth_user_id`. See `../SECURITY.md` for the security/RLS posture.
+> The live schema is maintained in `supabase/migrations/` (`001`–`045`; the first six are): base schema, seed, deal-sync, 4-phase schema sprint, auth wiring + business partners, and RLS. The DB is already provisioned on Supabase (project `yhgriqagrhyblhmloctc`, eu-west-1) with RLS enabled on all tables. Central table is `matters`; auth maps `auth.users` → `public.users` via `users.auth_user_id`. See `../SECURITY.md` for the security/RLS posture.
 
 ### 5. Configure Supabase Storage
 
