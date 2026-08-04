@@ -34,14 +34,14 @@ DELETE FROM public.enquiries           WHERE id::text          LIKE 'dd000000-%'
 DELETE FROM public.matter_parties      WHERE id::text          LIKE 'dd000000-%';
 DELETE FROM public.matters             WHERE id::text          LIKE 'dd000000-%';
 DELETE FROM public.clients             WHERE id::text          LIKE 'dd000000-%';
-DELETE FROM public.business_partners   WHERE id::text          LIKE 'dd000000-%';
+DELETE FROM public.firms   WHERE id::text          LIKE 'dd000000-%';
 -- (client/partner PROFILE rows are upserted by email below, not deleted, so a
 --  linked auth_user_id survives a re-run.)
 
 -- ----------------------------------------------------------------------------
 -- 1. Partner firm (the COO matter is managed by this firm; no client login)
 -- ----------------------------------------------------------------------------
-INSERT INTO public.business_partners (id, name, partner_type, primary_email, primary_cell, physical_address, active)
+INSERT INTO public.firms (id, name, partner_type, primary_email, primary_cell, physical_address, active)
 VALUES (
   'dd000000-0000-0000-0000-000000000f01',
   'Sterling & Hayes Attorneys',
@@ -225,7 +225,7 @@ COMMIT;
 -- ============================================================================
 -- VERIFY
 -- ============================================================================
-SELECT 'business_partners' AS t, count(*) FROM public.business_partners WHERE id::text LIKE 'dd000000-%'
+SELECT 'firms' AS t, count(*) FROM public.firms WHERE id::text LIKE 'dd000000-%'
 UNION ALL SELECT 'clients',        count(*) FROM public.clients          WHERE id::text LIKE 'dd000000-%'
 UNION ALL SELECT 'matters',        count(*) FROM public.matters          WHERE id::text LIKE 'dd000000-%'
 UNION ALL SELECT 'matter_parties', count(*) FROM public.matter_parties   WHERE id::text LIKE 'dd000000-%'
@@ -244,6 +244,6 @@ UNION ALL SELECT 'users(dryrun)',  count(*) FROM public.users WHERE email IN ('d
 -- DELETE FROM public.matter_parties      WHERE id::text         LIKE 'dd000000-%';
 -- DELETE FROM public.matters             WHERE id::text         LIKE 'dd000000-%';
 -- DELETE FROM public.clients             WHERE id::text         LIKE 'dd000000-%';
--- DELETE FROM public.business_partners   WHERE id::text         LIKE 'dd000000-%';
+-- DELETE FROM public.firms   WHERE id::text         LIKE 'dd000000-%';
 -- DELETE FROM public.users WHERE email IN ('dryrun.client@example.com','dryrun.partner@sterlinghayes.co.za');
 -- COMMIT;

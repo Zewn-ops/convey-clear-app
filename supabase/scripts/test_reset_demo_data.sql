@@ -21,7 +21,7 @@
 -- ---- BEFORE counts (run this first on its own) -----------------------------
 -- SELECT
 --   (SELECT count(*) FROM clients)           AS clients,
---   (SELECT count(*) FROM business_partners) AS firms,
+--   (SELECT count(*) FROM firms) AS firms,
 --   (SELECT count(*) FROM matters)           AS matters,
 --   (SELECT count(*) FROM matter_parties)    AS parties,
 --   (SELECT count(*) FROM documents)         AS documents,
@@ -56,13 +56,13 @@ DELETE FROM clients;
 DELETE FROM users WHERE role IN ('client','business_partner');
 
 -- Firms (now unreferenced)
-DELETE FROM business_partners;
+DELETE FROM firms;
 
 -- ---- AFTER counts (sanity check before COMMIT) -----------------------------
 -- Expect zeros for clients/firms/matters/parties/documents, staff users intact.
 SELECT
   (SELECT count(*) FROM clients)           AS clients,
-  (SELECT count(*) FROM business_partners) AS firms,
+  (SELECT count(*) FROM firms) AS firms,
   (SELECT count(*) FROM matters)           AS matters,
   (SELECT count(*) FROM matter_parties)    AS parties,
   (SELECT count(*) FROM documents)         AS documents,
