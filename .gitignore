@@ -23,11 +23,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# local env files — broad by design. A file named .env.staging or
+# .env.something was NOT covered by the old explicit list, which is exactly
+# how a service_role key ends up in a public repo.
 .env
-.env.local
-.env.development.local
-.env.test.local
+.env*
+!.env.example
 .env.production.local
 
 # vercel
