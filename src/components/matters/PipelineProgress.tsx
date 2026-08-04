@@ -50,12 +50,12 @@ export default function PipelineProgress({
               <div
                 className={
                   "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold " +
-                  (done ? "bg-green-500 text-white" : active ? "bg-[#1B2E6B] text-white" : "bg-gray-200 text-gray-500")
+                  (done ? "bg-green-500 text-white" : active ? "bg-[#1B2E6B] text-white" : "bg-gray-200 text-ink-3")
                 }
               >
                 {done ? <CheckCircle2 className="h-5 w-5" /> : i}
               </div>
-              <p className={"mt-2 text-[11px] leading-tight " + (active ? "font-semibold text-[#1B2E6B]" : "text-gray-500")}>
+              <p className={"mt-2 text-[11px] leading-tight " + (active ? "font-semibold text-[#1B2E6B]" : "text-ink-3")}>
                 {s.name}
               </p>
             </div>
@@ -65,8 +65,8 @@ export default function PipelineProgress({
 
       {/* Stages of the current phase */}
       {currentPhaseDef && stages.length > 0 && (
-        <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+        <div className="rounded-lg border border-line bg-raised px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3 mb-2">
             {currentStep.name} — stages
           </p>
           <ul className="space-y-1.5">
@@ -75,9 +75,9 @@ export default function PipelineProgress({
               return (
                 <li key={st.key} className="flex items-center gap-2 text-sm">
                   <span className={"h-1.5 w-1.5 rounded-full shrink-0 " + (active ? "bg-[#E8521A]" : "bg-gray-300")} />
-                  <span className={active ? "font-medium text-gray-900" : "text-gray-600"}>{st.name}</span>
+                  <span className={active ? "font-medium text-ink" : "text-ink-2"}>{st.name}</span>
                   {!isClient && !st.clientVisible && (
-                    <span className="inline-flex items-center gap-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500" title="Admin-only — not shown to the client">
+                    <span className="inline-flex items-center gap-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-ink-3" title="Admin-only — not shown to the client">
                       <EyeOff className="h-3 w-3" /> Internal
                     </span>
                   )}

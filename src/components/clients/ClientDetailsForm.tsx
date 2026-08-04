@@ -79,7 +79,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
     return (
       <Card>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Details</h2>
+          <h2 className="font-semibold text-ink">Details</h2>
           <button
             type="button"
             onClick={() => setEditing(true)}
@@ -115,14 +115,14 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Edit details</h2>
-        <button type="button" onClick={cancel} className="text-xs text-gray-500 hover:text-gray-700">
+        <h2 className="font-semibold text-ink">Edit details</h2>
+        <button type="button" onClick={cancel} className="text-xs text-ink-3 hover:text-ink-2">
           Cancel
         </button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="text-xs font-medium text-gray-500 sm:col-span-2">
+        <label className="text-xs font-medium text-ink-3 sm:col-span-2">
           Client type
           <select
             value={entity}
@@ -133,7 +133,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
               setForm((cur) => ({ ...seed(next), ...cur }));
               setEntity(next);
             }}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
           >
             {ENTITY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -141,20 +141,20 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
               </option>
             ))}
           </select>
-          <span className="mt-1 block text-[11px] font-normal text-gray-500">
+          <span className="mt-1 block text-[11px] font-normal text-ink-3">
             Changes which documents the FICA vault asks for.
           </span>
         </label>
 
         {showIdNumber && (
-          <label className="text-xs font-medium text-gray-500">
+          <label className="text-xs font-medium text-ink-3">
             <span className="flex items-center gap-1">
               ID number <span className="text-[#E8521A]">*</span>
             </span>
             <input
               value={form.id_number ?? ""}
               onChange={(e) => setForm((s) => ({ ...s, id_number: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
             />
           </label>
         )}
@@ -164,8 +164,8 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
             key={f.key}
             className={
               f.type === "textarea"
-                ? "text-xs font-medium text-gray-500 sm:col-span-2"
-                : "text-xs font-medium text-gray-500"
+                ? "text-xs font-medium text-ink-3 sm:col-span-2"
+                : "text-xs font-medium text-ink-3"
             }
           >
             <span className="flex items-center gap-1">
@@ -179,7 +179,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
                 value={form[f.key] ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                 placeholder={f.hint}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
               />
             ) : (
               <input
@@ -187,7 +187,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
                 value={form[f.key] ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                 placeholder={f.hint}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
               />
             )}
           </label>
@@ -195,7 +195,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
       </div>
 
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={cancel} className="px-2 text-sm text-gray-500 hover:text-gray-800">
+        <button type="button" onClick={cancel} className="px-2 text-sm text-ink-3 hover:text-ink">
           Cancel
         </button>
         <button
@@ -225,7 +225,7 @@ function Field({
   const empty = value == null || String(value).trim() === "";
   return (
     <div className={wide ? "sm:col-span-2" : undefined}>
-      <dt className="text-xs text-gray-500">{label}</dt>
+      <dt className="text-xs text-ink-3">{label}</dt>
       <dd className={`mt-0.5 font-medium ${empty ? "text-gray-300" : ""}`}>
         {empty ? (required ? "Not captured" : "—") : value}
       </dd>

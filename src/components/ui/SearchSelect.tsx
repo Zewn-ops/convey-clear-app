@@ -100,7 +100,7 @@ export default function SearchSelect({
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-ink-2">
           {label}
           {required && <span className="ml-1 text-red-500">*</span>}
         </span>
@@ -114,12 +114,12 @@ export default function SearchSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           className={cn(
-            "flex w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-sm",
+            "flex w-full items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left text-sm",
             "focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent",
-            "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60"
+            "disabled:cursor-not-allowed disabled:bg-raised disabled:opacity-60"
           )}
         >
-          <span className={cn("truncate", selected ? "text-gray-900" : "text-gray-500")}>
+          <span className={cn("truncate", selected ? "text-ink" : "text-ink-3")}>
             {selected ? selected.label : (emptyLabel ?? placeholder)}
           </span>
           <span className="flex shrink-0 items-center gap-1">
@@ -132,19 +132,19 @@ export default function SearchSelect({
                   e.stopPropagation();
                   onChange("");
                 }}
-                className="text-gray-300 hover:text-gray-600"
+                className="text-gray-300 hover:text-ink-2"
               >
                 <X className="h-3.5 w-3.5" />
               </span>
             )}
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-ink-3" />
           </span>
         </button>
 
         {open && (
-          <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-            <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-              <Search className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+          <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-line bg-surface shadow-lg">
+            <div className="flex items-center gap-2 border-b border-line px-3 py-2">
+              <Search className="h-3.5 w-3.5 shrink-0 text-ink-3" />
               <input
                 ref={inputRef}
                 value={query}
@@ -164,7 +164,7 @@ export default function SearchSelect({
                   <button
                     type="button"
                     onClick={() => pick("")}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-ink-3 hover:bg-raised"
                   >
                     {emptyLabel}
                     {!value && <Check className="h-3.5 w-3.5 text-[#1B2E6B]" />}
@@ -173,7 +173,7 @@ export default function SearchSelect({
               )}
 
               {matches.length === 0 ? (
-                <li className="px-3 py-3 text-sm text-gray-500">No match for “{query}”</li>
+                <li className="px-3 py-3 text-sm text-ink-3">No match for “{query}”</li>
               ) : (
                 matches.map((o, i) => (
                   <li key={o.value}>
@@ -185,13 +185,13 @@ export default function SearchSelect({
                       onClick={() => pick(o.value)}
                       className={cn(
                         "flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-sm",
-                        i === active ? "bg-gray-50" : "",
-                        o.value === value ? "text-[#1B2E6B]" : "text-gray-800"
+                        i === active ? "bg-raised" : "",
+                        o.value === value ? "text-[#1B2E6B]" : "text-ink"
                       )}
                     >
                       <span className="min-w-0">
                         <span className="block truncate">{o.label}</span>
-                        {o.hint && <span className="block truncate text-xs text-gray-500">{o.hint}</span>}
+                        {o.hint && <span className="block truncate text-xs text-ink-3">{o.hint}</span>}
                       </span>
                       {o.value === value && <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
                     </button>
@@ -203,7 +203,7 @@ export default function SearchSelect({
         )}
       </div>
 
-      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+      {hint && <p className="text-xs text-ink-3">{hint}</p>}
     </div>
   );
 }

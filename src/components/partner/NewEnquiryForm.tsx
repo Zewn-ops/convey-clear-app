@@ -37,7 +37,7 @@ export default function NewEnquiryForm({ matters }: { matters: { id: string; tit
 
   return (
     <Card className="space-y-4">
-      <h2 className="font-semibold text-gray-900">New matter enquiry</h2>
+      <h2 className="font-semibold text-ink">New matter enquiry</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Clearance figures query" />
         <Select
@@ -48,13 +48,13 @@ export default function NewEnquiryForm({ matters }: { matters: { id: string; tit
         />
       </div>
       <label className="block">
-        <span className="text-xs font-medium text-gray-700">Message</span>
+        <span className="text-xs font-medium text-ink-2">Message</span>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
           placeholder="How can ConveyClear help?"
-          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
+          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
         />
       </label>
       <Button onClick={submit} loading={loading} className="w-full sm:w-auto" size="lg">

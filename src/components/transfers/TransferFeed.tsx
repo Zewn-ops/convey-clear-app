@@ -61,9 +61,9 @@ export default function TransferFeed({
     <Card accent="firm">
       <div className="mb-1 flex items-center gap-2">
         <MessageSquare className="h-4 w-4 text-[#1B2E6B]" />
-        <h2 className="font-semibold text-gray-900">Transfer feed</h2>
+        <h2 className="font-semibold text-ink">Transfer feed</h2>
       </div>
-      <p className="mb-4 text-xs text-gray-500">
+      <p className="mb-4 text-xs text-ink-3">
         The transaction&apos;s own history and conversation — shared between ConveyClear and the attorney firm. Not
         visible to clients.
       </p>
@@ -75,7 +75,7 @@ export default function TransferFeed({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Add a note about this transfer…"
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
           />
           <button
             type="button"
@@ -89,15 +89,15 @@ export default function TransferFeed({
       )}
 
       {activities.length === 0 ? (
-        <p className="text-sm text-gray-500">Nothing on this transfer yet.</p>
+        <p className="text-sm text-ink-3">Nothing on this transfer yet.</p>
       ) : (
         <ul className="space-y-3">
           {activities.map((a) => (
             <li key={a.id} className="flex gap-2.5">
               <Icon type={a.activity_type} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-gray-800">{a.body}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm text-ink">{a.body}</p>
+                <p className="text-xs text-ink-3">
                   {a.users?.full_name || a.author_label || "System"} · {formatDate(a.created_at)}
                 </p>
               </div>
@@ -112,7 +112,7 @@ export default function TransferFeed({
 function Icon({ type }: { type: string }) {
   const cls = "mt-0.5 h-3.5 w-3.5 shrink-0";
   if (type === "matter_linked" || type === "matter_unlinked") return <Link2 className={`${cls} text-[#E8521A]`} />;
-  if (type === "document_upload") return <FileText className={`${cls} text-gray-500`} />;
-  if (type === "status_change") return <Settings2 className={`${cls} text-gray-500`} />;
+  if (type === "document_upload") return <FileText className={`${cls} text-ink-3`} />;
+  if (type === "status_change") return <Settings2 className={`${cls} text-ink-3`} />;
   return <MessageSquare className={`${cls} text-[#1B2E6B]`} />;
 }

@@ -16,8 +16,8 @@ function Row({ k, v }: { k: string; v: string | null | undefined }) {
   if (!v) return null;
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-gray-500">{k}</dt>
-      <dd className="text-gray-800 text-right break-words">{v}</dd>
+      <dt className="text-ink-3">{k}</dt>
+      <dd className="text-ink text-right break-words">{v}</dd>
     </div>
   );
 }
@@ -32,7 +32,7 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
 
   return (
     <div>
-      <h2 className="font-semibold text-gray-900 mb-3">Parties ({parties.length})</h2>
+      <h2 className="font-semibold text-ink mb-3">Parties ({parties.length})</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {ordered.map((p) => {
           const isEntity = p.entity_type !== "natural_person";
@@ -43,9 +43,9 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#1B2E6B]">
                   {ROLE_LABELS[p.role] ?? p.role}
                 </p>
-                <span className="text-xs text-gray-500">{p.entity_type.replace("_", " ")}</span>
+                <span className="text-xs text-ink-3">{p.entity_type.replace("_", " ")}</span>
               </div>
-              <p className="font-medium text-gray-900">{name || "—"}</p>
+              <p className="font-medium text-ink">{name || "—"}</p>
               <dl className="space-y-1.5 text-sm">
                 <Row k="Reg / IT no." v={p.registration_no} />
                 {/* Natural person → ID here. Business/trust → ID lives with the
@@ -56,8 +56,8 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                 <Row k="Address" v={p.physical_address} />
               </dl>
               {isEntity && (contactPersonName(p) || p.contact_email || p.contact_cell || p.id_number) && (
-                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm space-y-1.5">
-                  <p className="text-xs font-medium text-gray-600">Contact person</p>
+                <div className="rounded-lg border border-line bg-raised p-3 text-sm space-y-1.5">
+                  <p className="text-xs font-medium text-ink-2">Contact person</p>
                   <dl className="space-y-1.5">
                     <Row k="Name" v={contactPersonName(p) || null} />
                     <Row k="ID number" v={p.id_number} />
@@ -67,7 +67,7 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                 </div>
               )}
               {manage && (
-                <div className="space-y-3 border-t border-gray-100 pt-3">
+                <div className="space-y-3 border-t border-line pt-3">
                   <EditPartyButton party={p} />
                   <CreatePartyAccount partyId={p.id} partyName={name || "this party"} />
                 </div>

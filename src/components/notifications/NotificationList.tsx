@@ -75,7 +75,7 @@ export default function NotificationList({
             type="button"
             disabled={busy}
             onClick={() => markRead(items.filter((n) => !n.read_at).map((n) => n.id))}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-raised disabled:opacity-50"
           >
             <Check className="h-4 w-4" /> Mark all read
           </button>
@@ -83,14 +83,14 @@ export default function NotificationList({
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-12 text-center">
+        <div className="rounded-xl border border-line bg-surface px-4 py-12 text-center">
           <Inbox className="mx-auto h-8 w-8 text-gray-300" />
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-ink-3">
             {filter === "unread" ? "Nothing unread — you're all caught up." : "No notifications yet."}
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
           {items.map((n) => (
             <li key={n.id} className={n.read_at ? "" : "bg-[#1B2E6B]/5"}>
               <div className="flex items-start gap-3 px-4 py-3">
@@ -99,14 +99,14 @@ export default function NotificationList({
                   onClick={() => !n.read_at && markRead([n.id])}
                   className="min-w-0 flex-1"
                 >
-                  <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                  <p className="flex items-center gap-2 text-sm font-medium text-ink">
                     {!n.read_at && (
                       <span className="h-2 w-2 shrink-0 rounded-full bg-[#E8521A]" aria-label="Unread" />
                     )}
                     <span className="truncate">{n.title}</span>
                   </p>
-                  {n.body && <p className="mt-0.5 text-xs text-gray-600">{n.body}</p>}
-                  <p className="mt-1 text-[11px] text-gray-500">
+                  {n.body && <p className="mt-0.5 text-xs text-ink-2">{n.body}</p>}
+                  <p className="mt-1 text-[11px] text-ink-3">
                     {new Date(n.created_at).toLocaleString("en-ZA")}
                   </p>
                 </Link>
@@ -115,7 +115,7 @@ export default function NotificationList({
                     type="button"
                     disabled={busy}
                     onClick={() => markRead([n.id])}
-                    className="shrink-0 text-xs font-medium text-gray-500 hover:text-[#1B2E6B] disabled:opacity-50"
+                    className="shrink-0 text-xs font-medium text-ink-3 hover:text-[#1B2E6B] disabled:opacity-50"
                     aria-label={`Mark "${n.title}" as read`}
                   >
                     Mark read
@@ -137,7 +137,7 @@ function TabLink({ href, active, label }: { href: string; active: boolean; label
       className={
         active
           ? "rounded-lg bg-[#1B2E6B]/10 px-3 py-1.5 text-sm font-semibold text-[#1B2E6B]"
-          : "rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100"
+          : "rounded-lg px-3 py-1.5 text-sm font-medium text-ink-3 hover:bg-raised"
       }
     >
       {label}

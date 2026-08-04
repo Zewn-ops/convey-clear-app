@@ -59,7 +59,7 @@ export default function MobileNav() {
                 onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-                  active ? "bg-white/15 text-white" : "text-white/70"
+                  active ? "bg-surface/15 text-white" : "text-white/70"
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />

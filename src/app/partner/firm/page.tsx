@@ -34,12 +34,12 @@ export default async function PartnerFirmPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <Link href="/partner" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/partner" className="inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink-2">
         <ArrowLeft className="h-4 w-4" /> Back
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Firm details</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-ink">Firm details</h1>
+        <p className="text-sm text-ink-3 mt-1">
           Banking, trust account and municipality BP numbers for your firm. Firm administrators only.
         </p>
       </div>

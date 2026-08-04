@@ -111,19 +111,19 @@ export default function LoginForm() {
         Sign in
       </Button>
       {TURNSTILE_ENABLED && !captchaToken && (
-        <p className="text-center text-xs text-gray-500 -mt-2">
+        <p className="text-center text-xs text-ink-3 -mt-2">
           Complete the verification above to sign in.
         </p>
       )}
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-500">or</span>
+        <span className="text-xs text-ink-3">or</span>
         <span className="h-px flex-1 bg-gray-200" />
       </div>
       <GoogleSignInButton />
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-sm text-ink-2">
         Don&apos;t have an account?{" "}
         <Link href="/auth/signup" className="text-[#E8521A] font-medium hover:underline">
           Create account

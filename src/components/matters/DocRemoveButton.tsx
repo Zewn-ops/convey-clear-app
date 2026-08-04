@@ -41,7 +41,7 @@ export default function DocRemoveButton({
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="shrink-0 text-gray-500 hover:text-red-600"
+        className="shrink-0 text-ink-3 hover:text-red-600"
         title={fileName ? `Remove ${fileName}` : "Remove document"}
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -51,7 +51,7 @@ export default function DocRemoveButton({
 
   return (
     <span className="flex shrink-0 items-center gap-1">
-      <span className="text-xs text-gray-500">Remove?</span>
+      <span className="text-xs text-ink-3">Remove?</span>
       <button
         onClick={remove}
         disabled={busy}
@@ -63,7 +63,7 @@ export default function DocRemoveButton({
       <button
         onClick={() => setConfirming(false)}
         disabled={busy}
-        className="text-gray-500 hover:text-gray-600 disabled:opacity-50"
+        className="text-ink-3 hover:text-ink-2 disabled:opacity-50"
         title="Cancel"
       >
         <X className="h-3.5 w-3.5" />

@@ -18,28 +18,28 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-gray-700"
+            className="text-sm font-medium text-ink-2"
           >
             {label}
-            {props.required && <span className="ml-1 text-red-500">*</span>}
+            {props.required && <span className="ml-1 text-danger">*</span>}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
           className={cn(
-            "w-full rounded-lg border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500",
-            "focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent",
-            "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60",
+            "w-full rounded border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3",
+            "focus:outline-none focus:ring-2 focus:ring-action focus:border-transparent",
+            "disabled:cursor-not-allowed disabled:bg-raised disabled:opacity-60",
             error
-              ? "border-red-400 focus:ring-red-400"
-              : "border-gray-300",
+              ? "border-danger focus:ring-danger"
+              : "border-line",
             className
           )}
           {...props}
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
+        {hint && !error && <p className="text-xs text-ink-3">{hint}</p>}
       </div>
     );
   }

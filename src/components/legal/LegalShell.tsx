@@ -16,7 +16,7 @@ export function LegalSection({
       <h2 className="text-lg font-bold text-[#1B2E6B]">
         {n}. {title}
       </h2>
-      <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-gray-700">
+      <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-ink-2">
         {children}
       </div>
     </section>
@@ -46,7 +46,7 @@ export default function LegalShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-raised">
       <header className="bg-[#1B2E6B] text-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link href="/" className="flex items-center">
@@ -74,14 +74,14 @@ export default function LegalShell({
           </div>
 
           <h1 className="mt-6 text-3xl font-bold text-[#1B2E6B]">{title}</h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-ink-3">
             Convey Clear (Pty) Ltd · Reg No. 2025/057574/07 · Last updated {lastUpdated}
           </p>
 
           {children}
 
-          <div className="mt-12 border-t border-gray-200 pt-6 text-sm text-gray-500">
-            <p className="font-medium text-gray-700">Convey Clear (Pty) Ltd</p>
+          <div className="mt-12 border-t border-line pt-6 text-sm text-ink-3">
+            <p className="font-medium text-ink-2">Convey Clear (Pty) Ltd</p>
             <p>9 Lauriston Place Street, Glen Lauriston, Centurion, 0185, South Africa</p>
             <p>
               <a href="mailto:hello@conveyclear.co.za" className="text-[#1B2E6B] hover:underline">

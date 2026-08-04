@@ -61,7 +61,7 @@ export default function MfaChallengeForm() {
     window.location.assign("/auth/login");
   };
 
-  if (!ready) return <p className="text-sm text-gray-500">Checking…</p>;
+  if (!ready) return <p className="text-sm text-ink-3">Checking…</p>;
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -77,7 +77,7 @@ export default function MfaChallengeForm() {
         hint="6-digit code from your authenticator app"
       />
       <Button type="submit" loading={loading} className="w-full" size="lg">Verify</Button>
-      <button type="button" onClick={signOut} className="w-full text-center text-sm text-gray-500 hover:underline">
+      <button type="button" onClick={signOut} className="w-full text-center text-sm text-ink-3 hover:underline">
         Sign out
       </button>
     </form>

@@ -68,7 +68,7 @@ export default function ReviewDocActions({
           rows={2}
           placeholder="Reason (shown to the uploader)…"
           disabled={busy !== null}
-          className="w-64 rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+          className="w-64 rounded-md border border-line px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
         />
         <div className="flex items-center gap-2">
           <button
@@ -78,7 +78,7 @@ export default function ReviewDocActions({
               setReason("");
             }}
             disabled={busy !== null}
-            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 disabled:opacity-50"
+            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-ink-3 hover:text-ink disabled:opacity-50"
           >
             Cancel
           </button>

@@ -154,7 +154,7 @@ export default function ClientVault({
   // twice). This card is the one place on the page holding a person's identity
   // documents, and it should not look like the cards around it: the border says
   // "this is the vault" before anyone reads the heading.
-  // ! modifiers: Card already carries `border border-gray-200`, and cn() is a
+  // ! modifiers: Card already carries `border border-line`, and cn() is a
   // string join, not a tailwind-merge — without !important the grey wins the
   // stylesheet-order fight and the vault renders with the default border.
   // (Confirmed live 2026-07-16: padlock showed, border didn't.)
@@ -165,11 +165,11 @@ export default function ClientVault({
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[#1B2E6B]/10">
             <Lock className="h-3.5 w-3.5 text-[#1B2E6B]" />
           </span>
-          <h2 className="font-semibold text-gray-900">FICA vault</h2>
+          <h2 className="font-semibold text-ink">FICA vault</h2>
         </div>
         <VaultProgress held={summary.requiredHeld} total={summary.requiredTotal} complete={summary.complete} />
       </div>
-      <p className="text-xs text-gray-500 mb-4">
+      <p className="text-xs text-ink-3 mb-4">
         Documents stored against the client, not a matter — uploaded once, reused on every matter without re-uploading.
       </p>
 
@@ -206,18 +206,18 @@ export default function ClientVault({
                 dragSlot === t
                   ? "border-[#1B2E6B] bg-[#1B2E6B]/5"
                   : empty && !slot.rule.optional
-                    ? "border-dashed border-gray-300 bg-gray-50/60"
-                    : "border-gray-200"
+                    ? "border-dashed border-line bg-raised/60"
+                    : "border-line"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-ink">
                     {docLabel(t)}
-                    {slot.rule.optional && <span className="ml-1.5 text-xs font-normal text-gray-500">optional</span>}
+                    {slot.rule.optional && <span className="ml-1.5 text-xs font-normal text-ink-3">optional</span>}
                   </p>
                   {empty && (
-                    <p className="mt-0.5 text-xs text-gray-500">
+                    <p className="mt-0.5 text-xs text-ink-3">
                       {slot.rule.hint ?? "Not on file"} — drop a file here or browse.
                     </p>
                   )}
@@ -231,7 +231,7 @@ export default function ClientVault({
               </div>
 
               {slot.docs.length > 0 && (
-                <ul className="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
+                <ul className="mt-2 space-y-1.5 border-t border-line pt-2">
                   {slot.docs.map((d) => (
                     <DocRow
                       key={d.id}
@@ -254,8 +254,8 @@ export default function ClientVault({
 
       {/* Anything on file that isn't expected for this entity type. */}
       {summary.extras.length > 0 && (
-        <div className="mt-4 border-t border-gray-100 pt-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Other documents</p>
+        <div className="mt-4 border-t border-line pt-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Other documents</p>
           <ul className="space-y-1.5">
             {summary.extras.map((d) => (
               <DocRow
@@ -278,15 +278,15 @@ export default function ClientVault({
       <AddOther busy={busy === "__other"} onUpload={(f, t) => upload(f, t)} />
 
       {archived.length > 0 && (
-        <details className="mt-3 border-t border-gray-100 pt-3">
-          <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-600">
+        <details className="mt-3 border-t border-line pt-3">
+          <summary className="cursor-pointer text-xs font-medium text-ink-3 hover:text-ink-2">
             Archived ({archived.length})
           </summary>
           <ul className="mt-2 space-y-1.5">
             {archived.map((d) => (
               <li key={d.id} className="flex items-center gap-3 py-1 text-sm">
                 <Archive className="h-3.5 w-3.5 shrink-0 text-gray-300" />
-                <span className="min-w-0 flex-1 truncate text-gray-500">
+                <span className="min-w-0 flex-1 truncate text-ink-3">
                   {docLabel(d.document_type)} · {d.file_name || "—"}
                 </span>
                 <button
@@ -311,13 +311,13 @@ export default function ClientVault({
 function VaultProgress({ held, total, complete }: { held: number; total: number; complete: boolean }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-raised">
         <div
           className={`h-full rounded-full transition-all ${complete ? "bg-green-500" : "bg-[#1B2E6B]"}`}
           style={{ width: `${total === 0 ? 100 : (held / total) * 100}%` }}
         />
       </div>
-      <span className={`text-xs font-medium ${complete ? "text-green-600" : "text-gray-500"}`}>
+      <span className={`text-xs font-medium ${complete ? "text-green-600" : "text-ink-3"}`}>
         {complete ? "Complete" : `${held}/${total} required`}
       </span>
     </div>
@@ -372,30 +372,30 @@ function DocRow({
 
   return (
     <li className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1 ${busy ? "opacity-50" : ""}`}>
-      <FileText className={`h-4 w-4 shrink-0 ${expired ? "text-red-400" : "text-gray-500"}`} />
+      <FileText className={`h-4 w-4 shrink-0 ${expired ? "text-red-400" : "text-ink-3"}`} />
 
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate text-sm text-gray-800">
+        <p className="flex items-center gap-1.5 truncate text-sm text-ink">
           {showType && <span className="font-medium">{docLabel(doc.document_type)} ·</span>}
           <span className="truncate">{doc.file_name || "—"}</span>
           {verified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Verified" />}
           <ExpiryBadge expiry={doc.expiry_date} />
         </p>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-3">
           Added {formatDate(doc.created_at)}
           {doc.supersedes_id ? " · replaced an earlier version" : ""}
         </p>
       </div>
 
       {/* Expiry is editable in place — chasing a stale FICA doc is the whole point. */}
-      <label className="flex shrink-0 items-center gap-1 text-[11px] text-gray-500">
+      <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-3">
         Expires
         <input
           type="date"
           defaultValue={doc.expiry_date ?? ""}
           disabled={busy}
           onChange={(e) => onExpiry(e.target.value)}
-          className="rounded border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
+          className="rounded border border-line px-1.5 py-0.5 text-[11px] text-ink-2 focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
         />
       </label>
 
@@ -415,7 +415,7 @@ function DocRow({
           type="button"
           disabled={busy}
           onClick={() => onVerify(!verified)}
-          className={`font-medium hover:underline disabled:opacity-50 ${verified ? "text-gray-500" : "text-green-700"}`}
+          className={`font-medium hover:underline disabled:opacity-50 ${verified ? "text-ink-3" : "text-green-700"}`}
         >
           {verified ? "Unverify" : "Verify"}
         </button>
@@ -426,7 +426,7 @@ function DocRow({
           type="button"
           disabled={busy}
           onClick={onArchive}
-          className="font-medium text-gray-500 hover:text-gray-600 hover:underline disabled:opacity-50"
+          className="font-medium text-ink-3 hover:text-ink-2 hover:underline disabled:opacity-50"
         >
           Archive
         </button>
@@ -482,7 +482,7 @@ function FilePick({
         onClick={() => ref.current?.click()}
         className={
           small
-            ? "inline-flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
+            ? "inline-flex items-center gap-1 font-medium text-ink-3 hover:text-ink-2 hover:underline disabled:opacity-50"
             : "inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1B2E6B] px-2.5 py-1.5 text-xs font-medium text-white hover:bg-[#1B2E6B]/90 disabled:opacity-50"
         }
       >
@@ -504,7 +504,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-ink-3 hover:text-ink-2"
       >
         <Plus className="h-3.5 w-3.5" /> Add another kind of document
       </button>
@@ -512,13 +512,13 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
   }
 
   return (
-    <div className="mt-3 flex items-end gap-2 border-t border-gray-100 pt-3">
-      <label className="flex-1 text-xs font-medium text-gray-500">
+    <div className="mt-3 flex items-end gap-2 border-t border-line pt-3">
+      <label className="flex-1 text-xs font-medium text-ink-3">
         Document type
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
         >
           {allVaultDocTypes().map((t) => (
             <option key={t} value={t}>
@@ -547,7 +547,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
       >
         <UploadCloud className="h-4 w-4" /> {busy ? "Uploading…" : "Upload"}
       </button>
-      <button type="button" onClick={() => setOpen(false)} className="px-1 text-xs text-gray-500 hover:text-gray-600">
+      <button type="button" onClick={() => setOpen(false)} className="px-1 text-xs text-ink-3 hover:text-ink-2">
         Cancel
       </button>
     </div>

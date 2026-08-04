@@ -61,8 +61,8 @@ function PartyFields({
 }) {
   const set = (patch: Partial<PartyDraft>) => onChange({ ...value, ...patch });
   return (
-    <div className="rounded-lg border border-gray-200 p-3 space-y-3">
-      <p className="text-sm font-semibold text-gray-800">{title}</p>
+    <div className="rounded-lg border border-line p-3 space-y-3">
+      <p className="text-sm font-semibold text-ink">{title}</p>
       <Select
         label="Entity type"
         value={value.entity_type}
@@ -203,8 +203,8 @@ export default function CreateMatterForm({
         <div className="flex items-start gap-2 rounded-lg border border-[#E8521A]/30 bg-[#E8521A]/[0.04] px-3 py-2.5">
           <Home className="mt-0.5 h-4 w-4 shrink-0 text-[#E8521A]" />
           <div className="min-w-0 text-xs">
-            <p className="font-medium text-gray-900">Creating a matter inside transfer {transfer.reference}</p>
-            <p className="mt-0.5 text-gray-500">
+            <p className="font-medium text-ink">Creating a matter inside transfer {transfer.reference}</p>
+            <p className="mt-0.5 text-ink-3">
               It is linked to the transfer on creation, and inherits the property and municipality — those describe the{" "}
               <b>transaction</b>, so they are not retyped per matter.
             </p>
@@ -216,14 +216,14 @@ export default function CreateMatterForm({
         <button
           type="button"
           onClick={() => setMode("existing")}
-          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "existing" ? "bg-[#1B2E6B] text-white" : "bg-gray-100 text-gray-600")}
+          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "existing" ? "bg-[#1B2E6B] text-white" : "bg-raised text-ink-2")}
         >
           Existing client
         </button>
         <button
           type="button"
           onClick={() => setMode("new")}
-          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "new" ? "bg-[#1B2E6B] text-white" : "bg-gray-100 text-gray-600")}
+          className={"px-3 py-1.5 rounded-lg text-sm font-medium " + (mode === "new" ? "bg-[#1B2E6B] text-white" : "bg-raised text-ink-2")}
         >
           New client
         </button>
@@ -236,7 +236,7 @@ export default function CreateMatterForm({
               person in a list of every client is the thing Jukka complained about. */}
           {transfer && transfer.parties.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-gray-500">This transfer:</span>
+              <span className="text-xs text-ink-3">This transfer:</span>
               {transfer.parties.map((p) => (
                 <button
                   key={p.id}
@@ -246,7 +246,7 @@ export default function CreateMatterForm({
                     "rounded-full border px-2.5 py-1 text-xs font-medium " +
                     (clientId === p.id
                       ? "border-[#1B2E6B] bg-[#1B2E6B] text-white"
-                      : "border-gray-200 text-gray-600 hover:border-[#1B2E6B]/40")
+                      : "border-line text-ink-2 hover:border-[#1B2E6B]/40")
                   }
                 >
                   {p.label} <span className="opacity-70">· {p.role}</span>
@@ -304,8 +304,8 @@ export default function CreateMatterForm({
       {isCoo && (
         <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Parties to the transaction</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h3 className="text-sm font-semibold text-ink">Parties to the transaction</h3>
+            <p className="text-xs text-ink-3 mt-0.5">
               Optional now — both sections are created either way, and each side gets
               its own document slots. Fill in what you have.
             </p>
@@ -317,8 +317,8 @@ export default function CreateMatterForm({
         </div>
       )}
 
-      <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter title (auto)</p>
+      <div className="rounded-lg bg-raised border border-line p-3">
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter title (auto)</p>
         <p className="text-sm font-mono text-[#1B2E6B] mt-1">{previewTitle}</p>
       </div>
 

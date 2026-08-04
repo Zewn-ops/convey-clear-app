@@ -60,7 +60,7 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-[#1B2E6B] hover:underline"
+        className="inline-flex items-center gap-1 text-xs font-medium text-ink-2 hover:text-[#1B2E6B] hover:underline"
       >
         <Pencil className="h-3.5 w-3.5" /> Edit details
       </button>
@@ -68,7 +68,7 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+    <div className="rounded-lg border border-line bg-raised p-3 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="Entity type"
@@ -97,8 +97,8 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
       </div>
       <Input label="Physical address" value={form.physical_address} onChange={(e) => set({ physical_address: e.target.value })} />
       {!isPerson && (
-        <div className="rounded-lg border border-gray-100 bg-white p-3 space-y-3">
-          <p className="text-xs font-medium text-gray-600">Contact person</p>
+        <div className="rounded-lg border border-line bg-surface p-3 space-y-3">
+          <p className="text-xs font-medium text-ink-2">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="First name" value={form.contact_first_name} onChange={(e) => set({ contact_first_name: e.target.value })} />
             <Input label="Surname" value={form.contact_last_name} onChange={(e) => set({ contact_last_name: e.target.value })} />

@@ -32,7 +32,7 @@ export default function EnquiryReply({ enquiryId }: { enquiryId: string }) {
         onChange={(e) => setBody(e.target.value)}
         rows={2}
         placeholder="Write a reply…"
-        className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
+        className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
       />
       <button
         type="button"

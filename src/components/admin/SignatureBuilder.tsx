@@ -87,7 +87,7 @@ export default function SignatureBuilder() {
 
   const html = buildSignature({ name, title, phone, email, signoff });
   const input =
-    "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
+    "w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
 
   async function copySignature() {
     const text = new DOMParser().parseFromString(html, "text/html").body.innerText;
@@ -143,10 +143,10 @@ export default function SignatureBuilder() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
           <Mail className="h-5 w-5 text-[#1B2E6B]" /> Email Signatures
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-ink-3 mt-1">
           Fill the fields, preview, copy, and paste into Gmail. Logo, tagline, website and offices are fixed.
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function SignatureBuilder() {
       <Card>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-gray-500">Quick-fill a known person (optional)</label>
+            <label className="text-xs font-semibold text-ink-3">Quick-fill a known person (optional)</label>
             <select
               className={`${input} mt-1`}
               defaultValue=""
@@ -172,28 +172,28 @@ export default function SignatureBuilder() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-gray-500">Full name</label>
+              <label className="text-xs font-semibold text-ink-3">Full name</label>
               <input className={`${input} mt-1`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jukka Höll" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500">Job title</label>
+              <label className="text-xs font-semibold text-ink-3">Job title</label>
               <input className={`${input} mt-1`} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Director" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500">Direct phone</label>
+              <label className="text-xs font-semibold text-ink-3">Direct phone</label>
               <input className={`${input} mt-1`} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 12 345 6789" />
-              <p className="mt-1 text-[11px] text-gray-500">Type it how it should read — the clickable link is derived automatically.</p>
+              <p className="mt-1 text-[11px] text-ink-3">Type it how it should read — the clickable link is derived automatically.</p>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500">Email address</label>
+              <label className="text-xs font-semibold text-ink-3">Email address</label>
               <input className={`${input} mt-1`} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jukka@conveyclear.co.za" />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-500">Sign-off above the signature (optional)</label>
+            <label className="text-xs font-semibold text-ink-3">Sign-off above the signature (optional)</label>
             <textarea className={`${input} mt-1 resize-y`} rows={2} value={signoff} onChange={(e) => setSignoff(e.target.value)} />
-            <p className="mt-1 text-[11px] text-gray-500">
+            <p className="mt-1 text-[11px] text-ink-3">
               A fixed sign-off shown above the logo. Leave blank for none. The email message itself is still typed fresh each time.
             </p>
           </div>
@@ -201,7 +201,7 @@ export default function SignatureBuilder() {
       </Card>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Preview</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">Preview</p>
         <Card>
           <div id="sig-preview" className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: html }} />
         </Card>
@@ -214,7 +214,7 @@ export default function SignatureBuilder() {
           </button>
           <button
             onClick={() => setShowSource((s) => !s)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-gray-200"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-gray-200"
           >
             <Code2 className="h-4 w-4" /> {showSource ? "Hide" : "Show"} HTML source
           </button>
@@ -224,16 +224,16 @@ export default function SignatureBuilder() {
       {showSource && (
         <Card>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">HTML source (for the API deploy / advanced)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">HTML source (for the API deploy / advanced)</p>
             <button onClick={copySource} className="text-xs font-medium text-[#1B2E6B] hover:underline">Copy source</button>
           </div>
-          <textarea readOnly value={html} rows={8} className="w-full rounded-lg border border-gray-200 p-3 font-mono text-[11px] text-gray-700" />
+          <textarea readOnly value={html} rows={8} className="w-full rounded-lg border border-line p-3 font-mono text-[11px] text-ink-2" />
         </Card>
       )}
 
       <Card accent="internal">
-        <h2 className="text-sm font-semibold text-gray-800">How to use in Gmail</h2>
-        <ul className="mt-2 space-y-1.5 text-xs text-gray-600 leading-relaxed list-disc pl-4">
+        <h2 className="text-sm font-semibold text-ink">How to use in Gmail</h2>
+        <ul className="mt-2 space-y-1.5 text-xs text-ink-2 leading-relaxed list-disc pl-4">
           <li><b>Web:</b> Gmail → ⚙ See all settings → General → Signature → create/edit → click into the box → paste (Ctrl/Cmd+V) → Save Changes. Use <b>Copy signature</b>, not the HTML source.</li>
           <li><b>Mobile:</b> the Gmail app has its own signature field that does not sync from web — set a short text version there per person.</li>
           <li><b>Disclaimer:</b> the confidentiality footer goes in the Google Admin console (Apps → Gmail → Compliance → Append footer), never in a personal signature.</li>

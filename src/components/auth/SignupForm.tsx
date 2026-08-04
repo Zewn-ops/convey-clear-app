@@ -159,7 +159,7 @@ export default function SignupForm() {
         <p className="text-xs font-semibold text-[#1B2E6B] uppercase tracking-wide">
           POPIA — Data Handling Notice
         </p>
-        <p className="text-xs text-gray-600 leading-relaxed">
+        <p className="text-xs text-ink-2 leading-relaxed">
           ConveyClear collects and processes your personal information (name,
           contact details, ID number, and documents) to provide conveyancing
           services. Your data is stored securely in South Africa and is only
@@ -177,10 +177,10 @@ export default function SignupForm() {
         <label className="flex items-start gap-2 cursor-pointer">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#1B2E6B] focus:ring-[#1B2E6B]"
+            className="mt-0.5 h-4 w-4 rounded border-line text-[#1B2E6B] focus:ring-[#1B2E6B]"
             {...register("popia_consent")}
           />
-          <span className="text-xs text-gray-700">
+          <span className="text-xs text-ink-2">
             I have read and accept ConveyClear&apos;s POPIA data handling
             notice and consent to the processing of my personal information.
           </span>
@@ -202,19 +202,19 @@ export default function SignupForm() {
         Create account
       </Button>
       {TURNSTILE_ENABLED && !captchaToken && (
-        <p className="text-center text-xs text-gray-500 -mt-2">
+        <p className="text-center text-xs text-ink-3 -mt-2">
           Complete the verification above to continue.
         </p>
       )}
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-500">or</span>
+        <span className="text-xs text-ink-3">or</span>
         <span className="h-px flex-1 bg-gray-200" />
       </div>
       <GoogleSignInButton label="Sign up with Google" />
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-sm text-ink-2">
         Already have an account?{" "}
         <Link
           href="/auth/login"

@@ -33,7 +33,7 @@ export default function LinkMatterControl({
   const [loading, setLoading] = useState(false);
 
   if (candidates.length === 0) {
-    return <p className="text-sm text-gray-500">No unlinked matters available to attach.</p>;
+    return <p className="text-sm text-ink-3">No unlinked matters available to attach.</p>;
   }
 
   const link = async () => {

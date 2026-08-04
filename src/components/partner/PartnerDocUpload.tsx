@@ -37,8 +37,8 @@ export default function PartnerDocUpload({ matterId, submitted = false }: { matt
             <Upload className="h-5 w-5 text-[#E8521A]" />
           </div>
           <div>
-            <p className="font-semibold text-gray-900 text-sm">Complete onboarding / upload documents</p>
-            <p className="text-xs text-gray-600">
+            <p className="font-semibold text-ink text-sm">Complete onboarding / upload documents</p>
+            <p className="text-xs text-ink-2">
               Open the secure FICA form to upload your client&apos;s ID, proof of address and signed authorisations.
             </p>
           </div>

@@ -33,7 +33,7 @@ export default function MatterPocsCard({
   const linkedIds = useMemo(() => new Set(linked.map((p) => p.id)), [linked]);
   const assignable = useMemo(() => all.filter((p) => !linkedIds.has(p.id)), [all, linkedIds]);
 
-  const input = "rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
+  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
 
   async function assign() {
     if (!assignId) return;
@@ -91,7 +91,7 @@ export default function MatterPocsCard({
   return (
     <Card accent="internal">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+        <h2 className="font-semibold text-ink flex items-center gap-2">
           <Landmark className="h-4 w-4 text-[#1B2E6B]" /> Council POC{linked.length === 1 ? "" : "s"} ({linked.length})
         </h2>
       </div>
@@ -99,17 +99,17 @@ export default function MatterPocsCard({
       {linked.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           {linked.map((p) => (
-            <div key={p.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
+            <div key={p.id} className="rounded-lg border border-line bg-raised p-3 text-sm">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-gray-900">{councilPocName(p)}</p>
-                <button onClick={() => unlink(p.id)} disabled={busy} title="Remove from this matter" className="text-gray-500 hover:text-red-600 disabled:opacity-50">
+                <p className="font-medium text-ink">{councilPocName(p)}</p>
+                <button onClick={() => unlink(p.id)} disabled={busy} title="Remove from this matter" className="text-ink-3 hover:text-red-600 disabled:opacity-50">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">{[p.council, p.department].filter(Boolean).join(" · ") || "—"}</p>
+              <p className="text-xs text-ink-3 mt-0.5">{[p.council, p.department].filter(Boolean).join(" · ") || "—"}</p>
               <dl className="mt-2 space-y-1 text-xs">
-                {p.email && <dd><span className="text-gray-500">Email:</span> <a href={`mailto:${p.email}`} className="text-[#1B2E6B] hover:underline">{p.email}</a></dd>}
-                {p.cell && <dd><span className="text-gray-500">Cell:</span> <a href={`tel:${p.cell}`} className="text-[#1B2E6B] hover:underline">{p.cell}</a></dd>}
+                {p.email && <dd><span className="text-ink-3">Email:</span> <a href={`mailto:${p.email}`} className="text-[#1B2E6B] hover:underline">{p.email}</a></dd>}
+                {p.cell && <dd><span className="text-ink-3">Cell:</span> <a href={`tel:${p.cell}`} className="text-[#1B2E6B] hover:underline">{p.cell}</a></dd>}
               </dl>
               <Link href={`/admin/council-pocs/${p.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-[#E8521A] hover:underline mt-2">
                 <ExternalLink className="h-3 w-3" /> Contact card
@@ -118,7 +118,7 @@ export default function MatterPocsCard({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-500 mb-4">No council contact linked yet.</p>
+        <p className="text-sm text-ink-3 mb-4">No council contact linked yet.</p>
       )}
 
       {/* Assign an existing directory POC */}
@@ -140,7 +140,7 @@ export default function MatterPocsCard({
 
       {/* Add a brand-new POC (saved to the directory + linked here) */}
       {adding ? (
-        <form onSubmit={addNew} className="grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-gray-100 pt-3">
+        <form onSubmit={addNew} className="grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-line pt-3">
           <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} placeholder="First name *" className={input} />
           <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} placeholder="Surname" className={input} />
           <input list="matter-poc-council" value={form.council} onChange={(e) => setForm({ ...form, council: e.target.value })} placeholder="Council (e.g. COT)" className={input} />
@@ -152,7 +152,7 @@ export default function MatterPocsCard({
             <button type="submit" disabled={busy} className="px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 disabled:opacity-50">
               {busy ? "Saving…" : "Add & link"}
             </button>
-            <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Cancel</button>
+            <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 text-sm font-medium text-ink-3 hover:text-ink">Cancel</button>
           </div>
         </form>
       ) : (

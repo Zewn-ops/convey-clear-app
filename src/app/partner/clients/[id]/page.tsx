@@ -43,14 +43,14 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <Link href="/partner/clients" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/partner/clients" className="inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink-2">
         <ArrowLeft className="h-4 w-4" /> Back to clients
       </Link>
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{clientDisplayName(client)}</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-ink">{clientDisplayName(client)}</h1>
+          <p className="text-sm text-ink-3 mt-1">
             {client.entity_type.replace("_", " ")}
             {client.registration_no ? ` · ${client.registration_no}` : ""} · added {formatDate(client.created_at)}
           </p>
@@ -58,45 +58,45 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
       </div>
 
       <Card>
-        <h2 className="font-semibold text-gray-900 mb-3">Contact</h2>
+        <h2 className="font-semibold text-ink mb-3">Contact</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-gray-500" />
+            <Mail className="h-4 w-4 text-ink-3" />
             {client.primary_email ? (
               <a href={`mailto:${client.primary_email}`} className="text-[#1B2E6B] hover:underline">{client.primary_email}</a>
             ) : (
-              <span className="text-gray-500">No email</span>
+              <span className="text-ink-3">No email</span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-gray-500" />
+            <Phone className="h-4 w-4 text-ink-3" />
             {client.primary_cell ? (
               <a href={`tel:${client.primary_cell.replace(/[^\d+]/g, "")}`} className="text-[#1B2E6B] hover:underline">{client.primary_cell}</a>
             ) : (
-              <span className="text-gray-500">No cell</span>
+              <span className="text-ink-3">No cell</span>
             )}
           </div>
           {client.id_number && (
-            <div className="text-gray-700"><span className="text-gray-500">ID/Reg: </span>{client.id_number}</div>
+            <div className="text-ink-2"><span className="text-ink-3">ID/Reg: </span>{client.id_number}</div>
           )}
           {client.physical_address && (
             <div className="flex items-start gap-2 sm:col-span-2">
-              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-              <span className="text-gray-700">{client.physical_address}</span>
+              <MapPin className="h-4 w-4 text-ink-3 mt-0.5" />
+              <span className="text-ink-2">{client.physical_address}</span>
             </div>
           )}
         </dl>
       </Card>
 
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3">Matters ({matters.length})</h2>
+        <h2 className="font-semibold text-ink mb-3">Matters ({matters.length})</h2>
         <Card padding="none">
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-line">
             {matters.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-raised transition-colors">
                 <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{m.title || "Untitled matter"}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-medium text-ink truncate">{m.title || "Untitled matter"}</p>
+                  <p className="text-xs text-ink-3">
                     {m.municipality ? `${m.municipality} · ` : ""}
                     {m.current_phase ? `Phase ${m.current_phase}: ${PHASE_LABELS[m.current_phase as MatterPhase]}` : "—"}
                   </p>
@@ -107,7 +107,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
                 </div>
               </li>
             ))}
-            {matters.length === 0 && <li className="px-5 py-10 text-center text-gray-500">No matters for this client</li>}
+            {matters.length === 0 && <li className="px-5 py-10 text-center text-ink-3">No matters for this client</li>}
           </ul>
         </Card>
       </div>

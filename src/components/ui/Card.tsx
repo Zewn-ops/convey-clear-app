@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 //
 // An accented card REPLACES the base border classes rather than adding to them:
 // cn() is a string join, not a tailwind-merge, so stacking a second border class
-// on top of `border-gray-200` loses the stylesheet-order fight (the vault border
+// on top of `border-line` loses the stylesheet-order fight (the vault border
 // shipped grey exactly this way, 2026-07-16).
 //
 // ⚠️ The colour assignments per section are a PROPOSAL pending Jukka's
@@ -46,8 +46,8 @@ export default function Card({
   return (
     <div
       className={cn(
-        "rounded-xl bg-white shadow-sm",
-        accent ? accentClasses[accent] : "border border-gray-200",
+        "rounded-lg bg-surface shadow-sm",
+        accent ? accentClasses[accent] : "border border-line",
         paddingClasses[padding],
         className
       )}

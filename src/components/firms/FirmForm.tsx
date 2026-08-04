@@ -102,28 +102,28 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="firm-notes" className="text-sm font-medium text-gray-700">Notes</label>
+        <label htmlFor="firm-notes" className="text-sm font-medium text-ink-2">Notes</label>
         <textarea
           id="firm-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
         />
       </div>
 
       {existing && (
-        <div className="pt-2 border-t border-gray-100">
+        <div className="pt-2 border-t border-line">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-[#E8521A] focus:ring-[#1B2E6B]"
+              className="mt-1 h-4 w-4 rounded border-line text-[#E8521A] focus:ring-[#1B2E6B]"
             />
             <span>
-              <span className="text-sm font-medium text-gray-700">Active</span>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <span className="text-sm font-medium text-ink-2">Active</span>
+              <p className="text-xs text-ink-3 mt-0.5">
                 Deactivating hides the firm from the pickers on new matters and transfers. Existing
                 matters, users and transfers keep their link to it — firms are never deleted.
               </p>

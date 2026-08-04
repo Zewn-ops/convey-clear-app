@@ -32,8 +32,8 @@ export default function ClientDocUpload({ matterId }: { matterId: string }) {
             <Upload className="h-5 w-5 text-[#E8521A]" />
           </div>
           <div>
-            <p className="font-semibold text-gray-900 text-sm">Upload your documents</p>
-            <p className="text-xs text-gray-600">Securely submit your ID, proof of address and signed forms (FICA).</p>
+            <p className="font-semibold text-ink text-sm">Upload your documents</p>
+            <p className="text-xs text-ink-2">Securely submit your ID, proof of address and signed forms (FICA).</p>
           </div>
         </div>
         <Button variant="secondary" onClick={open} loading={loading}>

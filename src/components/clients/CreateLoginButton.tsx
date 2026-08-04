@@ -50,7 +50,7 @@ export default function CreateLoginButton({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <KeyRound className="h-4 w-4 text-[#1B2E6B]" />
-          <h2 className="font-semibold text-gray-900">Portal access</h2>
+          <h2 className="font-semibold text-ink">Portal access</h2>
         </div>
         {hasLogin ? (
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700">
@@ -68,7 +68,7 @@ export default function CreateLoginButton({
         )}
       </div>
 
-      <p className="mt-2 text-xs text-gray-500">
+      <p className="mt-2 text-xs text-ink-3">
         {hasLogin
           ? `This client can sign in to the portal${loginEmail ? ` as ${loginEmail}` : ""}. Attach their matters and they will appear on their dashboard.`
           : clientEmail
@@ -78,13 +78,13 @@ export default function CreateLoginButton({
 
       {result && (
         <div className="mt-3 rounded-lg border border-[#1B2E6B]/20 bg-[#1B2E6B]/5 p-3 text-sm">
-          <p className="font-medium text-gray-800">Login created for {result.email}</p>
+          <p className="font-medium text-ink">Login created for {result.email}</p>
           {result.temp_password && (
-            <p className="mt-1 text-gray-700">
+            <p className="mt-1 text-ink-2">
               Temporary password: <span className="font-mono font-semibold">{result.temp_password}</span>
             </p>
           )}
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-ink-3">
             {result.emailed
               ? "Emailed to the client. They must change it on first sign-in."
               : "Email is not configured — send these details to the client yourself. They must change the password on first sign-in."}

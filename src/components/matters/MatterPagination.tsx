@@ -30,10 +30,10 @@ export default function MatterPagination({
   }
 
   const btn =
-    "rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed";
+    "rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-raised disabled:opacity-40 disabled:cursor-not-allowed";
 
   return (
-    <div className="flex items-center justify-between text-sm text-gray-500">
+    <div className="flex items-center justify-between text-sm text-ink-3">
       <span>{total === 0 ? "No matters" : `Showing ${from}–${to} of ${total}`}</span>
       <div className="flex gap-2">
         <button type="button" disabled={!hasPrev} onClick={() => go(page - 1)} className={btn}>

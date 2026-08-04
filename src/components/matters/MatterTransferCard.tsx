@@ -63,31 +63,31 @@ export default function MatterTransferCard({
   return (
     <Card accent="service" className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide flex items-center gap-1.5">
           <Building2 className="h-3.5 w-3.5" /> Property transfer
         </p>
         {transfer && <Badge label={TRANSFER_STATUS_LABELS[transfer.status]} variant={statusVariant(transfer.status)} />}
       </div>
 
       {transfer ? (
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-ink-2">
           Part of{" "}
           <Link href={`${basePath}/${transfer.id}`} className="font-medium text-[#1B2E6B] hover:underline">
             {transfer.reference}
           </Link>
         </p>
       ) : (
-        <p className="text-sm text-gray-500">Standalone matter — not part of a property transfer.</p>
+        <p className="text-sm text-ink-3">Standalone matter — not part of a property transfer.</p>
       )}
 
       {manage && (
         <div className="flex flex-col sm:flex-row sm:items-end gap-2 pt-1">
-          <label className="flex-1 text-xs font-medium text-gray-500">
+          <label className="flex-1 text-xs font-medium text-ink-3">
             Transfer
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
             >
               <option value="">— None (standalone) —</option>
               {options.map((o) => (

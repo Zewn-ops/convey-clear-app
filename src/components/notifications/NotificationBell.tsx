@@ -118,10 +118,10 @@ export default function NotificationBell({ base }: { base: string }) {
     <div className="fixed top-3 right-16 z-40 md:right-4">
       <button
         onClick={toggle}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface border border-line shadow-sm hover:bg-raised"
         aria-label="Notifications"
       >
-        <Bell className="h-4 w-4 text-gray-600" />
+        <Bell className="h-4 w-4 text-ink-2" />
         {unread > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#E8521A] text-white text-[10px] font-bold flex items-center justify-center">
             {unread > 9 ? "9+" : unread}
@@ -132,24 +132,24 @@ export default function NotificationBell({ base }: { base: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-5rem)] max-h-96 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg z-40">
-            <div className="px-4 py-2.5 border-b border-gray-100">
-              <p className="text-sm font-semibold text-gray-900">Notifications</p>
+          <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-5rem)] max-h-96 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg z-40">
+            <div className="px-4 py-2.5 border-b border-line">
+              <p className="text-sm font-semibold text-ink">Notifications</p>
             </div>
             {items.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gray-500">Nothing yet.</p>
+              <p className="px-4 py-6 text-center text-sm text-ink-3">Nothing yet.</p>
             ) : (
-              <ul className="divide-y divide-gray-50">
+              <ul className="divide-y divide-line">
                 {items.map((n) => (
                   <li key={n.id}>
                     <Link
                       href={linkFor(n)}
                       onClick={() => setOpen(false)}
-                      className={"block px-4 py-3 hover:bg-gray-50 " + (n.read_at ? "" : "bg-[#1B2E6B]/5")}
+                      className={"block px-4 py-3 hover:bg-raised " + (n.read_at ? "" : "bg-[#1B2E6B]/5")}
                     >
-                      <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                      {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
-                      <p className="text-[11px] text-gray-500 mt-1">{new Date(n.created_at).toLocaleString("en-ZA")}</p>
+                      <p className="text-sm font-medium text-ink">{n.title}</p>
+                      {n.body && <p className="text-xs text-ink-3 mt-0.5 line-clamp-2">{n.body}</p>}
+                      <p className="text-[11px] text-ink-3 mt-1">{new Date(n.created_at).toLocaleString("en-ZA")}</p>
                     </Link>
                   </li>
                 ))}

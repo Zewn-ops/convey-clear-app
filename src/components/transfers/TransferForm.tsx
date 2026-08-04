@@ -112,8 +112,8 @@ export default function TransferForm({
         />
       </div>
 
-      <div className="pt-2 border-t border-gray-100">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Parties</p>
+      <div className="pt-2 border-t border-line">
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-3">Parties</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SearchSelect
             label="Conveyancing attorney (firm)"
@@ -144,20 +144,20 @@ export default function TransferForm({
             placeholder="Search clients…"
           />
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-ink-3 mt-2">
           The attorney firm controls who sees this transfer — its partner users get read access to the
           transfer and every matter linked under it.
         </p>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="transfer-notes" className="text-sm font-medium text-gray-700">Notes</label>
+        <label htmlFor="transfer-notes" className="text-sm font-medium text-ink-2">Notes</label>
         <textarea
           id="transfer-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
         />
       </div>
 

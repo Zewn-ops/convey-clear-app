@@ -80,9 +80,9 @@ export default function FirmDetailsForm({
       <Card className="space-y-4">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-[#1B2E6B]" />
-          <h2 className="font-semibold text-gray-900">{firmName}</h2>
+          <h2 className="font-semibold text-ink">{firmName}</h2>
         </div>
-        <p className="text-xs text-gray-500 -mt-2">
+        <p className="text-xs text-ink-3 -mt-2">
           These details are visible to ConveyClear and to your firm&apos;s administrators only — not to other firms or clients.
         </p>
       </Card>
@@ -90,7 +90,7 @@ export default function FirmDetailsForm({
       <Card className="space-y-4">
         <div className="flex items-center gap-2">
           <Landmark className="h-4 w-4 text-[#1B2E6B]" />
-          <h2 className="font-semibold text-gray-900">Business account</h2>
+          <h2 className="font-semibold text-ink">Business account</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Bank" value={b.bank_name ?? ""} onChange={setField("bank_name")} />
@@ -113,9 +113,9 @@ export default function FirmDetailsForm({
       <Card className="space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[#1B2E6B]" />
-          <h2 className="font-semibold text-gray-900">Trust account</h2>
+          <h2 className="font-semibold text-ink">Trust account</h2>
         </div>
-        <p className="text-xs text-gray-500 -mt-2">The section-86(4) trust account, where client funds are held.</p>
+        <p className="text-xs text-ink-3 -mt-2">The section-86(4) trust account, where client funds are held.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Trust bank" value={b.trust_bank_name ?? ""} onChange={setField("trust_bank_name")} />
           <Input label="Trust account name" value={b.trust_account_name ?? ""} onChange={setField("trust_account_name")} />
@@ -126,7 +126,7 @@ export default function FirmDetailsForm({
 
       <Card className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-gray-900">Municipality BP numbers</h2>
+          <h2 className="font-semibold text-ink">Municipality BP numbers</h2>
           <button
             type="button"
             onClick={() => setBps((prev) => [...prev, { municipality: "", bp_number: "" }])}
@@ -135,11 +135,11 @@ export default function FirmDetailsForm({
             <Plus className="h-3.5 w-3.5" /> Add a municipality
           </button>
         </div>
-        <p className="text-xs text-gray-500 -mt-2">
+        <p className="text-xs text-ink-3 -mt-2">
           Your firm&apos;s council-assigned BP number for each municipality — used on clearance applications.
         </p>
         {bps.length === 0 ? (
-          <p className="text-sm text-gray-500">None captured yet.</p>
+          <p className="text-sm text-ink-3">None captured yet.</p>
         ) : (
           <div className="space-y-2">
             {bps.map((row, i) => (

@@ -22,7 +22,7 @@ export default function NotifyVolumeControl() {
   return (
     <div className="space-y-2 pt-1">
       <div className="flex items-center gap-3">
-        <Volume2 className="h-4 w-4 text-gray-500 shrink-0" />
+        <Volume2 className="h-4 w-4 text-ink-3 shrink-0" />
         <input
           type="range"
           min={0}
@@ -33,16 +33,16 @@ export default function NotifyVolumeControl() {
           className="flex-1 accent-[#1B2E6B]"
           aria-label="Notification volume"
         />
-        <span className="w-10 text-right text-xs font-medium text-gray-600">{vol}%</span>
+        <span className="w-10 text-right text-xs font-medium text-ink-2">{vol}%</span>
         <button
           type="button"
           onClick={() => playDing(vol)}
-          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-gray-400"
+          className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-ink-2 hover:border-gray-400"
         >
           <Play className="h-3.5 w-3.5" /> Test
         </button>
       </div>
-      <p className="text-xs text-gray-500">Notification volume is saved on this device.</p>
+      <p className="text-xs text-ink-3">Notification volume is saved on this device.</p>
     </div>
   );
 }

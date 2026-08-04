@@ -116,13 +116,13 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <Link href="/partner/transfers" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4">
+        <Link href="/partner/transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All property transfers
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[#1B2E6B]">{transfer.reference}</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-ink-3 mt-1">
               {transfer.property_description || "No property description"}
               {transfer.municipality ? ` · ${municipalityLabel(transfer.municipality)}` : ""}
             </p>
@@ -132,59 +132,59 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
       </div>
 
       <Card>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Transaction</p>
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-3">Transaction</p>
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-gray-500">Seller</dt>
-            <dd className="text-gray-800 mt-0.5">{transfer.seller ? clientDisplayName(transfer.seller) : "—"}</dd>
+            <dt className="text-xs text-ink-3">Seller</dt>
+            <dd className="text-ink mt-0.5">{transfer.seller ? clientDisplayName(transfer.seller) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Buyer</dt>
-            <dd className="text-gray-800 mt-0.5">{transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}</dd>
+            <dt className="text-xs text-ink-3">Buyer</dt>
+            <dd className="text-ink mt-0.5">{transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Council</dt>
-            <dd className="text-gray-800 mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
+            <dt className="text-xs text-ink-3">Council</dt>
+            <dd className="text-ink mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Opened</dt>
-            <dd className="text-gray-800 mt-0.5">{formatDate(transfer.created_at)}</dd>
+            <dt className="text-xs text-ink-3">Opened</dt>
+            <dd className="text-ink mt-0.5">{formatDate(transfer.created_at)}</dd>
           </div>
         </dl>
       </Card>
 
       <Card padding="none">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <div className="px-5 py-4 border-b border-line">
+          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
             Matters in this transfer · {linked.length}
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <tr className="border-b border-line bg-raised">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Phase</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Stage</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {linked.map((m) => {
                 const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
                 return (
-                  <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={m.id} className="hover:bg-raised transition-colors">
                     <td className="px-5 py-3">
-                      <Link href={`/partner/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
+                      <Link href={`/partner/matters/${m.id}`} className="font-medium text-ink hover:text-[#E8521A] hover:underline">
                         {m.title || "Untitled"}
                       </Link>
-                      {m.services?.name && <p className="text-xs text-gray-500 mt-0.5">{m.services.name}</p>}
+                      {m.services?.name && <p className="text-xs text-ink-3 mt-0.5">{m.services.name}</p>}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 hidden md:table-cell">
+                    <td className="px-5 py-3 text-ink-2 hidden md:table-cell">
                       {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
                     </td>
-                    <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">
+                    <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
                       {pl
                         ? m.current_stage
                           ? isStageClientVisible(pl, m.current_stage)
@@ -204,7 +204,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               })}
               {linked.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-ink-3">
                     No matters linked yet. Refer a matter, then attach it here to build up the transaction.
                   </td>
                 </tr>
@@ -214,7 +214,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         </div>
         {/* The firm attaches its own referred matters (Meeting 2). Server route
             re-checks both matter and transfer belong to this firm. */}
-        <div className="px-5 py-4 border-t border-gray-100">
+        <div className="px-5 py-4 border-t border-line">
           <LinkMatterControl transferId={id} candidates={candidates} endpoint="/api/partner/transfers/link" />
         </div>
       </Card>

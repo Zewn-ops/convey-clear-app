@@ -73,22 +73,22 @@ export default function MfaSetupForm() {
     window.location.assign("/auth/login");
   };
 
-  if (!ready || !enrolling) return <p className="text-sm text-gray-500">Preparing setup…</p>;
+  if (!ready || !enrolling) return <p className="text-sm text-ink-3">Preparing setup…</p>;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-700">
+      <p className="text-sm text-ink-2">
         Your role requires two-factor authentication. Scan this QR code with an
         authenticator app (Google Authenticator, 1Password, Authy…), then enter the
         6-digit code it shows.
       </p>
-      <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg border border-gray-200 bg-white p-2" />
-      <p className="text-xs text-gray-500">
-        Can&rsquo;t scan? Enter this key manually: <code className="font-mono text-gray-700 break-all">{enrolling.secret}</code>
+      <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg border border-line bg-surface p-2" />
+      <p className="text-xs text-ink-3">
+        Can&rsquo;t scan? Enter this key manually: <code className="font-mono text-ink-2 break-all">{enrolling.secret}</code>
       </p>
       <Input label="6-digit code" inputMode="numeric" maxLength={6} autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
       <Button onClick={verify} loading={busy} className="w-full" size="lg">Verify &amp; continue</Button>
-      <button type="button" onClick={signOut} className="w-full text-center text-sm text-gray-500 hover:underline">
+      <button type="button" onClick={signOut} className="w-full text-center text-sm text-ink-3 hover:underline">
         Sign out
       </button>
     </div>

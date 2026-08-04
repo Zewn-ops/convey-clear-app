@@ -150,7 +150,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
           migration 026, because a transfer spans both sides of the deal.) */}
       <Link
         href={partnerTransferId ? `/partner/transfers/${partnerTransferId}` : "/partner/matters"}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        className="inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink-2"
       >
         <ArrowLeft className="h-4 w-4" />{" "}
         {partnerTransferId ? matter.property_transfers?.reference ?? "Property transfer" : "Back to matters"}
@@ -158,8 +158,8 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{matter.title || clientDisplayName(client) || "Matter"}</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-ink">{matter.title || clientDisplayName(client) || "Matter"}</h1>
+          <p className="text-sm text-ink-3 mt-1">
             {matter.municipality || "—"} · Opened {formatDate(matter.created_at)}
             {matter.partner_file_ref ? ` · Your ref: ${matter.partner_file_ref}` : ""}
           </p>
@@ -195,15 +195,15 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       {decisionLabel && (
         <Card className="border-[#E8521A]/30 bg-[#E8521A]/5">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#E8521A] mb-1">Council decision</p>
-          <p className="text-lg font-semibold text-gray-900">{decisionLabel}</p>
+          <p className="text-lg font-semibold text-ink">{decisionLabel}</p>
         </Card>
       )}
 
       {/* Council rates account number (read-only for partners) */}
       {typeof sd.rates_account_no === "string" && sd.rates_account_no && (
         <Card>
-          <p className="text-xs text-gray-500">Rates account number</p>
-          <p className="mt-0.5 text-sm font-medium text-gray-900">{sd.rates_account_no}</p>
+          <p className="text-xs text-ink-3">Rates account number</p>
+          <p className="mt-0.5 text-sm font-medium text-ink">{sd.rates_account_no}</p>
         </Card>
       )}
 
@@ -238,12 +238,12 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         {/* Client (single-client matters only) */}
         {client && (
         <Card>
-          <h2 className="font-semibold text-gray-900 mb-3">Client</h2>
+          <h2 className="font-semibold text-ink mb-3">Client</h2>
           <dl className="space-y-1.5 text-sm">
-            <div className="flex justify-between"><dt className="text-gray-500">Name</dt><dd className="text-gray-900">{clientDisplayName(client)}</dd></div>
-            <div className="flex justify-between"><dt className="text-gray-500">Type</dt><dd className="text-gray-900">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-gray-500">Email</dt><dd className="text-gray-900">{client?.primary_email || "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-gray-500">Cell</dt><dd className="text-gray-900">{client?.primary_cell || "—"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-3">Name</dt><dd className="text-ink">{clientDisplayName(client)}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-3">Type</dt><dd className="text-ink">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-3">Email</dt><dd className="text-ink">{client?.primary_email || "—"}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink-3">Cell</dt><dd className="text-ink">{client?.primary_cell || "—"}</dd></div>
           </dl>
         </Card>
         )}
@@ -251,11 +251,11 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         {/* Documents — your / client uploads vs ConveyClear uploads (note 29) */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-900">Documents</h2>
+            <h2 className="font-semibold text-ink">Documents</h2>
             <StorageUpload matterId={matter.id} />
           </div>
           {docs.length === 0 ? (
-            <p className="text-sm text-gray-500">No documents yet.</p>
+            <p className="text-sm text-ink-3">No documents yet.</p>
           ) : (
             <div className="space-y-4">
               {([
@@ -263,15 +263,15 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                 { title: "ConveyClear uploads", list: docs.filter((d) => !["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
               ] as const).map((grp) => (
                 <div key={grp.title}>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{grp.title} ({grp.list.length})</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">{grp.title} ({grp.list.length})</p>
                   {grp.list.length === 0 ? (
-                    <p className="text-sm text-gray-500">None.</p>
+                    <p className="text-sm text-ink-3">None.</p>
                   ) : (
                     <ul className="space-y-2">
                       {grp.list.map((d) => (
                         <li key={d.id} className="flex items-center gap-2 text-sm">
-                          <FileText className="h-4 w-4 text-gray-500 shrink-0" />
-                          <span className="flex-1 text-gray-700 truncate">{d.file_name || d.document_type}</span>
+                          <FileText className="h-4 w-4 text-ink-3 shrink-0" />
+                          <span className="flex-1 text-ink-2 truncate">{d.file_name || d.document_type}</span>
                           {d.storage_path && signedUrls[d.storage_path] ? (
                             <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
                           ) : d.drive_file_id ? (
@@ -291,17 +291,17 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       {/* Activity */}
       <Card>
-        <h2 className="font-semibold text-gray-900 mb-3">Activity</h2>
+        <h2 className="font-semibold text-ink mb-3">Activity</h2>
         {activities.length === 0 ? (
-          <p className="text-sm text-gray-500">No activity yet.</p>
+          <p className="text-sm text-ink-3">No activity yet.</p>
         ) : (
           <ul className="space-y-3">
             {activities.map((a) => (
               <li key={a.id} className="flex gap-3 text-sm">
                 <div className="mt-1 h-2 w-2 rounded-full bg-[#1B2E6B] shrink-0" />
                 <div>
-                  <p className="text-gray-700">{a.body}</p>
-                  <p className="text-xs text-gray-500">{formatDate(a.created_at)}</p>
+                  <p className="text-ink-2">{a.body}</p>
+                  <p className="text-xs text-ink-3">{formatDate(a.created_at)}</p>
                 </div>
               </li>
             ))}

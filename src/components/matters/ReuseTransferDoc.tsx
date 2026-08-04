@@ -73,7 +73,7 @@ export default function ReuseTransferDoc({
       <select
         value={sel}
         onChange={(e) => setSel(e.target.value)}
-        className="rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
+        className="rounded-lg border border-line px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
       >
         {options.map((o) => (
           <option key={o.id} value={o.id}>

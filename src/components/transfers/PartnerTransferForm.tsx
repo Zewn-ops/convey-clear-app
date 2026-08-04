@@ -94,10 +94,10 @@ export default function PartnerTransferForm({
         />
       </div>
 
-      <div className="pt-2 border-t border-gray-100">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Parties (optional)</p>
+      <div className="pt-2 border-t border-line">
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-3">Parties (optional)</p>
         {clients.length === 0 ? (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-3">
             No clients on your firm yet — add them by referring a matter first, then link them here.
           </p>
         ) : (
@@ -106,19 +106,19 @@ export default function PartnerTransferForm({
             <SearchSelect label="Buyer" value={buyerId} onChange={setBuyerId} options={clientOptions} placeholder="Search your clients…" />
           </div>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-ink-3 mt-2">
           Your firm owns this transfer and its matters. ConveyClear can see it; the other side&apos;s firm cannot.
         </p>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="pt-notes" className="text-sm font-medium text-gray-700">Notes</label>
+        <label htmlFor="pt-notes" className="text-sm font-medium text-ink-2">Notes</label>
         <textarea
           id="pt-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent"
         />
       </div>
 

@@ -82,7 +82,7 @@ export default function FilterRail({
       <button
         type="button"
         onClick={() => setOpenOnMobile((v) => !v)}
-        className="lg:hidden mb-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700"
+        className="lg:hidden mb-3 inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-2"
         aria-expanded={openOnMobile}
       >
         <SlidersHorizontal className="h-4 w-4" />
@@ -102,13 +102,13 @@ export default function FilterRail({
           }}
           className="relative"
         >
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder}
-            className="w-full rounded-lg border border-gray-300 py-1.5 pl-8 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="w-full rounded-lg border border-line py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
           />
         </form>
 
@@ -126,7 +126,7 @@ export default function FilterRail({
           const active = current(f);
           return (
             <div key={f.key}>
-              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3">
                 {f.label}
               </h3>
               <ul className="space-y-0.5">
@@ -144,12 +144,12 @@ export default function FilterRail({
                           "flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm transition-colors",
                           isActive
                             ? "bg-[#1B2E6B]/10 font-medium text-[#1B2E6B]"
-                            : "text-gray-600 hover:bg-gray-100"
+                            : "text-ink-2 hover:bg-raised"
                         )}
                       >
                         <span className="truncate">{o.label}</span>
                         {typeof o.count === "number" && (
-                          <span className="ml-2 shrink-0 text-xs text-gray-500">{o.count}</span>
+                          <span className="ml-2 shrink-0 text-xs text-ink-3">{o.count}</span>
                         )}
                       </button>
                     </li>

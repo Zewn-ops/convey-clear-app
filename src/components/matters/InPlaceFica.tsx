@@ -63,14 +63,14 @@ export default function InPlaceFica({
     <Card accent="client">
       <div className="mb-1 flex items-center gap-2">
         <ClipboardCheck className="h-4 w-4 text-[#1B2E6B]" />
-        <h2 className="font-semibold text-gray-900">Client details &amp; consent</h2>
+        <h2 className="font-semibold text-ink">Client details &amp; consent</h2>
       </div>
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="mb-3 text-xs text-ink-3">
         The details and consent the onboarding link used to collect. Capture them here to complete the matter without
         sending one.
       </p>
 
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-line">
         {subjects.map((s) => (
           <SubjectSection key={s.partyId ?? "matter-client"} matterId={matterId} subject={s} isStaff={isStaff} />
         ))}
@@ -133,8 +133,8 @@ function SubjectSection({
     return (
       <div className="flex items-start gap-2 py-3 text-xs">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-        <p className="text-gray-600">
-          <b className="text-gray-900">{label}</b> has no client record yet, so their details
+        <p className="text-ink-2">
+          <b className="text-ink">{label}</b> has no client record yet, so their details
           {needsDirectors ? ", directors" : ""} and consent can&apos;t be captured — and their FICA documents can&apos;t
           be reused across matters. Create one with <b>Contact</b> on the party above, then come back.
         </p>
@@ -180,8 +180,8 @@ function SubjectSection({
     <div className="py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-gray-900">{label}</h3>
-          <p className="text-[11px] uppercase tracking-wide text-gray-500">
+          <h3 className="truncate text-sm font-semibold text-ink">{label}</h3>
+          <p className="text-[11px] uppercase tracking-wide text-ink-3">
             {entity === "business" ? "Business" : entity === "trust" ? "Trust" : "Individual"}
           </p>
         </div>
@@ -216,19 +216,19 @@ function SubjectSection({
       </div>
 
       {!details.complete && !open && (
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-ink-3">
           Missing: {details.missing.map((f) => f.label).join(", ")}.
         </p>
       )}
 
       {open && (
-        <div className="mt-4 space-y-5 border-t border-gray-100 pt-4">
+        <div className="mt-4 space-y-5 border-t border-line pt-4">
           {/* ------------------------------------------------------------ details */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {fields.map((f) => (
               <label
                 key={f.key}
-                className={f.type === "textarea" ? "sm:col-span-2 text-xs font-medium text-gray-500" : "text-xs font-medium text-gray-500"}
+                className={f.type === "textarea" ? "sm:col-span-2 text-xs font-medium text-ink-3" : "text-xs font-medium text-ink-3"}
               >
                 <span className="flex items-center gap-1">
                   {f.label}
@@ -241,7 +241,7 @@ function SubjectSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder={f.hint}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
                   />
                 ) : (
                   <input
@@ -249,7 +249,7 @@ function SubjectSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder={f.hint}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
                   />
                 )}
               </label>
@@ -260,7 +260,7 @@ function SubjectSection({
           {isEntity && (
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
                   {entity === "trust" ? "Trustees" : "Directors"}
                 </p>
                 <button
@@ -276,7 +276,7 @@ function SubjectSection({
                   <Plus className="h-3.5 w-3.5" /> Add
                 </button>
               </div>
-              {directors.length === 0 && <p className="text-xs text-gray-500">None captured.</p>}
+              {directors.length === 0 && <p className="text-xs text-ink-3">None captured.</p>}
               <div className="space-y-2">
                 {directors.map((d, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -298,7 +298,7 @@ function SubjectSection({
                           onChange={(e) =>
                             setDirectors((ds) => ds.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))
                           }
-                          className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
+                          className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
                         />
                       ))}
                     </div>
@@ -317,8 +317,8 @@ function SubjectSection({
           )}
 
           {/* ------------------------------------------------------------ consent */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Consent</p>
+          <div className="rounded-lg border border-line bg-raised/60 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Consent</p>
 
             {portalConsent ? (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-green-700">
@@ -328,7 +328,7 @@ function SubjectSection({
               </p>
             ) : (
               <>
-                <p className="mt-1.5 text-xs text-gray-500">
+                <p className="mt-1.5 text-xs text-ink-3">
                   You are <b>recording</b> consent the client has already given, not giving it for them. Say how it was
                   obtained — it is stored against your name.
                 </p>
@@ -341,12 +341,12 @@ function SubjectSection({
 
                 {(popia || terms || marketing) && (
                   <div className="mt-3 space-y-2">
-                    <label className="block text-xs font-medium text-gray-500">
+                    <label className="block text-xs font-medium text-ink-3">
                       How was consent obtained? <span className="text-[#E8521A]">*</span>
                       <select
                         value={method}
                         onChange={(e) => setMethod(e.target.value as CaptureMethod)}
-                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
                       >
                         <option value="">Select…</option>
                         {CAPTURE_METHODS.map((m) => (
@@ -362,13 +362,13 @@ function SubjectSection({
                         Verbal consent is the weakest record you can hold. Follow it up with something written.
                       </p>
                     )}
-                    <label className="block text-xs font-medium text-gray-500">
+                    <label className="block text-xs font-medium text-ink-3">
                       Reference / note
                       <input
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="e.g. signed FICA pack dated 12 July, on file"
-                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
                       />
                     </label>
                   </div>
@@ -378,7 +378,7 @@ function SubjectSection({
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="px-2 text-sm text-gray-500 hover:text-gray-800">
+            <button type="button" onClick={() => setOpen(false)} className="px-2 text-sm text-ink-3 hover:text-ink">
               Cancel
             </button>
             <button
@@ -398,7 +398,7 @@ function SubjectSection({
 
 function StatusChip({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 font-medium ${ok ? "text-green-600" : "text-gray-500"}`}>
+    <span className={`inline-flex items-center gap-1 font-medium ${ok ? "text-green-600" : "text-ink-3"}`}>
       {ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
       {label}
     </span>
@@ -417,12 +417,12 @@ function Tick({
   required?: boolean;
 }) {
   return (
-    <label className="flex items-start gap-2 text-xs text-gray-700">
+    <label className="flex items-start gap-2 text-xs text-ink-2">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-[#1B2E6B] focus:ring-[#1B2E6B]"
+        className="mt-0.5 h-3.5 w-3.5 rounded border-line text-[#1B2E6B] focus:ring-[#1B2E6B]"
       />
       <span>
         {label}

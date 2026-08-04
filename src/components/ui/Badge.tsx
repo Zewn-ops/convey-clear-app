@@ -7,12 +7,14 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<NonNullable<BadgeProps["variant"]>, string> = {
-  default: "bg-[#1B2E6B] text-white",
-  success: "bg-green-100 text-green-800",
-  warning: "bg-amber-100 text-amber-800",
-  danger: "bg-red-100 text-red-700",
-  info: "bg-blue-100 text-blue-800",
-  gray: "bg-gray-100 text-gray-600",
+  // Tinted grounds with the role colour as the label, so these stay legible in
+  // both themes. Contrast for every pair is verified in DESIGN.md.
+  default: "bg-action-fill text-white",
+  success: "bg-ok-tint text-ok",
+  warning: "bg-waiting-tint text-waiting",
+  danger: "bg-danger-tint text-danger",
+  info: "bg-action-tint text-action",
+  gray: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
 };
 
 export default function Badge({

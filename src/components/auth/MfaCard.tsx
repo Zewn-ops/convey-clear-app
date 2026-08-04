@@ -117,22 +117,22 @@ export default function MfaCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-1">
-        {verified.length > 0 ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <ShieldAlert className="h-5 w-5 text-gray-500" />}
-        <h2 className="font-semibold text-gray-900">Two-factor authentication</h2>
+        {verified.length > 0 ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <ShieldAlert className="h-5 w-5 text-ink-3" />}
+        <h2 className="font-semibold text-ink">Two-factor authentication</h2>
       </div>
-      <p className="text-xs text-gray-500 mb-4">
+      <p className="text-xs text-ink-3 mb-4">
         Add an authenticator app (Google Authenticator, 1Password, Authy…) for a 6-digit code at sign-in.
       </p>
 
       {loading ? (
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-ink-3">Loading…</p>
       ) : enrolling ? (
         <div className="space-y-3">
-          <p className="text-sm text-gray-700">Scan this with your authenticator app, then enter the 6-digit code it shows.</p>
+          <p className="text-sm text-ink-2">Scan this with your authenticator app, then enter the 6-digit code it shows.</p>
           {/* Supabase returns qr_code as an SVG data URI */}
-          <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg border border-gray-200 bg-white p-2" />
-          <p className="text-xs text-gray-500">
-            Can&rsquo;t scan? Enter this key manually: <code className="font-mono text-gray-700 break-all">{enrolling.secret}</code>
+          <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg border border-line bg-surface p-2" />
+          <p className="text-xs text-ink-3">
+            Can&rsquo;t scan? Enter this key manually: <code className="font-mono text-ink-2 break-all">{enrolling.secret}</code>
           </p>
           <Input label="6-digit code" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
           <div className="flex gap-2">
@@ -142,7 +142,7 @@ export default function MfaCard() {
         </div>
       ) : removing ? (
         <div className="space-y-3">
-          <p className="text-sm text-gray-700">Enter your current 6-digit code to confirm removing two-factor authentication.</p>
+          <p className="text-sm text-ink-2">Enter your current 6-digit code to confirm removing two-factor authentication.</p>
           <Input label="6-digit code" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
           <div className="flex gap-2">
             <Button onClick={confirmRemove} loading={removeBusy}>Remove authenticator</Button>
@@ -152,16 +152,16 @@ export default function MfaCard() {
       ) : verified.length > 0 ? (
         <div className="space-y-2">
           {verified.map((f) => (
-            <div key={f.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
-              <span className="flex items-center gap-2 text-sm text-gray-800">
-                <Smartphone className="h-4 w-4 text-gray-500" /> Authenticator app <span className="text-xs text-green-600 font-medium">· active</span>
+            <div key={f.id} className="flex items-center justify-between rounded-lg border border-line bg-raised px-3 py-2.5">
+              <span className="flex items-center gap-2 text-sm text-ink">
+                <Smartphone className="h-4 w-4 text-ink-3" /> Authenticator app <span className="text-xs text-green-600 font-medium">· active</span>
               </span>
               <button onClick={() => remove(f.id)} className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:underline">
                 <Trash2 className="h-3.5 w-3.5" /> Remove
               </button>
             </div>
           ))}
-          <p className="text-xs text-gray-500 pt-1">Two-factor authentication is on. You&rsquo;ll be asked for a code each sign-in.</p>
+          <p className="text-xs text-ink-3 pt-1">Two-factor authentication is on. You&rsquo;ll be asked for a code each sign-in.</p>
         </div>
       ) : (
         <Button onClick={startEnroll} loading={busy}>

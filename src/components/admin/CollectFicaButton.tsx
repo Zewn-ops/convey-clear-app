@@ -41,7 +41,7 @@ export default function CollectFicaButton({ matterId, fica = true }: { matterId:
         <p className="text-xs font-medium text-green-900">
           {fica ? "FICA document" : "Document"} link — valid 7 days, single use
         </p>
-        <div className="rounded bg-white border border-green-200 px-3 py-2 text-xs font-mono text-gray-700 break-all">
+        <div className="rounded bg-surface border border-green-200 px-3 py-2 text-xs font-mono text-ink-2 break-all">
           {link}
         </div>
         <div className="flex flex-wrap gap-2">

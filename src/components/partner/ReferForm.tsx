@@ -71,10 +71,10 @@ function PartySection({
 }) {
   const isPerson = party.entity_type === "natural_person";
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 space-y-4">
+    <div className="rounded-xl border border-line bg-surface shadow-sm p-4 space-y-4">
       <div>
-        <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        <h2 className="text-sm font-semibold text-ink">{title}</h2>
+        {subtitle && <p className="text-xs text-ink-3">{subtitle}</p>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Select
@@ -104,8 +104,8 @@ function PartySection({
       </div>
       <Input label="Physical address" value={party.physical_address} onChange={(e) => onChange({ physical_address: e.target.value })} placeholder="Street, suburb, city" />
       {!isPerson && (
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 space-y-3">
-          <p className="text-xs font-medium text-gray-600">Contact person</p>
+        <div className="rounded-lg border border-line bg-raised p-3 space-y-3">
+          <p className="text-xs font-medium text-ink-2">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="First name" value={party.contact_first_name} onChange={(e) => onChange({ contact_first_name: e.target.value })} placeholder="Authorised representative" />
             <Input label="Surname" value={party.contact_last_name} onChange={(e) => onChange({ contact_last_name: e.target.value })} placeholder="Surname" />
@@ -290,7 +290,7 @@ export default function ReferForm({
         <>
           {/* 1.1 Details — clearance type + referral fields */}
           <Card className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">1.1 Details</h2>
+            <h2 className="text-sm font-semibold text-ink">1.1 Details</h2>
             <Select
               label="Rates clearance type"
               value={prcSubtype}
@@ -321,7 +321,7 @@ export default function ReferForm({
         {prcBlocked ? "Contact ConveyClear to proceed" : "Refer matter"}
       </Button>
       {!canSubmit && !prcBlocked && (
-        <p className="text-center text-xs text-gray-500 -mt-2">
+        <p className="text-center text-xs text-ink-3 -mt-2">
           Fill in all required fields (marked <span className="text-red-500">*</span>) to continue.
         </p>
       )}

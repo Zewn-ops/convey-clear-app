@@ -158,15 +158,15 @@ export default function InPlaceIntake({
     <Card accent="service" className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /> Capture documents</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h2 className="font-semibold text-ink flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /> Capture documents</h2>
+          <p className="text-xs text-ink-3 mt-0.5">
             Upload each required document straight onto the matter — no need to send a link first.
           </p>
         </div>
         {required > 0 && (
           <span
             className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-              complete ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"
+              complete ? "bg-green-50 text-green-700" : "bg-raised text-ink-2"
             }`}
           >
             {done}/{required} required
@@ -184,9 +184,9 @@ export default function InPlaceIntake({
         <div className="rounded-lg border border-[#E8521A]/30 bg-[#E8521A]/[0.03] p-3">
           <div className="mb-2 flex items-center gap-1.5">
             <Link2 className="h-3.5 w-3.5 text-[#E8521A]" />
-            <h3 className="text-xs font-semibold text-gray-900">From this property transfer</h3>
+            <h3 className="text-xs font-semibold text-ink">From this property transfer</h3>
           </div>
-          <p className="mb-2.5 text-xs text-gray-500">
+          <p className="mb-2.5 text-xs text-ink-3">
             Held once for the property and reusable on every matter in the transfer — no need to fetch them again.
           </p>
           <ul className="space-y-1.5">
@@ -194,10 +194,10 @@ export default function InPlaceIntake({
               const attached = documents.some((d) => d.transfer_document_id === t.id);
               return (
                 <li key={t.id} className="flex items-center gap-2.5">
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-ink-3" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-gray-800">{docLabel(t.document_type)}</p>
-                    <p className="truncate text-[11px] text-gray-500">{t.file_name || "—"}</p>
+                    <p className="truncate text-xs font-medium text-ink">{docLabel(t.document_type)}</p>
+                    <p className="truncate text-[11px] text-ink-3">{t.file_name || "—"}</p>
                   </div>
                   {attached ? (
                     <span className="shrink-0 text-xs font-medium text-green-600">On this matter</span>
@@ -216,20 +216,20 @@ export default function InPlaceIntake({
       )}
 
       {groups.map((g) => (
-        <div key={g.key} className="rounded-lg border border-gray-100">
-          <div className="border-b border-gray-100 bg-gray-50 px-4 py-2">
-            <p className="text-sm font-medium text-gray-800">{g.title}</p>
-            {g.subtitle && <p className="text-xs text-gray-500">{g.subtitle}</p>}
+        <div key={g.key} className="rounded-lg border border-line">
+          <div className="border-b border-line bg-raised px-4 py-2">
+            <p className="text-sm font-medium text-ink">{g.title}</p>
+            {g.subtitle && <p className="text-xs text-ink-3">{g.subtitle}</p>}
           </div>
           {g.missingParty && (
-            <p className="px-4 py-3 text-sm text-gray-500">
+            <p className="px-4 py-3 text-sm text-ink-3">
               No {g.title.toLowerCase()} captured on this matter yet. Add their
-              details in <span className="font-medium text-gray-700">Parties</span> above
+              details in <span className="font-medium text-ink-2">Parties</span> above
               (or send the client the onboarding link) and this side&apos;s document
               slots appear here.
             </p>
           )}
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-line">
             {g.slots.map((s) => {
               const doc = docFor(g.partyId, s.docType);
               const key = keyFor(g.partyId, s.docType);
@@ -257,16 +257,16 @@ export default function InPlaceIntake({
                     <Circle className={`h-4 w-4 shrink-0 ${s.optional ? "text-gray-200" : "text-gray-300"}`} />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-gray-800">
+                    <p className="truncate text-sm text-ink">
                       {docLabel(s.docType)}
-                      {s.optional && <span className="ml-1.5 text-xs text-gray-500">(optional)</span>}
+                      {s.optional && <span className="ml-1.5 text-xs text-ink-3">(optional)</span>}
                     </p>
                     {doc && (
-                      <p className="flex items-center gap-1 truncate text-xs text-gray-500">
+                      <p className="flex items-center gap-1 truncate text-xs text-ink-3">
                         <FileText className="h-3 w-3 shrink-0" /> {doc.file_name || "Uploaded"}
                       </p>
                     )}
-                    {isUnavailable && <p className="text-xs text-gray-500">Marked not available</p>}
+                    {isUnavailable && <p className="text-xs text-ink-3">Marked not available</p>}
                   </div>
                   <div className="shrink-0">
                     {doc ? (
@@ -319,7 +319,7 @@ export default function InPlaceIntake({
                             <input type="hidden" name="matter_id" value={matterId} />
                             <input type="hidden" name="doc_key" value={key} />
                             <input type="hidden" name="make" value="1" />
-                            <SubmitButton pendingLabel="…" className="text-xs text-gray-500 hover:text-gray-600 hover:underline">
+                            <SubmitButton pendingLabel="…" className="text-xs text-ink-3 hover:text-ink-2 hover:underline">
                               Not available
                             </SubmitButton>
                           </form>

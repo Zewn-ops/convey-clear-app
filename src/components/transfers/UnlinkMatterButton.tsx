@@ -28,7 +28,7 @@ export default function UnlinkMatterButton({ matterId }: { matterId: string }) {
     <button
       onClick={unlink}
       disabled={loading}
-      className="text-xs font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
+      className="text-xs font-medium text-ink-3 hover:text-red-600 disabled:opacity-50"
     >
       {loading ? "Unlinking…" : "Unlink"}
     </button>

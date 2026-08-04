@@ -12,8 +12,8 @@ import { councilPocName, type CouncilPoc } from "@/types";
 function Row({ k, v }: { k: string; v: string | null }) {
   return (
     <div>
-      <dt className="text-gray-500 text-xs">{k}</dt>
-      <dd className="font-medium mt-0.5 text-gray-800 break-words">{v || "—"}</dd>
+      <dt className="text-ink-3 text-xs">{k}</dt>
+      <dd className="font-medium mt-0.5 text-ink break-words">{v || "—"}</dd>
     </div>
   );
 }
@@ -37,7 +37,7 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
     notes: poc.notes ?? "",
   });
 
-  const input = "rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
+  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]";
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -78,59 +78,59 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
       <Card>
         <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-gray-500">First name *</label>
+            <label className="text-xs text-ink-3">First name *</label>
             <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Surname</label>
+            <label className="text-xs text-ink-3">Surname</label>
             <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Council</label>
+            <label className="text-xs text-ink-3">Council</label>
             <input list="council-list-edit" value={form.council} onChange={(e) => setForm({ ...form, council: e.target.value })} className={`${input} w-full mt-1`} />
             <datalist id="council-list-edit">{MUNICIPALITIES.map((m) => <option key={m} value={m} />)}</datalist>
           </div>
           <div>
-            <label className="text-xs text-gray-500">Department</label>
+            <label className="text-xs text-ink-3">Department</label>
             <input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Email</label>
+            <label className="text-xs text-ink-3">Email</label>
             <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Cell</label>
+            <label className="text-xs text-ink-3">Cell</label>
             <input value={form.cell} onChange={(e) => setForm({ ...form, cell: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Tel</label>
+            <label className="text-xs text-ink-3">Tel</label>
             <input value={form.tel} onChange={(e) => setForm({ ...form, tel: e.target.value })} className={`${input} w-full mt-1`} placeholder="Office / landline" />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Job title</label>
+            <label className="text-xs text-ink-3">Job title</label>
             <input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Region</label>
+            <label className="text-xs text-ink-3">Region</label>
             <input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className={`${input} w-full mt-1`} placeholder="e.g. Tshwane North" />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Birthday</label>
+            <label className="text-xs text-ink-3">Birthday</label>
             <input type="date" value={form.birthday} onChange={(e) => setForm({ ...form, birthday: e.target.value })} className={`${input} w-full mt-1`} />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-xs text-gray-500">Office description</label>
+            <label className="text-xs text-ink-3">Office description</label>
             <input value={form.office_description} onChange={(e) => setForm({ ...form, office_description: e.target.value })} className={`${input} w-full mt-1`} placeholder="e.g. Rates hall, 2nd floor, Room 214" />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-xs text-gray-500">Comments</label>
+            <label className="text-xs text-ink-3">Comments</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className={`${input} w-full mt-1 resize-none`} />
           </div>
           <div className="sm:col-span-2 flex gap-2 pt-1">
             <button type="submit" disabled={busy} className="px-4 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90 disabled:opacity-50">
               {busy ? "Saving…" : "Save changes"}
             </button>
-            <button type="button" onClick={() => setEditing(false)} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900">Cancel</button>
+            <button type="button" onClick={() => setEditing(false)} className="px-4 py-2 text-sm font-medium text-ink-3 hover:text-ink">Cancel</button>
           </div>
         </form>
       </Card>
@@ -140,7 +140,7 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">Contact details</h2>
+        <h2 className="font-semibold text-ink">Contact details</h2>
         <div className="flex items-center gap-3">
           <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-medium text-[#1B2E6B] hover:underline">
             <Pencil className="h-3.5 w-3.5" /> Edit
@@ -158,28 +158,28 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
         <Row k="Department" v={poc.department} />
         <Row k="Region" v={poc.region} />
         <div>
-          <dt className="text-gray-500 text-xs">Email</dt>
+          <dt className="text-ink-3 text-xs">Email</dt>
           <dd className="font-medium mt-0.5">{poc.email ? <a href={`mailto:${poc.email}`} className="text-[#1B2E6B] hover:underline">{poc.email}</a> : "—"}</dd>
         </div>
         <div>
-          <dt className="text-gray-500 text-xs">Cell</dt>
+          <dt className="text-ink-3 text-xs">Cell</dt>
           <dd className="font-medium mt-0.5">{poc.cell ? <a href={`tel:${poc.cell}`} className="text-[#1B2E6B] hover:underline">{poc.cell}</a> : "—"}</dd>
         </div>
         <div>
-          <dt className="text-gray-500 text-xs">Tel</dt>
+          <dt className="text-ink-3 text-xs">Tel</dt>
           <dd className="font-medium mt-0.5">{poc.tel ? <a href={`tel:${poc.tel}`} className="text-[#1B2E6B] hover:underline">{poc.tel}</a> : "—"}</dd>
         </div>
         <Row k="Birthday" v={poc.birthday} />
         {poc.office_description && (
           <div className="col-span-2">
-            <dt className="text-gray-500 text-xs">Office description</dt>
-            <dd className="font-medium mt-0.5 text-gray-800 whitespace-pre-wrap">{poc.office_description}</dd>
+            <dt className="text-ink-3 text-xs">Office description</dt>
+            <dd className="font-medium mt-0.5 text-ink whitespace-pre-wrap">{poc.office_description}</dd>
           </div>
         )}
         {poc.notes && (
           <div className="col-span-2">
-            <dt className="text-gray-500 text-xs">Comments</dt>
-            <dd className="font-medium mt-0.5 text-gray-800 whitespace-pre-wrap">{poc.notes}</dd>
+            <dt className="text-ink-3 text-xs">Comments</dt>
+            <dd className="font-medium mt-0.5 text-ink whitespace-pre-wrap">{poc.notes}</dd>
           </div>
         )}
       </dl>

@@ -86,7 +86,7 @@ export default function StorageUpload({
         type="button"
         disabled={busy}
         onClick={() => fileRef.current?.click()}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink-2 hover:bg-raised disabled:opacity-50"
       >
         <UploadCloud className="h-4 w-4" /> {busy ? "Uploading…" : label}
       </button>
