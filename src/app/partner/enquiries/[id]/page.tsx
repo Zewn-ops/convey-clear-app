@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import EnquiryReply from "@/components/enquiries/EnquiryReply";
 import { formatDateTime } from "@/lib/utils";
 import { ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryMessage, type EnquiryStatus } from "@/types";
@@ -45,12 +45,20 @@ export default async function PartnerEnquiryDetail({ params }: { params: { id: s
           {enquiry.matter_id && (
             <p className="text-sm text-ink-3 mt-1">
               Re:{" "}
-              <Link href={`/partner/matters/${enquiry.matter_id}`} className="text-[#E8521A] hover:underline">{matterTitle || "View matter"}</Link>
+              <Link href={`/partner/matters/${enquiry.matter_id}`} className="text-action hover:underline">{matterTitle || "View matter"}</Link>
             </p>
           )}
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <Badge label={ENQUIRY_STATUS_LABELS[enquiry.status]} variant={statusVariant(enquiry.status)} />
+          <StatusPill
+            tone={
+              ({ open: "waiting", assigned: "action", resolved: "ok", closed: "neutral" } as Record<string, StatusTone>)[
+                enquiry.status
+              ] ?? "neutral"
+            }
+          >
+            {ENQUIRY_STATUS_LABELS[enquiry.status]}
+          </StatusPill>
           <a
             href={telHref(CONVEYCLEAR_PHONE)}
             className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"

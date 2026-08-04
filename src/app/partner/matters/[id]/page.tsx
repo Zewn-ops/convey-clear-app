@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
+import MetaChip from "@/components/ui/MetaChip";
+import Callout from "@/components/ui/Callout";
+import { workdaysSince } from "@/lib/elapsed";
 import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
@@ -159,16 +162,32 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{matter.title || clientDisplayName(client) || "Matter"}</h1>
-          <p className="text-sm text-ink-3 mt-1">
-            {matter.municipality || "—"} · Opened {formatDate(matter.created_at)}
-            {matter.partner_file_ref ? ` · Your ref: ${matter.partner_file_ref}` : ""}
-          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {matter.municipality && <MetaChip label="Council" value={matter.municipality} />}
+            {(() => {
+              const open = workdaysSince(matter.created_at);
+              return open === null ? null : (
+                <MetaChip
+                  label="Open"
+                  value={`${open} workday${open === 1 ? "" : "s"}`}
+                  tone={open > 60 ? "waiting" : "neutral"}
+                />
+              );
+            })()}
+            <MetaChip label="Opened" value={formatDate(matter.created_at)} />
+            {matter.partner_file_ref && <MetaChip label="Your ref" value={matter.partner_file_ref} />}
+          </div>
         </div>
         {matter.status && (
-          <Badge
-            label={MATTER_STATUS_LABELS[matter.status as MatterStatus]}
-            variant={({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[matter.status] ?? "gray"}
-          />
+          <StatusPill
+            tone={
+              ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
+                matter.status
+              ] ?? "neutral"
+            }
+          >
+            {MATTER_STATUS_LABELS[matter.status as MatterStatus]}
+          </StatusPill>
         )}
       </div>
 
@@ -193,17 +212,16 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
       {/* Council decision (e.g. COT Decision: Memo Approved/Delayed/Rejected) */}
       {decisionLabel && (
-        <Card className="border-[#E8521A]/30 bg-[#E8521A]/5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#E8521A] mb-1">Council decision</p>
-          <p className="text-lg font-semibold text-ink">{decisionLabel}</p>
-        </Card>
+        <Callout tone="waiting" label="Council decision">
+          <span className="text-[17px] font-semibold text-ink">{decisionLabel}</span>
+        </Callout>
       )}
 
       {/* Council rates account number (read-only for partners) */}
       {typeof sd.rates_account_no === "string" && sd.rates_account_no && (
         <Card>
-          <p className="text-xs text-ink-3">Rates account number</p>
-          <p className="mt-0.5 text-sm font-medium text-ink">{sd.rates_account_no}</p>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Rates account number</p>
+          <p className="mt-1 text-[17px] font-semibold tabular-nums text-ink">{sd.rates_account_no}</p>
         </Card>
       )}
 
@@ -234,12 +252,12 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         transferDocs={transferDocs}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Client (single-client matters only) */}
         {client && (
         <Card>
           <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Client</h2>
-          <dl className="space-y-1.5 text-sm">
+          <dl className="space-y-2.5 text-[14px]">
             <div className="flex justify-between"><dt className="text-ink-3">Name</dt><dd className="text-ink">{clientDisplayName(client)}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-3">Type</dt><dd className="text-ink">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-3">Email</dt><dd className="text-ink">{client?.primary_email || "—"}</dd></div>
@@ -251,7 +269,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         {/* Documents — your / client uploads vs ConveyClear uploads (note 29) */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-ink">Documents</h2>
+            <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Documents</h2>
             <StorageUpload matterId={matter.id} />
           </div>
           {docs.length === 0 ? (
@@ -263,7 +281,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                 { title: "ConveyClear uploads", list: docs.filter((d) => !["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
               ] as const).map((grp) => (
                 <div key={grp.title}>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">{grp.title} ({grp.list.length})</p>
+                  <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">{grp.title} ({grp.list.length})</p>
                   {grp.list.length === 0 ? (
                     <p className="text-sm text-ink-3">None.</p>
                   ) : (
@@ -273,11 +291,11 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                           <FileText className="h-4 w-4 text-ink-3 shrink-0" />
                           <span className="flex-1 text-ink-2 truncate">{d.file_name || d.document_type}</span>
                           {d.storage_path && signedUrls[d.storage_path] ? (
-                            <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                            <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs font-semibold text-action hover:underline">View</a>
                           ) : d.drive_file_id ? (
-                            <a href={`https://drive.google.com/file/d/${d.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline shrink-0">View</a>
+                            <a href={`https://drive.google.com/file/d/${d.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs font-semibold text-action hover:underline">View</a>
                           ) : null}
-                          {d.verified && <Badge label="Verified" variant="success" />}
+                          {d.verified && <StatusPill tone="ok">Verified</StatusPill>}
                         </li>
                       ))}
                     </ul>
@@ -298,7 +316,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
           <ul className="space-y-3">
             {activities.map((a) => (
               <li key={a.id} className="flex gap-3 text-sm">
-                <div className="mt-1 h-2 w-2 rounded-full bg-[#1B2E6B] shrink-0" />
+                <div className="mt-1 h-2 w-2 rounded-full bg-action shrink-0" />
                 <div>
                   <p className="text-ink-2">{a.body}</p>
                   <p className="text-xs text-ink-3">{formatDate(a.created_at)}</p>

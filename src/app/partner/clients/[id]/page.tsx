@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
@@ -63,7 +63,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-ink-3" />
             {client.primary_email ? (
-              <a href={`mailto:${client.primary_email}`} className="text-[#1B2E6B] hover:underline">{client.primary_email}</a>
+              <a href={`mailto:${client.primary_email}`} className="text-action hover:underline">{client.primary_email}</a>
             ) : (
               <span className="text-ink-3">No email</span>
             )}
@@ -71,7 +71,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
           <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-ink-3" />
             {client.primary_cell ? (
-              <a href={`tel:${client.primary_cell.replace(/[^\d+]/g, "")}`} className="text-[#1B2E6B] hover:underline">{client.primary_cell}</a>
+              <a href={`tel:${client.primary_cell.replace(/[^\d+]/g, "")}`} className="text-action hover:underline">{client.primary_cell}</a>
             ) : (
               <span className="text-ink-3">No cell</span>
             )}
@@ -102,8 +102,18 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {m.status && <Badge label={MATTER_STATUS_LABELS[m.status as MatterStatus]} variant={statusVariant(m.status)} />}
-                  <Link href={`/partner/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">View</Link>
+                  {m.status && (
+                    <StatusPill
+                      tone={
+                        ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
+                          m.status
+                        ] ?? "neutral"
+                      }
+                    >
+                      {MATTER_STATUS_LABELS[m.status as MatterStatus]}
+                    </StatusPill>
+                  )}
+                  <Link href={`/partner/matters/${m.id}`} className="text-action hover:underline text-xs font-medium">View</Link>
                 </div>
               </li>
             ))}

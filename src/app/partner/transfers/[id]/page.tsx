@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
+import MetaChip from "@/components/ui/MetaChip";
+import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
@@ -121,34 +123,58 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1B2E6B]">{transfer.reference}</h1>
-            <p className="text-sm text-ink-3 mt-1">
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{transfer.reference}</h1>
+            <p className="mt-2.5 text-[15px] font-medium text-ink-3">
               {transfer.property_description || "No property description"}
-              {transfer.municipality ? ` · ${municipalityLabel(transfer.municipality)}` : ""}
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {transfer.municipality && (
+                <MetaChip label="Council" value={municipalityLabel(transfer.municipality)} />
+              )}
+              <MetaChip label="Matters" value={linked.length} tone={linked.length === 0 ? "required" : "neutral"} />
+              {(() => {
+                const live = transfer.status === "open" || transfer.status === "on_hold";
+                const open = workdaysSince(transfer.created_at);
+                return live && open !== null ? (
+                  <MetaChip
+                    label="Open"
+                    value={`${open} workday${open === 1 ? "" : "s"}`}
+                    tone={open > 60 ? "waiting" : "neutral"}
+                  />
+                ) : null;
+              })()}
+            </div>
           </div>
-          <Badge label={TRANSFER_STATUS_LABELS[transfer.status]} variant={statusVariant(transfer.status)} />
+          <StatusPill
+            tone={
+              ({ open: "action", registered: "ok", cancelled: "danger", on_hold: "waiting" } as Record<string, StatusTone>)[
+                transfer.status
+              ] ?? "neutral"
+            }
+          >
+            {TRANSFER_STATUS_LABELS[transfer.status]}
+          </StatusPill>
         </div>
       </div>
 
       <Card>
-        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-3">Transaction</p>
+        <p className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Transaction</p>
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-ink-3">Seller</dt>
-            <dd className="text-ink mt-0.5">{transfer.seller ? clientDisplayName(transfer.seller) : "—"}</dd>
+            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Seller</dt>
+            <dd className="mt-1 text-[14.5px] font-medium text-ink">{transfer.seller ? clientDisplayName(transfer.seller) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-ink-3">Buyer</dt>
-            <dd className="text-ink mt-0.5">{transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}</dd>
+            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Buyer</dt>
+            <dd className="mt-1 text-[14.5px] font-medium text-ink">{transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-ink-3">Council</dt>
-            <dd className="text-ink mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
+            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Council</dt>
+            <dd className="mt-1 text-[14.5px] font-medium text-ink">{municipalityLabel(transfer.municipality)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-ink-3">Opened</dt>
-            <dd className="text-ink mt-0.5">{formatDate(transfer.created_at)}</dd>
+            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Opened</dt>
+            <dd className="mt-1 text-[14.5px] font-medium text-ink">{formatDate(transfer.created_at)}</dd>
           </div>
         </dl>
       </Card>
@@ -176,7 +202,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
                 return (
                   <tr key={m.id} className="hover:bg-raised transition-colors">
                     <td className="px-5 py-3">
-                      <Link href={`/partner/matters/${m.id}`} className="font-medium text-ink hover:text-[#E8521A] hover:underline">
+                      <Link href={`/partner/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
                         {m.title || "Untitled"}
                       </Link>
                       {m.services?.name && <p className="text-xs text-ink-3 mt-0.5">{m.services.name}</p>}
@@ -194,10 +220,20 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
                         : m.current_stage || "—"}
                     </td>
                     <td className="px-5 py-3">
-                      {m.status && <Badge label={MATTER_STATUS_LABELS[m.status]} variant={matterStatusVariant(m.status)} />}
+                      {m.status && (
+                        <StatusPill
+                          tone={
+                            ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
+                              m.status
+                            ] ?? "neutral"
+                          }
+                        >
+                          {MATTER_STATUS_LABELS[m.status]}
+                        </StatusPill>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <Link href={`/partner/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">View</Link>
+                      <Link href={`/partner/matters/${m.id}`} className="text-xs font-semibold text-action hover:underline">View</Link>
                     </td>
                   </tr>
                 );
