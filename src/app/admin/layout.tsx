@@ -12,7 +12,7 @@ export default async function AdminLayout({
   const role = session?.profile?.role ?? null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex min-h-screen bg-canvas">
       {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0">
         <AdminSidebar role={role} />

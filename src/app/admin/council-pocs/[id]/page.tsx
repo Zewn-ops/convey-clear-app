@@ -60,16 +60,16 @@ export default async function AdminCouncilPocDetailPage({
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <Link href="/admin/council-pocs" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 mb-4">
+        <Link href="/admin/council-pocs" className="flex items-center gap-1 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All council POCs
         </Link>
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-[#1B2E6B] flex items-center justify-center text-white text-lg font-bold shrink-0">
+          <div className="h-14 w-14 rounded-full bg-action-fill flex items-center justify-center text-white text-lg font-bold shrink-0">
             {name.slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{name}</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{name}</h1>
+            <p className="text-sm text-ink-3">
               {[poc.council, poc.department].filter(Boolean).join(" · ") || "Council contact"} · added {formatDate(poc.created_at)}
             </p>
           </div>
@@ -79,18 +79,18 @@ export default async function AdminCouncilPocDetailPage({
       <CouncilPocCard poc={poc} />
 
       <div>
-        <h2 className="font-semibold text-gray-900 mb-3">Linked matters ({linkedMatters.length})</h2>
+        <h2 className="font-semibold text-ink mb-3">Linked matters ({linkedMatters.length})</h2>
         {linkedMatters.length > 0 ? (
           <div className="space-y-3">
             {linkedMatters.map((m) => (
               <Link key={m.id} href={`/admin/matters/${m.id}`}>
-                <Card className="hover:border-[#1B2E6B]/30 transition-colors">
+                <Card className="hover:border-line/30 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <Briefcase className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
+                      <Briefcase className="h-4 w-4 text-ink-3 mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{m.title || "Untitled matter"}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{m.municipality || "—"}</p>
+                        <p className="font-medium text-ink truncate">{m.title || "Untitled matter"}</p>
+                        <p className="text-xs text-ink-3 mt-0.5">{m.municipality || "—"}</p>
                       </div>
                     </div>
                     {m.status && (
@@ -103,7 +103,7 @@ export default async function AdminCouncilPocDetailPage({
           </div>
         ) : (
           <Card className="text-center py-8">
-            <p className="text-sm text-gray-500">Not linked to any matter yet</p>
+            <p className="text-sm text-ink-3">Not linked to any matter yet</p>
           </Card>
         )}
       </div>

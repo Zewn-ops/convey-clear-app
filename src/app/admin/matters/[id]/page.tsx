@@ -81,14 +81,14 @@ function priorityVariant(priority: string): "default" | "danger" | "warning" | "
 
 function ActivityIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
-    post: <MessageSquare className="h-4 w-4 text-gray-500" />,
-    phase_transition: <ArrowUpCircle className="h-4 w-4 text-[#1B2E6B]" />,
+    post: <MessageSquare className="h-4 w-4 text-ink-3" />,
+    phase_transition: <ArrowUpCircle className="h-4 w-4 text-action" />,
     document_upload: <UploadCloud className="h-4 w-4 text-green-500" />,
     email_bridge: <Mail className="h-4 w-4 text-blue-500" />,
-    system: <Settings className="h-4 w-4 text-gray-500" />,
+    system: <Settings className="h-4 w-4 text-ink-3" />,
     status_change: <ArrowUpCircle className="h-4 w-4 text-amber-500" />,
   };
-  return <>{icons[type] ?? <MessageSquare className="h-4 w-4 text-gray-500" />}</>;
+  return <>{icons[type] ?? <MessageSquare className="h-4 w-4 text-ink-3" />}</>;
 }
 
 // Resolve a matter's pipeline + current status/stage. MODULE-SCOPE on purpose:
@@ -505,26 +505,26 @@ export default async function AdminMatterDetailPage({
     // client and partner firm cannot see yet.
     return (
     <li key={doc.id} className={`flex items-center gap-3 px-5 py-3 ${isPending ? "opacity-60" : ""}`}>
-      <FileText className="h-4 w-4 text-gray-500 shrink-0" />
+      <FileText className="h-4 w-4 text-ink-3 shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 truncate">{doc.file_name || doc.document_type}</p>
-        <p className="text-xs text-gray-500">
+        <p className="text-sm font-medium text-ink truncate">{doc.file_name || doc.document_type}</p>
+        <p className="text-xs text-ink-3">
           {doc.document_type} · {formatDate(doc.created_at)}
           {doc.matter_party_id && partyById.get(doc.matter_party_id) ? ` · ${partyById.get(doc.matter_party_id)!.role}` : ""}
         </p>
       </div>
       {doc.storage_path && signedUrls[doc.storage_path] ? (
         <div className="flex items-center gap-3 shrink-0">
-          <a href={signedUrls[doc.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline">View</a>
-          <a href={`${signedUrls[doc.storage_path]}&download=${encodeURIComponent(doc.file_name ?? "document")}`} className="text-xs font-medium text-[#E8521A] hover:underline">Download</a>
+          <a href={signedUrls[doc.storage_path]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-action hover:underline">View</a>
+          <a href={`${signedUrls[doc.storage_path]}&download=${encodeURIComponent(doc.file_name ?? "document")}`} className="text-xs font-medium text-action hover:underline">Download</a>
         </div>
       ) : doc.drive_file_id ? (
         <div className="flex items-center gap-3 shrink-0">
-          <a href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1B2E6B] hover:underline">View</a>
-          <a href={`https://drive.google.com/uc?export=download&id=${doc.drive_file_id}`} className="text-xs font-medium text-[#E8521A] hover:underline">Download</a>
+          <a href={`https://drive.google.com/file/d/${doc.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-action hover:underline">View</a>
+          <a href={`https://drive.google.com/uc?export=download&id=${doc.drive_file_id}`} className="text-xs font-medium text-action hover:underline">Download</a>
         </div>
       ) : (
-        <span className="text-xs text-gray-300 shrink-0">No file</span>
+        <span className="shrink-0 text-xs text-ink-3">No file</span>
       )}
       <DocRenameButton documentId={doc.id} current={doc.file_name || doc.document_type} />
       {/* Approval gate (042/043/044). Pending = held for an admin; disapproved =
@@ -556,11 +556,11 @@ export default async function AdminMatterDetailPage({
 
   const docGroup = (title: string, list: MatterDocument[]) => (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{title} ({list.length})</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">{title} ({list.length})</p>
       {list.length > 0 ? (
-        <Card padding="none"><ul className="divide-y divide-gray-100">{list.map(docRow)}</ul></Card>
+        <Card padding="none"><ul className="divide-y divide-line">{list.map(docRow)}</ul></Card>
       ) : (
-        <Card className="text-center py-5"><p className="text-sm text-gray-500">None</p></Card>
+        <Card className="text-center py-5"><p className="text-sm text-ink-3">None</p></Card>
       )}
     </div>
   );
@@ -574,17 +574,17 @@ export default async function AdminMatterDetailPage({
             threw away the context the user was working in. */}
         <Link
           href={transferId ? `/admin/property-transfers/${transferId}` : "/admin/matters"}
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           {transferId ? matter.property_transfers?.reference ?? "Property transfer" : "All matters"}
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1B2E6B]">
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">
               {matter.title || displayName}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-ink-3 mt-1">
               {displayName}
               {matter.municipality ? ` · ${municipalityLabel(matter.municipality)}` : ""}
               {svc?.name ? ` · ${svc.name}` : ""}
@@ -614,63 +614,63 @@ export default async function AdminMatterDetailPage({
       {pipeline ? (
         <Card accent="service" className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><Workflow className="h-3.5 w-3.5 text-sky-700" /> Pipeline · {pipeline.label}</p>
-            <span className="text-xs text-gray-500">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide flex items-center gap-1.5"><Workflow className="h-3.5 w-3.5 text-sky-700" /> Pipeline · {pipeline.label}</p>
+            <span className="text-xs text-ink-3">
               {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
             </span>
           </div>
           <PipelineProgress pipeline={pipeline} currentPhase={matter.current_phase} currentStage={matter.current_stage} audience="staff" />
-          <div className="pt-3 border-t border-gray-100 grid gap-3 sm:grid-cols-2">
+          <div className="pt-3 border-t border-line grid gap-3 sm:grid-cols-2">
             <form action={advancePhase} className="flex items-end gap-2">
               <input type="hidden" name="matter_id" value={id} />
               <input type="hidden" name="author_id" value={authorId ?? ""} />
-              <label className="flex-1 text-xs font-medium text-gray-500">
+              <label className="flex-1 text-xs font-medium text-ink-3">
                 Phase
-                <select name="phase" defaultValue={matter.current_phase ?? ""} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                <select name="phase" defaultValue={matter.current_phase ?? ""} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
                   {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
                 </select>
               </label>
-              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set</SubmitButton>
+              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set</SubmitButton>
             </form>
             <form action={setStage} className="flex items-end gap-2">
               <input type="hidden" name="matter_id" value={id} />
               <input type="hidden" name="author_id" value={authorId ?? ""} />
-              <label className="flex-1 text-xs font-medium text-gray-500">
+              <label className="flex-1 text-xs font-medium text-ink-3">
                 Stage{curPhaseDef ? ` · ${curPhaseDef.internalName}` : ""}
-                <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-gray-50 disabled:text-gray-400">
+                <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
                   <option value="">— Select stage —</option>
                   {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
                 </select>
               </label>
-              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90">Update</SubmitButton>
+              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Update</SubmitButton>
             </form>
           </div>
 
           {/* Decision outcome (RCF/RCC: Approved / Delayed / Rejected + reason) */}
           {decisionOptions.length > 0 && (
-            <div className="pt-3 border-t border-gray-100">
+            <div className="pt-3 border-t border-line">
               {currentOutcomeLabel && (
-                <p className="text-xs text-gray-500 mb-2">Current outcome: <span className="font-medium text-gray-900">{currentOutcomeLabel}</span></p>
+                <p className="text-xs text-ink-3 mb-2">Current outcome: <span className="font-medium text-ink">{currentOutcomeLabel}</span></p>
               )}
               <form action={setOutcome} className="flex items-end gap-2">
                 <input type="hidden" name="matter_id" value={id} />
                 <input type="hidden" name="author_id" value={authorId ?? ""} />
-                <label className="flex-1 text-xs font-medium text-gray-500">
+                <label className="flex-1 text-xs font-medium text-ink-3">
                   {decisionStage?.name} outcome
-                  <select name="outcomeReason" defaultValue={currentOutcomeValue} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                  <select name="outcomeReason" defaultValue={currentOutcomeValue} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
                     <option value="">— Select outcome —</option>
                     {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
                   </select>
                 </label>
-                <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Set outcome</SubmitButton>
+                <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set outcome</SubmitButton>
               </form>
             </div>
           )}
         </Card>
       ) : (
         <Card accent="service">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Pipeline</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-1">Pipeline</p>
+          <p className="text-sm text-ink-3">
             No pipeline configured for {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"} yet.
             {" "}Phase: {matter.current_phase ?? "—"} · Stage: {matter.current_stage ?? "—"}.
           </p>
@@ -682,17 +682,17 @@ export default async function AdminMatterDetailPage({
       <Card accent="service">
         <form action={setRatesAccount} className="flex items-end gap-2">
           <input type="hidden" name="matter_id" value={id} />
-          <label className="flex-1 text-xs font-medium text-gray-500">
+          <label className="flex-1 text-xs font-medium text-ink-3">
             Rates account number
             <input
               type="text"
               name="rates_account_no"
               defaultValue={typeof sd.rates_account_no === "string" ? sd.rates_account_no : ""}
               placeholder="Council rates account no."
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
             />
           </label>
-          <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">Save</SubmitButton>
+          <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Save</SubmitButton>
         </form>
       </Card>
 
@@ -700,25 +700,25 @@ export default async function AdminMatterDetailPage({
       <Card accent="service">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-gray-500">Status</dt>
-            <dd className="text-gray-800 mt-0.5">{matter.status ? MATTER_STATUS_LABELS[matter.status as MatterStatus] : "—"}</dd>
+            <dt className="text-xs text-ink-3">Status</dt>
+            <dd className="text-ink mt-0.5">{matter.status ? MATTER_STATUS_LABELS[matter.status as MatterStatus] : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Priority</dt>
-            <dd className="text-gray-800 mt-0.5">{matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"}</dd>
+            <dt className="text-xs text-ink-3">Priority</dt>
+            <dd className="text-ink mt-0.5">{matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Estimated closing time</dt>
-            <dd className="text-gray-800 mt-0.5">{matter.deadline ? formatDate(matter.deadline) : "—"}</dd>
+            <dt className="text-xs text-ink-3">Estimated closing time</dt>
+            <dd className="text-ink mt-0.5">{matter.deadline ? formatDate(matter.deadline) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Opened</dt>
-            <dd className="text-gray-800 mt-0.5">{formatDate(matter.created_at)}</dd>
+            <dt className="text-xs text-ink-3">Opened</dt>
+            <dd className="text-ink mt-0.5">{formatDate(matter.created_at)}</dd>
           </div>
           {(matter as { service_subtype?: string | null }).service_subtype && (
             <div>
-              <dt className="text-xs text-gray-500">Clearance type</dt>
-              <dd className="text-gray-800 mt-0.5">{(matter as { service_subtype?: string | null }).service_subtype}</dd>
+              <dt className="text-xs text-ink-3">Clearance type</dt>
+              <dd className="text-ink mt-0.5">{(matter as { service_subtype?: string | null }).service_subtype}</dd>
             </div>
           )}
           {/* Service-specific referral fields (PRC account no / utilities / query ref) merged in. */}
@@ -726,34 +726,34 @@ export default async function AdminMatterDetailPage({
             .filter(([k, v]) => v && !["stage_outcome", "stage_reason"].includes(k))
             .map(([k, v]) => (
               <div key={k}>
-                <dt className="text-xs text-gray-500 capitalize">{k.replace(/_/g, " ")}</dt>
-                <dd className="text-gray-800 mt-0.5">{String(v)}</dd>
+                <dt className="text-xs text-ink-3 capitalize">{k.replace(/_/g, " ")}</dt>
+                <dd className="text-ink mt-0.5">{String(v)}</dd>
               </div>
             ))}
           {matter.service_notes && (
             <div className="col-span-2 sm:col-span-3">
-              <dt className="text-xs text-gray-500">Service Notes</dt>
-              <dd className="text-gray-800 mt-0.5">{matter.service_notes}</dd>
+              <dt className="text-xs text-ink-3">Service Notes</dt>
+              <dd className="text-ink mt-0.5">{matter.service_notes}</dd>
             </div>
           )}
         </dl>
 
         {/* Status control (H1) — partner/client referrals arrive as "New"; staff
             review then set Open (or Won/Lost/etc.). Won triggers the celebration. */}
-        <form action={setMatterStatus} className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
+        <form action={setMatterStatus} className="mt-4 pt-4 border-t border-line flex flex-wrap items-center gap-2">
           <input type="hidden" name="matter_id" value={id} />
           <input type="hidden" name="author_id" value={authorId ?? ""} />
-          <label className="text-xs font-medium text-gray-500">Status</label>
+          <label className="text-xs font-medium text-ink-3">Status</label>
           <select
             name="status"
             defaultValue={matter.status ?? "new"}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="rounded-lg border border-line px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
           >
             {(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => (
               <option key={s} value={s}>{MATTER_STATUS_LABELS[s]}</option>
             ))}
           </select>
-          <SubmitButton pendingLabel="Updating…" className="px-3 py-1.5 text-sm font-medium bg-[#1B2E6B] text-white rounded-lg hover:bg-[#1B2E6B]/90">
+          <SubmitButton pendingLabel="Updating…" className="px-3 py-1.5 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">
             Update status
           </SubmitButton>
           {matter.status === "new" && (
@@ -763,32 +763,32 @@ export default async function AdminMatterDetailPage({
       </Card>
 
       {/* ConveyClear internal — staff-only container (note 2026-06-22). */}
-      <Card accent="internal" className="bg-[#1B2E6B]/5">
+      <Card accent="internal" className="bg-action-fill/5">
         <div className="flex items-center gap-1.5 mb-3">
-          <Lock className="h-3.5 w-3.5 text-[#1B2E6B]" />
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-[#1B2E6B]">ConveyClear internal</h2>
+          <Lock className="h-3.5 w-3.5 text-action" />
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-action">ConveyClear internal</h2>
         </div>
         <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           {firm?.name && (
             <div>
-              <dt className="text-xs text-gray-500">Referring firm</dt>
-              <dd className="text-gray-800 mt-0.5">{firm.name}{firm.abbreviation ? ` (${firm.abbreviation})` : ""}</dd>
+              <dt className="text-xs text-ink-3">Referring firm</dt>
+              <dd className="text-ink mt-0.5">{firm.name}{firm.abbreviation ? ` (${firm.abbreviation})` : ""}</dd>
             </div>
           )}
           {matter.partner_file_ref && (
             <div>
-              <dt className="text-xs text-gray-500">Internal file ref</dt>
-              <dd className="text-gray-800 mt-0.5">{matter.partner_file_ref}</dd>
+              <dt className="text-xs text-ink-3">Internal file ref</dt>
+              <dd className="text-ink mt-0.5">{matter.partner_file_ref}</dd>
             </div>
           )}
           {matter.deal_value && (
             <div>
-              <dt className="text-xs text-gray-500">Deal value</dt>
-              <dd className="text-gray-800 mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
+              <dt className="text-xs text-ink-3">Deal value</dt>
+              <dd className="text-ink mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
             </div>
           )}
           {!firm?.name && !matter.partner_file_ref && !matter.deal_value && (
-            <p className="text-sm text-gray-500 col-span-3">No internal details captured yet.</p>
+            <p className="text-sm text-ink-3 col-span-3">No internal details captured yet.</p>
           )}
         </dl>
       </Card>
@@ -804,28 +804,28 @@ export default async function AdminMatterDetailPage({
       {matter.clients && (
         <Card accent="client">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-emerald-700" /> Client</p>
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-emerald-700" /> Client</p>
             <Link
               href={`/admin/clients/${(matter.clients as any).id}`}
-              className="text-xs text-[#E8521A] hover:underline"
+              className="text-xs text-action hover:underline"
             >
               View profile
             </Link>
           </div>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-xs text-gray-500">Name</dt>
+              <dt className="text-xs text-ink-3">Name</dt>
               <dd className="font-medium mt-0.5">{clientDisplayName(matter.clients)}</dd>
             </div>
             {(matter.clients as any).primary_email && (
               <div>
-                <dt className="text-xs text-gray-500">Email</dt>
+                <dt className="text-xs text-ink-3">Email</dt>
                 <dd className="mt-0.5">{(matter.clients as any).primary_email}</dd>
               </div>
             )}
             {(matter.clients as any).primary_cell && (
               <div>
-                <dt className="text-xs text-gray-500">Cell</dt>
+                <dt className="text-xs text-ink-3">Cell</dt>
                 <dd className="mt-0.5">{(matter.clients as any).primary_cell}</dd>
               </div>
             )}
@@ -862,7 +862,7 @@ export default async function AdminMatterDetailPage({
       {/* Documents — split client/partner uploads vs ConveyClear uploads (note 29) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
+          <h2 className="font-semibold text-ink flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
           <div className="flex flex-wrap items-center gap-3">
             {documents.length > 0 && <CouncilPackButton matterId={id} />}
             <StorageUpload matterId={id} />
@@ -879,10 +879,10 @@ export default async function AdminMatterDetailPage({
           shared one; everything here is ours. */}
       <div>
         <div className="mb-3 flex items-center gap-1.5">
-          <Lock className="h-3.5 w-3.5 text-gray-500" />
-          <h2 className="font-semibold text-gray-900">Internal Activity Feed</h2>
+          <Lock className="h-3.5 w-3.5 text-ink-3" />
+          <h2 className="font-semibold text-ink">Internal Activity Feed</h2>
         </div>
-        <p className="-mt-2 mb-3 text-xs text-gray-500">
+        <p className="-mt-2 mb-3 text-xs text-ink-3">
           ConveyClear only. Notes here are never shown to the client or the partner firm — use Matter Enquiries above to
           talk to them.
         </p>
@@ -896,11 +896,11 @@ export default async function AdminMatterDetailPage({
               name="body"
               rows={2}
               placeholder="Add a note or update..."
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
+              className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
             />
             <SubmitButton
               pendingLabel="Posting…"
-              className="px-4 py-2 text-sm font-medium bg-[#E8521A] text-white rounded-lg hover:bg-[#E8521A]/90 transition-colors self-end"
+              className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 transition-colors self-end"
             >
               Post
             </SubmitButton>
@@ -909,7 +909,7 @@ export default async function AdminMatterDetailPage({
 
         {activities.length > 0 ? (
           <Card accent="internal" padding="none">
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-line">
               {activities.map((a) => {
                 const authorName = (a.users as any)?.full_name ?? a.author_label ?? "System";
                 // Internal = not in the external-safe set (mirrors the partner-page
@@ -917,20 +917,20 @@ export default async function AdminMatterDetailPage({
                 // at a glance what the client/partner can and cannot see.
                 const isInternal = !["status_change", "document_upload", "phase_transition", "poa_signed"].includes(a.activity_type);
                 return (
-                  <li key={a.id} className={"flex gap-3 px-5 py-4 " + (isInternal ? "bg-gray-100" : "")}>
+                  <li key={a.id} className={"flex gap-3 px-5 py-4 " + (isInternal ? "bg-raised" : "")}>
                     <div className="mt-0.5 shrink-0">
                       <ActivityIcon type={a.activity_type} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm text-gray-800">{a.body || a.activity_type}</p>
+                        <p className="text-sm text-ink">{a.body || a.activity_type}</p>
                         {isInternal && (
-                          <span className="shrink-0 rounded bg-gray-300 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600" title="Not visible to client or business partner">
+                          <span className="shrink-0 rounded bg-raised px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-2" title="Not visible to client or business partner">
                             Internal
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-ink-3 mt-1">
                         {authorName} · {formatDateTime(a.created_at)}
                       </p>
                     </div>
@@ -941,7 +941,7 @@ export default async function AdminMatterDetailPage({
           </Card>
         ) : (
           <Card accent="internal" className="text-center py-8">
-            <p className="text-sm text-gray-500">No activity yet</p>
+            <p className="text-sm text-ink-3">No activity yet</p>
           </Card>
         )}
       </div>

@@ -76,8 +76,8 @@ export default async function AdminCouncilPocsPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Council POCs</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Council POCs</h1>
+        <p className="text-sm text-ink-3 mt-1">
           {pocs.length} council contact{pocs.length === 1 ? "" : "s"} · internal directory — not visible to partners or clients
         </p>
       </div>

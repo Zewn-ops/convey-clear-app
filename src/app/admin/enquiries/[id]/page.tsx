@@ -65,19 +65,19 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href="/admin/enquiries" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/admin/enquiries" className="inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink-2">
         <ArrowLeft className="h-4 w-4" /> All enquiries
       </Link>
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{enquiry.subject}</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{enquiry.subject}</h1>
+          <p className="text-sm text-ink-3 mt-1">
             {enquiry.firms?.name ?? "—"}
             {enquiry.matter_id ? (
               <>
                 {" · Re: "}
-                <Link href={`/admin/matters/${enquiry.matter_id}`} className="text-[#E8521A] hover:underline">{matterTitle || "View matter"}</Link>
+                <Link href={`/admin/matters/${enquiry.matter_id}`} className="text-action hover:underline">{matterTitle || "View matter"}</Link>
               </>
             ) : null}
           </p>
@@ -87,11 +87,11 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
 
       {/* Assignment + status controls */}
       <Card className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-ink-2">
           {assigneeName ? <>Assigned to <strong>{assigneeName}</strong></> : "Unassigned"}
         </span>
         <form action={claim}>
-          <button className="text-xs px-3 py-1.5 rounded-lg border border-[#1B2E6B] text-[#1B2E6B] font-medium hover:bg-[#1B2E6B]/5">
+          <button className="text-xs px-3 py-1.5 rounded-lg border border-line text-action font-medium hover:bg-action-fill/5">
             Claim (assign to me)
           </button>
         </form>
@@ -110,7 +110,7 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
             <button
               disabled={enquiry.status === st}
               className={`text-xs px-3 py-1.5 rounded-lg border font-medium ${
-                enquiry.status === st ? "bg-gray-100 text-gray-500 cursor-default" : "border-gray-200 text-gray-600 hover:border-gray-400"
+                enquiry.status === st ? "bg-raised text-ink-3 cursor-default" : "border-line text-ink-2 hover:border-line-strong"
               }`}
             >
               {ENQUIRY_STATUS_LABELS[st]}
@@ -120,14 +120,14 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
       </Card>
 
       <Card className="space-y-4">
-        <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-          <p className="text-xs text-gray-500 mb-1">{enquiry.firms?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
-          <p className="text-sm text-gray-800 whitespace-pre-wrap">{enquiry.message}</p>
+        <div className="rounded-lg bg-raised border border-line p-3">
+          <p className="text-xs text-ink-3 mb-1">{enquiry.firms?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
+          <p className="text-sm text-ink whitespace-pre-wrap">{enquiry.message}</p>
         </div>
         {messages.map((m) => (
-          <div key={m.id} className="rounded-lg border border-gray-100 p-3">
-            <p className="text-xs text-gray-500 mb-1">{m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}</p>
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{m.body}</p>
+          <div key={m.id} className="rounded-lg border border-line p-3">
+            <p className="text-xs text-ink-3 mb-1">{m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}</p>
+            <p className="text-sm text-ink whitespace-pre-wrap">{m.body}</p>
           </div>
         ))}
         <EnquiryReply enquiryId={enquiry.id} />

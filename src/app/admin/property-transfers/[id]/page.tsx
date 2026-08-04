@@ -65,10 +65,10 @@ type LinkedMatter = Matter & {
 function PartyRow({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div>
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className="text-gray-800 mt-0.5">
+      <dt className="text-xs text-ink-3">{label}</dt>
+      <dd className="text-ink mt-0.5">
         {href ? (
-          <Link href={href} className="text-[#1B2E6B] hover:underline">{value}</Link>
+          <Link href={href} className="text-action hover:underline">{value}</Link>
         ) : (
           value
         )}
@@ -172,13 +172,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <Link href="/admin/property-transfers" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4">
+        <Link href="/admin/property-transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All property transfers
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1B2E6B]">{transfer.reference}</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">{transfer.reference}</h1>
+            <p className="text-sm text-ink-3 mt-1">
               {transfer.property_description || "No property description"}
               {transfer.municipality ? ` · ${municipalityLabel(transfer.municipality)}` : ""}
             </p>
@@ -187,7 +187,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             <Badge label={TRANSFER_STATUS_LABELS[transfer.status]} variant={statusVariant(transfer.status)} />
             <Link
               href={`/admin/property-transfers/${id}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink-2 hover:bg-raised"
             >
               <Pencil className="h-3.5 w-3.5" /> Edit
             </Link>
@@ -197,7 +197,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
 
       {/* Parties to the transaction */}
       <Card accent="firm">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5"><Scale className="h-3.5 w-3.5 text-violet-700" /> Parties</p>
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-3 flex items-center gap-1.5"><Scale className="h-3.5 w-3.5 text-violet-700" /> Parties</p>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <PartyRow label="Conveyancing attorney" value={transfer.attorney?.name ?? "—"} />
           <PartyRow label="Estate agent" value={transfer.estate_agent?.name ?? "—"} />
@@ -223,59 +223,59 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       <Card accent="service">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-gray-500">Status</dt>
-            <dd className="text-gray-800 mt-0.5">{TRANSFER_STATUS_LABELS[transfer.status]}</dd>
+            <dt className="text-xs text-ink-3">Status</dt>
+            <dd className="text-ink mt-0.5">{TRANSFER_STATUS_LABELS[transfer.status]}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Council</dt>
-            <dd className="text-gray-800 mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
+            <dt className="text-xs text-ink-3">Council</dt>
+            <dd className="text-ink mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Opened</dt>
-            <dd className="text-gray-800 mt-0.5">{formatDate(transfer.created_at)}</dd>
+            <dt className="text-xs text-ink-3">Opened</dt>
+            <dd className="text-ink mt-0.5">{formatDate(transfer.created_at)}</dd>
           </div>
         </dl>
         {transfer.notes && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <dt className="text-xs text-gray-500 mb-1">Notes</dt>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{transfer.notes}</p>
+          <div className="mt-4 pt-4 border-t border-line">
+            <dt className="text-xs text-ink-3 mb-1">Notes</dt>
+            <p className="text-sm text-ink-2 whitespace-pre-wrap">{transfer.notes}</p>
           </div>
         )}
       </Card>
 
       {/* Linked matters — the point of the hub */}
       <Card accent="service" padding="none">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <div className="px-5 py-4 border-b border-line">
+          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
             Matters in this transfer · {linked.length}
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <tr className="border-b border-line bg-raised">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Phase</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Stage</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {linked.map((m) => {
                 const pipeline = getPipeline(m.services?.code, m.municipality, m.service_subtype);
                 return (
-                  <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={m.id} className="hover:bg-raised transition-colors">
                     <td className="px-5 py-3">
-                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
+                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
                         {m.title || "Untitled"}
                       </Link>
-                      {m.services?.name && <p className="text-xs text-gray-500 mt-0.5">{m.services.name}</p>}
+                      {m.services?.name && <p className="text-xs text-ink-3 mt-0.5">{m.services.name}</p>}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 hidden md:table-cell">
+                    <td className="px-5 py-3 text-ink-2 hidden md:table-cell">
                       {m.current_phase ? (pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase) : "—"}
                     </td>
-                    <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">
+                    <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
                       {pipeline ? (m.current_stage ? stageLabel(pipeline, m.current_stage) : "—") : m.current_stage || "—"}
                     </td>
                     <td className="px-5 py-3">
@@ -289,7 +289,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
               })}
               {linked.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-ink-3">
                     No matters linked yet.
                   </td>
                 </tr>
@@ -305,9 +305,9 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
 
             Native <details>: this is a server component, and a disclosure needs no
             JavaScript to be a disclosure. */}
-        <div className="px-5 py-4 border-t border-gray-100 space-y-4">
+        <div className="px-5 py-4 border-t border-line space-y-4">
           <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-[#E8521A] hover:underline">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-action hover:underline">
               <Plus className="h-4 w-4" /> Create a matter in this transfer
             </summary>
             <div className="mt-3">
@@ -325,7 +325,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             </div>
           </details>
 
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t border-line pt-4">
             <LinkMatterControl transferId={id} candidates={candidates} />
           </div>
         </div>

@@ -48,8 +48,8 @@ export default async function AdminNotificationsPage({
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Notifications</h1>
+        <p className="mt-1 text-sm text-ink-3">
           {filter === "unread"
             ? `${items.length} unread`
             : `Your last ${Math.min(items.length, PAGE_SIZE)} notification${items.length === 1 ? "" : "s"}`}
@@ -60,7 +60,7 @@ export default async function AdminNotificationsPage({
       {error ? (
         <Card className="border-2 !border-red-500">
           <h2 className="text-sm font-semibold text-red-700">Notifications could not be loaded</h2>
-          <p className="mt-2 font-mono text-xs text-gray-500">{error.message}</p>
+          <p className="mt-2 font-mono text-xs text-ink-3">{error.message}</p>
         </Card>
       ) : (
         <NotificationList items={items} filter={filter} base="/admin" />

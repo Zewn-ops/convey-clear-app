@@ -42,7 +42,7 @@ const TABS: { key: ReviewTab; label: string }[] = [
 ];
 
 const ROW_TINT: Record<ReviewDoc["state"], string> = {
-  pending: "bg-white hover:bg-gray-50",
+  pending: "bg-surface hover:bg-raised",
   approved: "bg-green-50/70 hover:bg-green-50",
   disapproved: "bg-red-50/70 hover:bg-red-50",
 };
@@ -93,8 +93,8 @@ export default async function AdminApprovalsPage({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Document Approvals</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Document Approvals</h1>
+        <p className="mt-1 text-sm text-ink-3">
           {isAdmin ? (
             <>
               Uploads by ConveyClear services, ops and delivery staff are held for
@@ -110,7 +110,7 @@ export default async function AdminApprovalsPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-gray-200">
+      <div className="flex flex-wrap gap-1 border-b border-line">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -119,13 +119,13 @@ export default async function AdminApprovalsPage({
               href={tabHref(t.key)}
               className={
                 active
-                  ? "-mb-px border-b-2 border-[#E8521A] px-3 py-2 text-sm font-semibold text-[#E8521A]"
-                  : "-mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+                  ? "-mb-px border-b-2 border-line px-3 py-2 text-sm font-semibold text-action"
+                  : "-mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-ink-3 hover:text-ink-2"
               }
             >
               {t.label}
               {t.key === "pending" && pendingCount ? (
-                <span className="ml-1.5 rounded-full bg-[#E8521A] px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                <span className="ml-1.5 rounded-full bg-action-fill px-1.5 py-0.5 text-[11px] font-semibold text-white">
                   {pendingCount}
                 </span>
               ) : null}
@@ -144,15 +144,15 @@ export default async function AdminApprovalsPage({
           <h2 className="text-sm font-semibold text-red-700">
             This queue could not be loaded — do not read it as empty
           </h2>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-ink-2">
             Pending documents may exist with no way to release them. Check that
             migrations 042 and 044 are applied.
           </p>
-          <p className="mt-2 font-mono text-xs text-gray-500">{error.message}</p>
+          <p className="mt-2 font-mono text-xs text-ink-3">{error.message}</p>
         </Card>
       ) : docs.length === 0 ? (
         <Card>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-3">
             {tab === "pending"
               ? isAdmin
                 ? "Nothing waiting. Documents uploaded by admins, clients and partner firms are released automatically and never appear here."
@@ -170,7 +170,7 @@ export default async function AdminApprovalsPage({
         <Card padding="none">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+              <thead className="bg-raised text-left text-xs uppercase tracking-wide text-ink-3">
                 <tr>
                   <th className="px-4 py-3">Document</th>
                   <th className="px-4 py-3">Where</th>
@@ -179,11 +179,11 @@ export default async function AdminApprovalsPage({
                   <th className="px-4 py-3 text-right">{isAdmin ? "Action" : "Status"}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-line">
                 {docs.map((d) => (
                   <tr key={`${d.kind}-${d.id}`} className={ROW_TINT[d.state]}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{d.fileName}</div>
+                      <div className="font-medium text-ink">{d.fileName}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         <Badge
                           variant={d.kind === "matter" ? "gray" : "info"}
@@ -202,12 +202,12 @@ export default async function AdminApprovalsPage({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={d.parentHref} className="text-[#1B2E6B] hover:underline">
+                      <Link href={d.parentHref} className="text-action hover:underline">
                         {d.parentLabel}
                       </Link>
                     </td>
-                    {isAdmin && <td className="px-4 py-3 text-gray-700">{d.uploader}</td>}
-                    <td className="px-4 py-3 text-gray-500">{formatDateTime(d.createdAt)}</td>
+                    {isAdmin && <td className="px-4 py-3 text-ink-2">{d.uploader}</td>}
+                    <td className="px-4 py-3 text-ink-3">{formatDateTime(d.createdAt)}</td>
                     <td className="px-4 py-3 text-right">
                       {d.state === "pending" ? (
                         isAdmin ? (
@@ -216,10 +216,10 @@ export default async function AdminApprovalsPage({
                           <span className="text-xs font-medium text-amber-700">Awaiting review</span>
                         )
                       ) : (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-ink-3">
                           {d.state === "approved" ? "Released" : "Held"}
                           {d.decidedAt && (
-                            <span className="block text-gray-500">{formatDateTime(d.decidedAt)}</span>
+                            <span className="block text-ink-3">{formatDateTime(d.decidedAt)}</span>
                           )}
                         </span>
                       )}
@@ -233,14 +233,14 @@ export default async function AdminApprovalsPage({
       )}
 
       {truncated && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-3">
           Showing the most recent {HISTORY_LIMIT}. Older documents are still on
           their matter or transfer.
         </p>
       )}
 
       {isAdmin && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-3">
           Disapproving keeps the document and its reason as the audit trail and
           tells the uploader what to replace. To remove a file entirely, open the
           matter and remove it there.

@@ -127,14 +127,14 @@ export default async function AdminTransfersPage({
     <div className="max-w-7xl mx-auto">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Transfers</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Property Transfers</h1>
+          <p className="text-sm text-ink-3 mt-1">
             {transfers.length} transfer{transfers.length === 1 ? "" : "s"} · one transaction, many matters
           </p>
         </div>
         <Link
           href="/admin/property-transfers/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+          className="inline-flex items-center gap-2 rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:opacity-90"
         >
           <Plus className="h-4 w-4" /> New transfer
         </Link>
@@ -147,36 +147,36 @@ export default async function AdminTransfersPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Reference</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Attorney firm</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Council</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matters</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Opened</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <tr className="border-b border-line bg-raised">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Reference</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Attorney firm</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Council</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matters</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Opened</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {transfers.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={t.id} className="hover:bg-raised transition-colors">
                   <td className="px-5 py-3">
-                    <Link href={`/admin/property-transfers/${t.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
+                    <Link href={`/admin/property-transfers/${t.id}`} className="font-medium text-ink hover:text-action hover:underline">
                       {t.reference}
                     </Link>
                     {t.property_description && (
-                      <p className="text-xs text-gray-500 mt-0.5">{t.property_description}</p>
+                      <p className="text-xs text-ink-3 mt-0.5">{t.property_description}</p>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{t.firms?.name ?? "—"}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{municipalityLabel(t.municipality)}</td>
-                  <td className="px-5 py-3 text-gray-600">{counts.get(t.id) ?? 0}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{formatDate(t.created_at)}</td>
+                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">{t.firms?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-ink-3 hidden md:table-cell">{municipalityLabel(t.municipality)}</td>
+                  <td className="px-5 py-3 text-ink-2">{counts.get(t.id) ?? 0}</td>
+                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">{formatDate(t.created_at)}</td>
                   <td className="px-5 py-3">
                     <Badge label={TRANSFER_STATUS_LABELS[t.status]} variant={statusVariant(t.status)} />
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <Link href={`/admin/property-transfers/${t.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">
+                    <Link href={`/admin/property-transfers/${t.id}`} className="text-action hover:underline text-xs font-medium">
                       Manage
                     </Link>
                   </td>
@@ -184,7 +184,7 @@ export default async function AdminTransfersPage({
               ))}
               {transfers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-5 py-10 text-center text-ink-3">
                     {filtering
                       ? "No transfers match your filters — try clearing them."
                       : "No property transfers yet. Create one to group the matters of a single transaction."}

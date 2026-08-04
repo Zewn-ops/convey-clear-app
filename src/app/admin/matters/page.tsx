@@ -171,12 +171,12 @@ export default async function AdminMattersPage({
     <div className="max-w-7xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">All Matters</h1>
-          <p className="text-sm text-gray-500 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">All Matters</h1>
+          <p className="text-sm text-ink-3 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
         </div>
         <Link
           href="/admin/matters/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+          className="inline-flex items-center gap-2 rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:opacity-90"
         >
           <Plus className="h-4 w-4" /> New matter
         </Link>
@@ -190,49 +190,49 @@ export default async function AdminMattersPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Firm</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Priority</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Deadline</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <tr className="border-b border-line bg-raised">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Firm</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Phase</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Stage</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Priority</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Deadline</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {matters.map((m) => {
                 const seller = partyDisplay(m.matter_parties?.find((p) => p.role === "seller"));
                 const buyer = partyDisplay(m.matter_parties?.find((p) => p.role === "buyer"));
                 const pipeline = getPipeline(m.services?.code, m.municipality, m.service_subtype);
                 return (
-                <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={m.id} className="hover:bg-raised transition-colors">
                   <td className="px-5 py-3">
                     <span className="flex items-center gap-2">
-                      {unread.has(m.id) && <span className="h-2 w-2 rounded-full bg-[#E8521A] shrink-0" title="New activity" />}
-                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
+                      {unread.has(m.id) && <span className="h-2 w-2 rounded-full bg-action-fill shrink-0" title="New activity" />}
+                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
                         {m.title || clientDisplayName(m.clients) || "Untitled"}
                       </Link>
                     </span>
-                    <div className="text-xs text-gray-500 mt-0.5 space-y-0.5">
+                    <div className="text-xs text-ink-3 mt-0.5 space-y-0.5">
                       {seller && <p>Seller: {seller}</p>}
                       {buyer && <p>Buyer: {buyer}</p>}
                       {!seller && !buyer && m.clients && <p>Client: {clientDisplayName(m.clients)}</p>}
                       {m.municipality && <p>Council: {municipalityLabel(m.municipality)}</p>}
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{m.firms?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">{m.firms?.name ?? "—"}</td>
                   <td className="px-5 py-3">
                     {m.current_phase ? (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#1B2E6B]/10 text-[#1B2E6B] whitespace-nowrap">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-action-fill/10 text-action whitespace-nowrap">
                         {pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase}
                       </span>
                     ) : (
-                      <span className="text-gray-500">—</span>
+                      <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell max-w-[140px] truncate">
+                  <td className="px-5 py-3 text-ink-3 hidden md:table-cell max-w-[140px] truncate">
                     {pipeline ? (m.current_stage ? stageLabel(pipeline, m.current_stage) : "—") : (m.current_stage || "—")}
                   </td>
                   <td className="px-5 py-3 hidden md:table-cell">
@@ -243,7 +243,7 @@ export default async function AdminMattersPage({
                       />
                     )}
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">
+                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
                     {m.deadline ? formatDate(m.deadline) : "—"}
                   </td>
                   <td className="px-5 py-3">
@@ -255,7 +255,7 @@ export default async function AdminMattersPage({
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <Link href={`/admin/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">
+                    <Link href={`/admin/matters/${m.id}`} className="text-action hover:underline text-xs font-medium">
                       Manage
                     </Link>
                   </td>
@@ -268,11 +268,11 @@ export default async function AdminMattersPage({
                       and need different next actions — saying "no matches" to
                       someone with an empty database sends them hunting for a
                       filter they never set. */}
-                  <td colSpan={8} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-5 py-10 text-center text-ink-3">
                     {hasActiveFilters ? (
                       <>No matters match your filters — try clearing them.</>
                     ) : (
-                      <>No matters yet. Create the first one with <span className="font-medium text-gray-500">New matter</span>.</>
+                      <>No matters yet. Create the first one with <span className="font-medium text-ink-3">New matter</span>.</>
                     )}
                   </td>
                 </tr>

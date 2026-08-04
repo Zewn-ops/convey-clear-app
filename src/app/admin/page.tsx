@@ -45,53 +45,53 @@ export default async function AdminPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
-        <p className="text-sm text-gray-500 mt-1">ConveyClear client portal management</p>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Admin Overview</h1>
+        <p className="text-sm text-ink-3 mt-1">ConveyClear client portal management</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-[#1B2E6B]/10 p-2.5">
-            <Briefcase className="h-5 w-5 text-[#1B2E6B]" />
+          <div className="rounded-lg bg-action-fill/10 p-2.5">
+            <Briefcase className="h-5 w-5 text-action" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#1B2E6B]">{totalMatters ?? 0}</p>
-            <p className="text-xs text-gray-500">Total matters</p>
+            <p className="text-[26px] font-semibold tracking-[-0.025em] tabular-nums text-ink">{totalMatters ?? 0}</p>
+            <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Total matters</p>
           </div>
         </Card>
         <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-amber-100 p-2.5">
-            <Clock className="h-5 w-5 text-amber-600" />
+          <div className="rounded-lg bg-required-tint p-2.5">
+            <Clock className="h-5 w-5 text-required" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-amber-600">{needsAction ?? 0}</p>
-            <p className="text-xs text-gray-500">Needs action</p>
+            <p className="text-[26px] font-semibold tracking-[-0.025em] tabular-nums text-required">{needsAction ?? 0}</p>
+            <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Needs action</p>
           </div>
         </Card>
         <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-blue-100 p-2.5">
-            <ClipboardList className="h-5 w-5 text-blue-600" />
+          <div className="rounded-lg bg-action-tint p-2.5">
+            <ClipboardList className="h-5 w-5 text-action" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-blue-600">{openMatters ?? 0}</p>
-            <p className="text-xs text-gray-500">Open matters</p>
+            <p className="text-[26px] font-semibold tracking-[-0.025em] tabular-nums text-action">{openMatters ?? 0}</p>
+            <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Open matters</p>
           </div>
         </Card>
         <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-[#E8521A]/10 p-2.5">
-            <Users className="h-5 w-5 text-[#E8521A]" />
+          <div className="rounded-lg bg-action-fill/10 p-2.5">
+            <Users className="h-5 w-5 text-action" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#E8521A]">{clientCount ?? 0}</p>
-            <p className="text-xs text-gray-500">Clients</p>
+            <p className="text-[26px] font-semibold tracking-[-0.025em] tabular-nums text-ink">{clientCount ?? 0}</p>
+            <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Clients</p>
           </div>
         </Card>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Recent Matters</h2>
-          <Link href="/admin/matters" className="flex items-center gap-1 text-sm text-[#E8521A] hover:underline">
+          <h2 className="font-semibold text-ink">Recent Matters</h2>
+          <Link href="/admin/matters" className="flex items-center gap-1 text-sm text-action hover:underline">
             View all <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -99,26 +99,26 @@ export default async function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Phase</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Opened</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                <tr className="border-b border-line">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Client</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Phase</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Opened</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line">
                 {matters.map((m) => (
-                  <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-gray-900">
+                  <tr key={m.id} className="hover:bg-raised transition-colors">
+                    <td className="px-5 py-3 font-medium text-ink">
                       {m.title || clientDisplayName(m.clients) || "—"}
                     </td>
-                    <td className="px-5 py-3 text-gray-600">
+                    <td className="px-5 py-3 text-ink-2">
                       {m.current_phase
                         ? `Phase ${m.current_phase}: ${PHASE_LABELS[m.current_phase as MatterPhase]}`
                         : "—"}
                     </td>
-                    <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(m.created_at)}</td>
+                    <td className="px-5 py-3 text-ink-3 hidden md:table-cell">{formatDate(m.created_at)}</td>
                     <td className="px-5 py-3">
                       {m.status && (
                         <Badge
@@ -128,7 +128,7 @@ export default async function AdminPage() {
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <Link href={`/admin/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">
+                      <Link href={`/admin/matters/${m.id}`} className="text-action hover:underline text-xs font-medium">
                         Manage
                       </Link>
                     </td>
@@ -136,7 +136,7 @@ export default async function AdminPage() {
                 ))}
                 {matters.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-gray-500">No matters yet</td>
+                    <td colSpan={5} className="px-5 py-10 text-center text-ink-3">No matters yet</td>
                   </tr>
                 )}
               </tbody>

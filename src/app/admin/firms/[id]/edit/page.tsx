@@ -24,11 +24,11 @@ export default async function EditFirmPage({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <Link href={`/admin/firms/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link href={`/admin/firms/${id}`} className="inline-flex items-center gap-1 text-sm text-ink-3 hover:text-ink-2">
         <ArrowLeft className="h-4 w-4" /> Back to firm
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Edit firm</h1>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Edit firm</h1>
       </div>
       <FirmForm existing={data as Firm} />
     </div>

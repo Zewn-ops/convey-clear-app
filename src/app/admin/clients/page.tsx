@@ -79,8 +79,8 @@ export default async function AdminClientsPage({
     <div className="max-w-7xl mx-auto">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-          <p className="text-sm text-gray-500 mt-1">{clients.length} registered client{clients.length === 1 ? "" : "s"}</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Clients</h1>
+          <p className="text-sm text-ink-3 mt-1">{clients.length} registered client{clients.length === 1 ? "" : "s"}</p>
         </div>
         <NewClientButton />
       </div>
@@ -92,22 +92,22 @@ export default async function AdminClientsPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Type</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Email</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Cell</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Added</th>
+              <tr className="border-b border-line bg-raised">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Client</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Type</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Email</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Cell</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Added</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {clients.map((client) => (
                 <ClientRow key={client.id} href={`/admin/clients/${client.id}`}>
                   <td className="px-5 py-3">
                     <Link
                       href={`/admin/clients/${client.id}`}
-                      className="font-medium text-gray-900 hover:text-[#1B2E6B] hover:underline"
+                      className="font-medium text-ink hover:text-action hover:underline"
                     >
                       {clientDisplayName(client)}
                     </Link>
@@ -118,11 +118,11 @@ export default async function AdminClientsPage({
                       variant={entityVariants[client.entity_type] ?? "gray"}
                     />
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{client.primary_email ?? "—"}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{client.primary_cell ?? "—"}</td>
-                  <td className="px-5 py-3 text-gray-500">{formatDate(client.created_at)}</td>
+                  <td className="px-5 py-3 text-ink-3 hidden md:table-cell">{client.primary_email ?? "—"}</td>
+                  <td className="px-5 py-3 text-ink-3 hidden md:table-cell">{client.primary_cell ?? "—"}</td>
+                  <td className="px-5 py-3 text-ink-3">{formatDate(client.created_at)}</td>
                   <td className="px-5 py-3 text-right">
-                    <Link href={`/admin/clients/${client.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">
+                    <Link href={`/admin/clients/${client.id}`} className="text-action hover:underline text-xs font-medium">
                       View
                     </Link>
                   </td>
@@ -130,7 +130,7 @@ export default async function AdminClientsPage({
               ))}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
+                  <td colSpan={6} className="px-5 py-10 text-center text-ink-3">
                     {filtering ? "No clients match your filters — try clearing them." : "No clients yet"}
                   </td>
                 </tr>
