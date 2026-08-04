@@ -89,7 +89,7 @@ export default function TransferFeed({
       )}
 
       {activities.length === 0 ? (
-        <p className="text-sm text-gray-400">Nothing on this transfer yet.</p>
+        <p className="text-sm text-gray-500">Nothing on this transfer yet.</p>
       ) : (
         <ul className="space-y-3">
           {activities.map((a) => (
@@ -97,7 +97,7 @@ export default function TransferFeed({
               <Icon type={a.activity_type} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-gray-800">{a.body}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-500">
                   {a.users?.full_name || a.author_label || "System"} · {formatDate(a.created_at)}
                 </p>
               </div>
@@ -112,7 +112,7 @@ export default function TransferFeed({
 function Icon({ type }: { type: string }) {
   const cls = "mt-0.5 h-3.5 w-3.5 shrink-0";
   if (type === "matter_linked" || type === "matter_unlinked") return <Link2 className={`${cls} text-[#E8521A]`} />;
-  if (type === "document_upload") return <FileText className={`${cls} text-gray-400`} />;
-  if (type === "status_change") return <Settings2 className={`${cls} text-gray-400`} />;
+  if (type === "document_upload") return <FileText className={`${cls} text-gray-500`} />;
+  if (type === "status_change") return <Settings2 className={`${cls} text-gray-500`} />;
   return <MessageSquare className={`${cls} text-[#1B2E6B]`} />;
 }

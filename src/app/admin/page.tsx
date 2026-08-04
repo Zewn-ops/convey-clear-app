@@ -136,7 +136,7 @@ export default async function AdminPage() {
                 ))}
                 {matters.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters yet</td>
+                    <td colSpan={5} className="px-5 py-10 text-center text-gray-500">No matters yet</td>
                   </tr>
                 )}
               </tbody>

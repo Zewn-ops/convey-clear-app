@@ -120,7 +120,7 @@ export default function MatterEnquiries({
       )}
 
       {threads.length === 0 && !composing && (
-        <p className="text-sm text-gray-400">No enquiries on this matter yet.</p>
+        <p className="text-sm text-gray-500">No enquiries on this matter yet.</p>
       )}
 
       <div className="space-y-2">
@@ -139,7 +139,7 @@ export default function MatterEnquiries({
                     </span>
                   )}
                 </span>
-                <span className="block text-xs text-gray-400 mt-0.5">
+                <span className="block text-xs text-gray-500 mt-0.5">
                   {formatDateTime(t.created_at)} · {t.messages.length} repl{t.messages.length === 1 ? "y" : "ies"}
                 </span>
               </span>
@@ -148,13 +148,13 @@ export default function MatterEnquiries({
 
             <div className="border-t border-gray-100 px-3 py-3 space-y-3">
               <div>
-                <p className="text-xs text-gray-400 mb-1">Opened · {formatDateTime(t.created_at)}</p>
+                <p className="text-xs text-gray-500 mb-1">Opened · {formatDateTime(t.created_at)}</p>
                 <p className="text-sm text-gray-800 whitespace-pre-wrap">{t.message}</p>
               </div>
 
               {t.messages.map((m) => (
                 <div key={m.id} className="border-t border-gray-50 pt-3">
-                  <p className="text-xs text-gray-400 mb-1">
+                  <p className="text-xs text-gray-500 mb-1">
                     {m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}
                   </p>
                   <p className="text-sm text-gray-800 whitespace-pre-wrap">{m.body}</p>

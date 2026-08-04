@@ -73,7 +73,7 @@ export default async function PartnerTransfersPage() {
                     <Link href={`/partner/transfers/${t.id}`} className="font-medium text-gray-900 hover:text-[#E8521A] hover:underline">
                       {t.reference}
                     </Link>
-                    {t.property_description && <p className="text-xs text-gray-400 mt-0.5">{t.property_description}</p>}
+                    {t.property_description && <p className="text-xs text-gray-500 mt-0.5">{t.property_description}</p>}
                   </td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{municipalityLabel(t.municipality)}</td>
                   <td className="px-5 py-3 text-gray-600">{counts.get(t.id) ?? 0}</td>
@@ -88,7 +88,7 @@ export default async function PartnerTransfersPage() {
               ))}
               {transfers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
                     No property transfers yet. Use <span className="font-medium text-gray-500">New transfer</span> to group
                     the matters of one transaction together.
                   </td>

@@ -219,7 +219,7 @@ export default async function AdminApprovalsPage({
                         <span className="text-xs text-gray-500">
                           {d.state === "approved" ? "Released" : "Held"}
                           {d.decidedAt && (
-                            <span className="block text-gray-400">{formatDateTime(d.decidedAt)}</span>
+                            <span className="block text-gray-500">{formatDateTime(d.decidedAt)}</span>
                           )}
                         </span>
                       )}
@@ -233,14 +233,14 @@ export default async function AdminApprovalsPage({
       )}
 
       {truncated && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Showing the most recent {HISTORY_LIMIT}. Older documents are still on
           their matter or transfer.
         </p>
       )}
 
       {isAdmin && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Disapproving keeps the document and its reason as the audit trail and
           tells the uploader what to replace. To remove a file entirely, open the
           matter and remove it there.

@@ -130,7 +130,7 @@ export default async function AdminClientsPage({
               ))}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={6} className="px-5 py-10 text-center text-gray-500">
                     {filtering ? "No clients match your filters — try clearing them." : "No clients yet"}
                   </td>
                 </tr>

@@ -165,7 +165,7 @@ export default async function AdminTransfersPage({
                       {t.reference}
                     </Link>
                     {t.property_description && (
-                      <p className="text-xs text-gray-400 mt-0.5">{t.property_description}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{t.property_description}</p>
                     )}
                   </td>
                   <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{t.firms?.name ?? "—"}</td>
@@ -184,7 +184,7 @@ export default async function AdminTransfersPage({
               ))}
               {transfers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
                     {filtering
                       ? "No transfers match your filters — try clearing them."
                       : "No property transfers yet. Create one to group the matters of a single transaction."}

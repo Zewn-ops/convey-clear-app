@@ -28,7 +28,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            "w-full rounded-lg border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400",
+            "w-full rounded-lg border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500",
             "focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent",
             "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60",
             error

@@ -215,7 +215,7 @@ export default async function AdminMattersPage({
                         {m.title || clientDisplayName(m.clients) || "Untitled"}
                       </Link>
                     </span>
-                    <div className="text-xs text-gray-400 mt-0.5 space-y-0.5">
+                    <div className="text-xs text-gray-500 mt-0.5 space-y-0.5">
                       {seller && <p>Seller: {seller}</p>}
                       {buyer && <p>Buyer: {buyer}</p>}
                       {!seller && !buyer && m.clients && <p>Client: {clientDisplayName(m.clients)}</p>}
@@ -229,7 +229,7 @@ export default async function AdminMattersPage({
                         {pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase}
                       </span>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-500">—</span>
                     )}
                   </td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell max-w-[140px] truncate">
@@ -268,7 +268,7 @@ export default async function AdminMattersPage({
                       and need different next actions — saying "no matches" to
                       someone with an empty database sends them hunting for a
                       filter they never set. */}
-                  <td colSpan={8} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={8} className="px-5 py-10 text-center text-gray-500">
                     {hasActiveFilters ? (
                       <>No matters match your filters — try clearing them.</>
                     ) : (

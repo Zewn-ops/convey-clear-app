@@ -81,14 +81,14 @@ function priorityVariant(priority: string): "default" | "danger" | "warning" | "
 
 function ActivityIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
-    post: <MessageSquare className="h-4 w-4 text-gray-400" />,
+    post: <MessageSquare className="h-4 w-4 text-gray-500" />,
     phase_transition: <ArrowUpCircle className="h-4 w-4 text-[#1B2E6B]" />,
     document_upload: <UploadCloud className="h-4 w-4 text-green-500" />,
     email_bridge: <Mail className="h-4 w-4 text-blue-500" />,
-    system: <Settings className="h-4 w-4 text-gray-400" />,
+    system: <Settings className="h-4 w-4 text-gray-500" />,
     status_change: <ArrowUpCircle className="h-4 w-4 text-amber-500" />,
   };
-  return <>{icons[type] ?? <MessageSquare className="h-4 w-4 text-gray-400" />}</>;
+  return <>{icons[type] ?? <MessageSquare className="h-4 w-4 text-gray-500" />}</>;
 }
 
 // Resolve a matter's pipeline + current status/stage. MODULE-SCOPE on purpose:
@@ -505,10 +505,10 @@ export default async function AdminMatterDetailPage({
     // client and partner firm cannot see yet.
     return (
     <li key={doc.id} className={`flex items-center gap-3 px-5 py-3 ${isPending ? "opacity-60" : ""}`}>
-      <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+      <FileText className="h-4 w-4 text-gray-500 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 truncate">{doc.file_name || doc.document_type}</p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           {doc.document_type} · {formatDate(doc.created_at)}
           {doc.matter_party_id && partyById.get(doc.matter_party_id) ? ` · ${partyById.get(doc.matter_party_id)!.role}` : ""}
         </p>
@@ -556,11 +556,11 @@ export default async function AdminMatterDetailPage({
 
   const docGroup = (title: string, list: MatterDocument[]) => (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{title} ({list.length})</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{title} ({list.length})</p>
       {list.length > 0 ? (
         <Card padding="none"><ul className="divide-y divide-gray-100">{list.map(docRow)}</ul></Card>
       ) : (
-        <Card className="text-center py-5"><p className="text-sm text-gray-400">None</p></Card>
+        <Card className="text-center py-5"><p className="text-sm text-gray-500">None</p></Card>
       )}
     </div>
   );
@@ -615,7 +615,7 @@ export default async function AdminMatterDetailPage({
         <Card accent="service" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><Workflow className="h-3.5 w-3.5 text-sky-700" /> Pipeline · {pipeline.label}</p>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-500">
               {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
             </span>
           </div>
@@ -700,24 +700,24 @@ export default async function AdminMatterDetailPage({
       <Card accent="service">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <dt className="text-xs text-gray-400">Status</dt>
+            <dt className="text-xs text-gray-500">Status</dt>
             <dd className="text-gray-800 mt-0.5">{matter.status ? MATTER_STATUS_LABELS[matter.status as MatterStatus] : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Priority</dt>
+            <dt className="text-xs text-gray-500">Priority</dt>
             <dd className="text-gray-800 mt-0.5">{matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Estimated closing time</dt>
+            <dt className="text-xs text-gray-500">Estimated closing time</dt>
             <dd className="text-gray-800 mt-0.5">{matter.deadline ? formatDate(matter.deadline) : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Opened</dt>
+            <dt className="text-xs text-gray-500">Opened</dt>
             <dd className="text-gray-800 mt-0.5">{formatDate(matter.created_at)}</dd>
           </div>
           {(matter as { service_subtype?: string | null }).service_subtype && (
             <div>
-              <dt className="text-xs text-gray-400">Clearance type</dt>
+              <dt className="text-xs text-gray-500">Clearance type</dt>
               <dd className="text-gray-800 mt-0.5">{(matter as { service_subtype?: string | null }).service_subtype}</dd>
             </div>
           )}
@@ -726,13 +726,13 @@ export default async function AdminMatterDetailPage({
             .filter(([k, v]) => v && !["stage_outcome", "stage_reason"].includes(k))
             .map(([k, v]) => (
               <div key={k}>
-                <dt className="text-xs text-gray-400 capitalize">{k.replace(/_/g, " ")}</dt>
+                <dt className="text-xs text-gray-500 capitalize">{k.replace(/_/g, " ")}</dt>
                 <dd className="text-gray-800 mt-0.5">{String(v)}</dd>
               </div>
             ))}
           {matter.service_notes && (
             <div className="col-span-2 sm:col-span-3">
-              <dt className="text-xs text-gray-400">Service Notes</dt>
+              <dt className="text-xs text-gray-500">Service Notes</dt>
               <dd className="text-gray-800 mt-0.5">{matter.service_notes}</dd>
             </div>
           )}
@@ -771,24 +771,24 @@ export default async function AdminMatterDetailPage({
         <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           {firm?.name && (
             <div>
-              <dt className="text-xs text-gray-400">Referring firm</dt>
+              <dt className="text-xs text-gray-500">Referring firm</dt>
               <dd className="text-gray-800 mt-0.5">{firm.name}{firm.abbreviation ? ` (${firm.abbreviation})` : ""}</dd>
             </div>
           )}
           {matter.partner_file_ref && (
             <div>
-              <dt className="text-xs text-gray-400">Internal file ref</dt>
+              <dt className="text-xs text-gray-500">Internal file ref</dt>
               <dd className="text-gray-800 mt-0.5">{matter.partner_file_ref}</dd>
             </div>
           )}
           {matter.deal_value && (
             <div>
-              <dt className="text-xs text-gray-400">Deal value</dt>
+              <dt className="text-xs text-gray-500">Deal value</dt>
               <dd className="text-gray-800 mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
             </div>
           )}
           {!firm?.name && !matter.partner_file_ref && !matter.deal_value && (
-            <p className="text-sm text-gray-400 col-span-3">No internal details captured yet.</p>
+            <p className="text-sm text-gray-500 col-span-3">No internal details captured yet.</p>
           )}
         </dl>
       </Card>
@@ -814,18 +814,18 @@ export default async function AdminMatterDetailPage({
           </div>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-xs text-gray-400">Name</dt>
+              <dt className="text-xs text-gray-500">Name</dt>
               <dd className="font-medium mt-0.5">{clientDisplayName(matter.clients)}</dd>
             </div>
             {(matter.clients as any).primary_email && (
               <div>
-                <dt className="text-xs text-gray-400">Email</dt>
+                <dt className="text-xs text-gray-500">Email</dt>
                 <dd className="mt-0.5">{(matter.clients as any).primary_email}</dd>
               </div>
             )}
             {(matter.clients as any).primary_cell && (
               <div>
-                <dt className="text-xs text-gray-400">Cell</dt>
+                <dt className="text-xs text-gray-500">Cell</dt>
                 <dd className="mt-0.5">{(matter.clients as any).primary_cell}</dd>
               </div>
             )}
@@ -879,7 +879,7 @@ export default async function AdminMatterDetailPage({
           shared one; everything here is ours. */}
       <div>
         <div className="mb-3 flex items-center gap-1.5">
-          <Lock className="h-3.5 w-3.5 text-gray-400" />
+          <Lock className="h-3.5 w-3.5 text-gray-500" />
           <h2 className="font-semibold text-gray-900">Internal Activity Feed</h2>
         </div>
         <p className="-mt-2 mb-3 text-xs text-gray-500">
@@ -930,7 +930,7 @@ export default async function AdminMatterDetailPage({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         {authorName} · {formatDateTime(a.created_at)}
                       </p>
                     </div>
@@ -941,7 +941,7 @@ export default async function AdminMatterDetailPage({
           </Card>
         ) : (
           <Card accent="internal" className="text-center py-8">
-            <p className="text-sm text-gray-400">No activity yet</p>
+            <p className="text-sm text-gray-500">No activity yet</p>
           </Card>
         )}
       </div>

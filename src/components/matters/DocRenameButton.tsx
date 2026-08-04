@@ -34,7 +34,7 @@ export default function DocRenameButton({ documentId, current }: { documentId: s
 
   if (!editing) {
     return (
-      <button onClick={() => { setName(current); setEditing(true); }} className="text-gray-400 hover:text-[#1B2E6B] shrink-0" title="Rename">
+      <button onClick={() => { setName(current); setEditing(true); }} className="text-gray-500 hover:text-[#1B2E6B] shrink-0" title="Rename">
         <Pencil className="h-3.5 w-3.5" />
       </button>
     );
@@ -51,7 +51,7 @@ export default function DocRenameButton({ documentId, current }: { documentId: s
         className="w-44 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#1B2E6B]"
       />
       <button onClick={save} disabled={saving} className="text-green-600 hover:text-green-800" title="Save"><Check className="h-3.5 w-3.5" /></button>
-      <button onClick={() => setEditing(false)} disabled={saving} className="text-gray-400 hover:text-gray-600" title="Cancel"><X className="h-3.5 w-3.5" /></button>
+      <button onClick={() => setEditing(false)} disabled={saving} className="text-gray-500 hover:text-gray-600" title="Cancel"><X className="h-3.5 w-3.5" /></button>
     </span>
   );
 }

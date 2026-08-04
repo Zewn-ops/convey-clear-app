@@ -178,7 +178,7 @@ export default function TransferDocuments({
             const isPending = canManage && d.approved_at == null && !isDisapproved;
             return (
             <li key={d.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 ${busy === d.id ? "opacity-50" : isPending ? "opacity-60" : ""}`}>
-              <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+              <FileText className="h-4 w-4 shrink-0 text-gray-500" />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 truncate text-sm font-medium text-gray-800">
                   {docLabel(d.document_type)}
@@ -202,7 +202,7 @@ export default function TransferDocuments({
                     </span>
                   )}
                 </p>
-                <p className="truncate text-xs text-gray-400">
+                <p className="truncate text-xs text-gray-500">
                   {d.file_name || "—"} · {formatDate(d.created_at)}
                   {typeof d.usedOn === "number" && d.usedOn > 0 && (
                     <> · used on {d.usedOn} matter{d.usedOn === 1 ? "" : "s"}</>
@@ -231,7 +231,7 @@ export default function TransferDocuments({
                       type="button"
                       disabled={busy === d.id}
                       onClick={() => patch(d.id, { verified: !d.verified }, d.verified ? "Verification removed" : "Marked verified")}
-                      className={`font-medium hover:underline disabled:opacity-50 ${d.verified ? "text-gray-400" : "text-green-700"}`}
+                      className={`font-medium hover:underline disabled:opacity-50 ${d.verified ? "text-gray-500" : "text-green-700"}`}
                     >
                       {d.verified ? "Unverify" : "Verify"}
                     </button>
@@ -240,7 +240,7 @@ export default function TransferDocuments({
                       type="button"
                       disabled={busy === d.id}
                       onClick={() => patch(d.id, { status: "archived" }, "Archived — matters that used it keep the file")}
-                      className="font-medium text-gray-400 hover:text-gray-600 hover:underline disabled:opacity-50"
+                      className="font-medium text-gray-500 hover:text-gray-600 hover:underline disabled:opacity-50"
                     >
                       Archive
                     </button>
@@ -263,7 +263,7 @@ export default function TransferDocuments({
           })}
         </ul>
       ) : (
-        <p className="mb-4 text-sm text-gray-400">No transfer documents yet.</p>
+        <p className="mb-4 text-sm text-gray-500">No transfer documents yet.</p>
       )}
 
       {canManage && (
@@ -321,13 +321,13 @@ export default function TransferDocuments({
 
       {archived.length > 0 && canManage && (
         <details className="mt-3 border-t border-gray-100 pt-3">
-          <summary className="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-600">
+          <summary className="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-600">
             Archived ({archived.length})
           </summary>
           <ul className="mt-2 space-y-1.5">
             {archived.map((d) => (
               <li key={d.id} className="flex items-center gap-3 py-1 text-sm">
-                <span className="min-w-0 flex-1 truncate text-gray-400">
+                <span className="min-w-0 flex-1 truncate text-gray-500">
                   {docLabel(d.document_type)} · {d.file_name || "—"}
                 </span>
                 <button
@@ -371,7 +371,7 @@ function RenameDoc({
           setEditing(true);
         }}
         title="Rename"
-        className="text-gray-400 hover:text-[#1B2E6B] disabled:opacity-50"
+        className="text-gray-500 hover:text-[#1B2E6B] disabled:opacity-50"
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
@@ -406,7 +406,7 @@ function RenameDoc({
         onClick={() => setEditing(false)}
         disabled={busy}
         title="Cancel"
-        className="text-gray-400 hover:text-gray-600"
+        className="text-gray-500 hover:text-gray-600"
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -433,7 +433,7 @@ function ReplacePick({ busy, onPick }: { busy: boolean; onPick: (f: File) => voi
         type="button"
         disabled={busy}
         onClick={() => ref.current?.click()}
-        className="inline-flex items-center gap-1 font-medium text-gray-400 hover:text-gray-700 hover:underline disabled:opacity-50"
+        className="inline-flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
       >
         <RotateCcw className="h-3.5 w-3.5" /> Replace
       </button>

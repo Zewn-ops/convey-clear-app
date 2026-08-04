@@ -91,7 +91,7 @@ export default function ForgotPasswordForm() {
         Send reset link
       </Button>
       {TURNSTILE_ENABLED && !captchaToken && (
-        <p className="text-center text-xs text-gray-400 -mt-2">
+        <p className="text-center text-xs text-gray-500 -mt-2">
           Complete the verification above to continue.
         </p>
       )}

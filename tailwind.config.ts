@@ -9,6 +9,33 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Semantic tokens -> src/styles/tokens.css. These resolve per theme,
+        // so `text-required` is the right orange in light AND dark without a
+        // dark: variant at every call site.
+        canvas: "var(--cc-canvas)",
+        surface: "var(--cc-surface)",
+        raised: "var(--cc-raised)",
+        line: "var(--cc-border)",
+        "line-strong": "var(--cc-border-strong)",
+        ink: "var(--cc-text)",
+        "ink-2": "var(--cc-secondary)",
+        "ink-3": "var(--cc-muted)",
+        action: "var(--cc-action)",
+        required: "var(--cc-required)",
+        waiting: "var(--cc-waiting)",
+        ok: "var(--cc-ok)",
+        danger: "var(--cc-danger)",
+        "action-tint": "var(--cc-action-tint)",
+        "required-tint": "var(--cc-required-tint)",
+        "waiting-tint": "var(--cc-waiting-tint)",
+        "ok-tint": "var(--cc-ok-tint)",
+        "danger-tint": "var(--cc-danger-tint)",
+        "action-fill": "var(--cc-action-fill)",
+        "required-fill": "var(--cc-required-fill)",
+        "waiting-fill": "var(--cc-waiting-fill)",
+        "ok-fill": "var(--cc-ok-fill)",
+        "danger-fill": "var(--cc-danger-fill)",
+        chrome: "var(--cc-chrome)",
         navy: {
           50: "#eef1f9",
           100: "#d5dcf0",
@@ -27,6 +54,13 @@ const config: Config = {
           navy: "#1B2E6B",
         },
       },
+      borderRadius: { DEFAULT: "var(--cc-radius)", lg: "var(--cc-radius-lg)", sm: "var(--cc-radius-sm)" },
+      boxShadow: {
+        sm: "var(--cc-shadow-sm)",
+        DEFAULT: "var(--cc-shadow)",
+        lg: "var(--cc-shadow-lg)",
+      },
+      transitionTimingFunction: { out: "var(--cc-ease)" },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
       },

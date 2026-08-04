@@ -143,7 +143,7 @@ export function DocSlot({
               )}
               <span className="text-sm font-medium text-gray-900">{meta.label}</span>
             </div>
-            {meta.hint && <p className="mt-0.5 ml-6 text-xs text-gray-400">{meta.hint}</p>}
+            {meta.hint && <p className="mt-0.5 ml-6 text-xs text-gray-500">{meta.hint}</p>}
             {templateUrl && (
               <a href={templateUrl} target="_blank" rel="noopener noreferrer" className="mt-1 ml-6 inline-flex items-center gap-1 text-xs text-[#1B2E6B] hover:underline">
                 Download template →
@@ -175,7 +175,7 @@ export function DocSlot({
               placeholder="e.g. Tax clearance expired — renewal submitted to SARS"
               rows={2}
               className={cn(
-                "w-full rounded-lg border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent",
+                "w-full rounded-lg border px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent",
                 state.reason.trim() ? "border-gray-300" : "border-amber-300"
               )}
             />
@@ -200,16 +200,16 @@ export function DocSlot({
                   <p className="text-xs text-green-600">{formatBytes(state.file.size)}</p>
                 </div>
                 <button type="button" onClick={(e) => { e.stopPropagation(); onChange({ file: null }); if (fileRef.current) fileRef.current.value = ""; }}
-                  className="absolute top-2 right-2 rounded-full bg-white p-0.5 shadow text-gray-400 hover:text-gray-600">
+                  className="absolute top-2 right-2 rounded-full bg-white p-0.5 shadow text-gray-500 hover:text-gray-600">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </>
             ) : (
               <>
-                <Upload className="h-6 w-6 text-gray-400" />
+                <Upload className="h-6 w-6 text-gray-500" />
                 <div>
                   <p className="text-xs font-medium text-gray-600">Click or drag file here</p>
-                  <p className="text-xs text-gray-400">PDF, JPG, PNG — max 10 MB</p>
+                  <p className="text-xs text-gray-500">PDF, JPG, PNG — max 10 MB</p>
                 </div>
               </>
             )}
@@ -235,7 +235,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 const inputCls =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent";
 
 // ---------------------------------------------------------------------------
 // Main form
@@ -412,7 +412,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
           </div>
         </div>
         <footer className="py-4 text-center border-t border-gray-100">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
             <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
             <span>POPIA Compliant · South Africa</span>
           </div>
@@ -436,7 +436,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                 i < stage ? "bg-green-500 text-white" : i === stage ? "bg-[#1B2E6B] text-white" : "bg-gray-200 text-gray-500")}>
                 {i < stage ? "✓" : i + 1}
               </div>
-              <span className={cn("text-xs hidden sm:block", i === stage ? "text-gray-900 font-medium" : "text-gray-400")}>{label}</span>
+              <span className={cn("text-xs hidden sm:block", i === stage ? "text-gray-900 font-medium" : "text-gray-500")}>{label}</span>
             </div>
           ))}
         </div>
@@ -495,10 +495,10 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                       <Plus className="h-3.5 w-3.5" /> Add
                     </button>
                   </div>
-                  {directors.length === 0 && <p className="text-xs text-gray-400">Optional — add additional directors or contacts.</p>}
+                  {directors.length === 0 && <p className="text-xs text-gray-500">Optional — add additional directors or contacts.</p>}
                   {directors.map((d, i) => (
                     <div key={i} className="rounded-lg border border-gray-200 p-3 space-y-2 relative">
-                      <button type="button" onClick={() => removeDirector(i)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                      <button type="button" onClick={() => removeDirector(i)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -546,8 +546,8 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
 
             {/* Optional municipal login */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700">Municipal profile login <span className="font-normal text-gray-400">(optional)</span></h2>
-              <p className="text-xs text-gray-400">If provided, this lets us pull your municipal account statements for you.</p>
+              <h2 className="text-sm font-semibold text-gray-700">Municipal profile login <span className="font-normal text-gray-500">(optional)</span></h2>
+              <p className="text-xs text-gray-500">If provided, this lets us pull your municipal account statements for you.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Username"><input className={inputCls} value={details.municipal_username} onChange={(e) => setField("municipal_username", e.target.value)} /></Field>
                 <Field label="Password"><input className={inputCls} type="password" value={details.municipal_password} onChange={(e) => setField("municipal_password", e.target.value)} /></Field>
@@ -574,7 +574,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                 onChange={(next) => updateDoc(docType, next)}
                 templateUrl={docType === "poa" || docType === "poa_signed" ? `/api/generate-poa?token=${token}` : undefined} />
             ))}
-            {requiredDocs.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No documents required at this stage.</p>}
+            {requiredDocs.length === 0 && <p className="text-sm text-gray-500 text-center py-6">No documents required at this stage.</p>}
           </div>
         )}
 
@@ -646,7 +646,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
           )}
         </div>
         {!stageValid[stage] && stage < 3 && (
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-gray-500">
             {stage === 0 ? "Please complete the required fields." : stage === 1 ? "Please provide all required documents." : "Please accept the required consents."}
           </p>
         )}
@@ -654,12 +654,12 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
         {/* Footer */}
         <div className="space-y-3 pb-8 pt-2">
           <div className="flex items-center justify-center gap-2">
-            <Lock className="h-3 w-3 text-gray-400" />
-            <p className="text-xs text-gray-400">Encrypted in transit · Accessible to authorised staff only</p>
+            <Lock className="h-3 w-3 text-gray-500" />
+            <p className="text-xs text-gray-500">Encrypted in transit · Accessible to authorised staff only</p>
           </div>
           <div className="flex items-center justify-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
-            <p className="text-xs text-gray-400">POPIA Compliant · South Africa</p>
+            <p className="text-xs text-gray-500">POPIA Compliant · South Africa</p>
           </div>
         </div>
       </div>
@@ -670,7 +670,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-gray-400">{k}</span>
+      <span className="text-gray-500">{k}</span>
       <span className="text-gray-900 text-right">{v || "—"}</span>
     </div>
   );
@@ -684,7 +684,7 @@ export function ConsentBox({
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#1B2E6B] shrink-0" />
       <div>
         <p className="text-sm font-medium text-gray-900">
-          {title} {required && <span className="text-[#E8521A]">*</span>} {optional && <span className="text-xs font-normal text-gray-400">(optional)</span>}
+          {title} {required && <span className="text-[#E8521A]">*</span>} {optional && <span className="text-xs font-normal text-gray-500">(optional)</span>}
         </p>
         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{body}</p>
       </div>

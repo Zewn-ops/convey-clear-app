@@ -186,7 +186,7 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
                     {initialPocs.length === 0
                       ? "No council POCs yet — add one above."
                       : "No POCs match your filters — try clearing them."}

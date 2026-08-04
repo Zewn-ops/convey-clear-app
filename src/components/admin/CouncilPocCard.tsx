@@ -12,7 +12,7 @@ import { councilPocName, type CouncilPoc } from "@/types";
 function Row({ k, v }: { k: string; v: string | null }) {
   return (
     <div>
-      <dt className="text-gray-400 text-xs">{k}</dt>
+      <dt className="text-gray-500 text-xs">{k}</dt>
       <dd className="font-medium mt-0.5 text-gray-800 break-words">{v || "—"}</dd>
     </div>
   );
@@ -158,27 +158,27 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
         <Row k="Department" v={poc.department} />
         <Row k="Region" v={poc.region} />
         <div>
-          <dt className="text-gray-400 text-xs">Email</dt>
+          <dt className="text-gray-500 text-xs">Email</dt>
           <dd className="font-medium mt-0.5">{poc.email ? <a href={`mailto:${poc.email}`} className="text-[#1B2E6B] hover:underline">{poc.email}</a> : "—"}</dd>
         </div>
         <div>
-          <dt className="text-gray-400 text-xs">Cell</dt>
+          <dt className="text-gray-500 text-xs">Cell</dt>
           <dd className="font-medium mt-0.5">{poc.cell ? <a href={`tel:${poc.cell}`} className="text-[#1B2E6B] hover:underline">{poc.cell}</a> : "—"}</dd>
         </div>
         <div>
-          <dt className="text-gray-400 text-xs">Tel</dt>
+          <dt className="text-gray-500 text-xs">Tel</dt>
           <dd className="font-medium mt-0.5">{poc.tel ? <a href={`tel:${poc.tel}`} className="text-[#1B2E6B] hover:underline">{poc.tel}</a> : "—"}</dd>
         </div>
         <Row k="Birthday" v={poc.birthday} />
         {poc.office_description && (
           <div className="col-span-2">
-            <dt className="text-gray-400 text-xs">Office description</dt>
+            <dt className="text-gray-500 text-xs">Office description</dt>
             <dd className="font-medium mt-0.5 text-gray-800 whitespace-pre-wrap">{poc.office_description}</dd>
           </div>
         )}
         {poc.notes && (
           <div className="col-span-2">
-            <dt className="text-gray-400 text-xs">Comments</dt>
+            <dt className="text-gray-500 text-xs">Comments</dt>
             <dd className="font-medium mt-0.5 text-gray-800 whitespace-pre-wrap">{poc.notes}</dd>
           </div>
         )}

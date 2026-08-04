@@ -102,13 +102,13 @@ export default function FilterRail({
           }}
           className="relative"
         >
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder}
-            className="w-full rounded-lg border border-gray-300 py-1.5 pl-8 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="w-full rounded-lg border border-gray-300 py-1.5 pl-8 pr-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
           />
         </form>
 
@@ -149,7 +149,7 @@ export default function FilterRail({
                       >
                         <span className="truncate">{o.label}</span>
                         {typeof o.count === "number" && (
-                          <span className="ml-2 shrink-0 text-xs text-gray-400">{o.count}</span>
+                          <span className="ml-2 shrink-0 text-xs text-gray-500">{o.count}</span>
                         )}
                       </button>
                     </li>

@@ -182,7 +182,7 @@ export default function SignatureBuilder() {
             <div>
               <label className="text-xs font-semibold text-gray-500">Direct phone</label>
               <input className={`${input} mt-1`} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 12 345 6789" />
-              <p className="mt-1 text-[11px] text-gray-400">Type it how it should read — the clickable link is derived automatically.</p>
+              <p className="mt-1 text-[11px] text-gray-500">Type it how it should read — the clickable link is derived automatically.</p>
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500">Email address</label>
@@ -193,7 +193,7 @@ export default function SignatureBuilder() {
           <div>
             <label className="text-xs font-semibold text-gray-500">Sign-off above the signature (optional)</label>
             <textarea className={`${input} mt-1 resize-y`} rows={2} value={signoff} onChange={(e) => setSignoff(e.target.value)} />
-            <p className="mt-1 text-[11px] text-gray-400">
+            <p className="mt-1 text-[11px] text-gray-500">
               A fixed sign-off shown above the logo. Leave blank for none. The email message itself is still typed fresh each time.
             </p>
           </div>
@@ -201,7 +201,7 @@ export default function SignatureBuilder() {
       </Card>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Preview</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Preview</p>
         <Card>
           <div id="sig-preview" className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: html }} />
         </Card>
@@ -224,7 +224,7 @@ export default function SignatureBuilder() {
       {showSource && (
         <Card>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">HTML source (for the API deploy / advanced)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">HTML source (for the API deploy / advanced)</p>
             <button onClick={copySource} className="text-xs font-medium text-[#1B2E6B] hover:underline">Copy source</button>
           </div>
           <textarea readOnly value={html} rows={8} className="w-full rounded-lg border border-gray-200 p-3 font-mono text-[11px] text-gray-700" />

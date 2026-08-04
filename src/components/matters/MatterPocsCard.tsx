@@ -102,14 +102,14 @@ export default function MatterPocsCard({
             <div key={p.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <p className="font-medium text-gray-900">{councilPocName(p)}</p>
-                <button onClick={() => unlink(p.id)} disabled={busy} title="Remove from this matter" className="text-gray-400 hover:text-red-600 disabled:opacity-50">
+                <button onClick={() => unlink(p.id)} disabled={busy} title="Remove from this matter" className="text-gray-500 hover:text-red-600 disabled:opacity-50">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">{[p.council, p.department].filter(Boolean).join(" · ") || "—"}</p>
               <dl className="mt-2 space-y-1 text-xs">
-                {p.email && <dd><span className="text-gray-400">Email:</span> <a href={`mailto:${p.email}`} className="text-[#1B2E6B] hover:underline">{p.email}</a></dd>}
-                {p.cell && <dd><span className="text-gray-400">Cell:</span> <a href={`tel:${p.cell}`} className="text-[#1B2E6B] hover:underline">{p.cell}</a></dd>}
+                {p.email && <dd><span className="text-gray-500">Email:</span> <a href={`mailto:${p.email}`} className="text-[#1B2E6B] hover:underline">{p.email}</a></dd>}
+                {p.cell && <dd><span className="text-gray-500">Cell:</span> <a href={`tel:${p.cell}`} className="text-[#1B2E6B] hover:underline">{p.cell}</a></dd>}
               </dl>
               <Link href={`/admin/council-pocs/${p.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-[#E8521A] hover:underline mt-2">
                 <ExternalLink className="h-3 w-3" /> Contact card
@@ -118,7 +118,7 @@ export default function MatterPocsCard({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-400 mb-4">No council contact linked yet.</p>
+        <p className="text-sm text-gray-500 mb-4">No council contact linked yet.</p>
       )}
 
       {/* Assign an existing directory POC */}

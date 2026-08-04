@@ -65,7 +65,7 @@ export default async function AdminEnquiriesPage() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No enquiries</td></tr>
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-500">No enquiries</td></tr>
               )}
             </tbody>
           </table>

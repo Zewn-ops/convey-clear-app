@@ -74,7 +74,7 @@ function PartySection({
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
-        {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Select
@@ -321,7 +321,7 @@ export default function ReferForm({
         {prcBlocked ? "Contact ConveyClear to proceed" : "Refer matter"}
       </Button>
       {!canSubmit && !prcBlocked && (
-        <p className="text-center text-xs text-gray-400 -mt-2">
+        <p className="text-center text-xs text-gray-500 -mt-2">
           Fill in all required fields (marked <span className="text-red-500">*</span>) to continue.
         </p>
       )}

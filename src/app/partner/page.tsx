@@ -1,40 +1,50 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
+import StatTile from "@/components/ui/StatTile";
+import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
+import MetaChip from "@/components/ui/MetaChip";
+import PhaseProgress from "@/components/ui/PhaseProgress";
+import EmptyState from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
+import { workdaysSince, relativeDays } from "@/lib/elapsed";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
   type Matter,
   type MatterStatus,
 } from "@/types";
-import { getPipeline, phaseLabel } from "@/lib/pipelines";
-import { Briefcase, Users, Clock, ArrowRight, PlusCircle, Phone, Mail, MessageSquare } from "lucide-react";
+import { getPipeline, phaseLabel, phaseOrder, phaseSteps } from "@/lib/pipelines";
+import { ArrowRight, PlusCircle, Phone, Mail, MessageSquare, Briefcase } from "lucide-react";
 import { CONVEYCLEAR_PHONE, CONVEYCLEAR_EMAIL, telHref } from "@/lib/contact";
 
 export const metadata = { title: "Partner Overview — ConveyClear" };
 
-function statusVariant(s: string): "info" | "success" | "danger" | "warning" | "gray" {
-  return ({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[s] ?? "gray";
-}
+const STATUS_TONE: Record<string, StatusTone> = {
+  new: "waiting",
+  open: "action",
+  on_hold: "waiting",
+  won: "ok",
+  lost: "danger",
+  archived: "neutral",
+};
 
 export default async function PartnerOverview() {
   const supabase = await createClient();
 
   // RLS scopes all of these to the partner's firm automatically.
-  const [{ count: totalMatters }, { count: activeMatters }, { count: clientCount }, { data: recent }] =
+  const [{ count: totalMatters }, { count: activeMatters }, { count: onHold }, { count: clientCount }, { data: recent }] =
     await Promise.all([
       supabase.from("matters").select("id", { count: "exact", head: true }),
       supabase.from("matters").select("id", { count: "exact", head: true }).eq("status", "open"),
+      supabase.from("matters").select("id", { count: "exact", head: true }).eq("status", "on_hold"),
       supabase.from("clients").select("id", { count: "exact", head: true }),
       supabase
         .from("matters")
         .select("id, title, current_phase, status, municipality, service_subtype, created_at, clients(full_name, business_name), services(code, name)")
         .in("status", ["open", "on_hold"])
         .order("created_at", { ascending: false })
-        .limit(10),
+        .limit(6),
     ]);
 
   type PartnerMatterRow = Matter & {
@@ -42,123 +52,174 @@ export default async function PartnerOverview() {
     service_subtype?: string | null;
     services?: { code?: string | null; name?: string | null } | null;
   };
-  const serviceLabel = (m: PartnerMatterRow) => [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
+  const serviceLabel = (m: PartnerMatterRow) =>
+    [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
   const matters = (recent as PartnerMatterRow[] | null) ?? [];
+  const ids = matters.map((m) => m.id);
 
-  // Per-row unread notification dots (cleared when the matter is opened).
+  // Per-row unread dots, and the last time anything happened on each matter.
+  // Both are single queries over the listed ids rather than one per row.
   const meId = (await getSessionProfile())?.profile?.id ?? null;
   const unread = new Set<string>();
-  if (meId && matters.length) {
-    const { data: notes } = await supabase
-      .from("notifications")
-      .select("matter_id")
-      .eq("user_id", meId)
-      .is("read_at", null)
-      .in("matter_id", matters.map((m) => m.id));
-    (notes ?? []).forEach((n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id));
+  const lastActivity = new Map<string, string>();
+
+  if (ids.length) {
+    const [{ data: notes }, { data: acts }] = await Promise.all([
+      meId
+        ? supabase.from("notifications").select("matter_id").eq("user_id", meId).is("read_at", null).in("matter_id", ids)
+        : Promise.resolve({ data: [] as { matter_id: string | null }[] }),
+      supabase
+        .from("matter_activities")
+        .select("matter_id, created_at")
+        .in("matter_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+
+    (notes ?? []).forEach((n) => {
+      const id = (n as { matter_id: string | null }).matter_id;
+      if (id) unread.add(id);
+    });
+    // Ordered desc, so the first row seen for a matter is its latest.
+    (acts ?? []).forEach((a) => {
+      const row = a as { matter_id: string; created_at: string };
+      if (!lastActivity.has(row.matter_id)) lastActivity.set(row.matter_id, row.created_at);
+    });
   }
 
+  const actionLink =
+    "inline-flex items-center gap-2 rounded border border-line px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors duration-150 ease-out hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col gap-3">
+    <div className="mx-auto max-w-5xl space-y-7">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Your matters</h1>
-          <p className="text-sm text-gray-500 mt-1">Matters ConveyClear is handling for your clients.</p>
+          <h1 className="text-[28px] font-extrabold tracking-[-0.025em] text-ink">Your matters</h1>
+          <p className="mt-1 text-sm text-ink-3">Matters ConveyClear is handling for your clients.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={`mailto:${CONVEYCLEAR_EMAIL}`}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
-          >
+          <a href={`mailto:${CONVEYCLEAR_EMAIL}`} className={actionLink}>
             <Mail className="h-4 w-4" /> Email ConveyClear
           </a>
-          <a
-            href={telHref(CONVEYCLEAR_PHONE)}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
-          >
-            <Phone className="h-4 w-4" /> Call ConveyClear · {CONVEYCLEAR_PHONE}
+          <a href={telHref(CONVEYCLEAR_PHONE)} className={actionLink}>
+            <Phone className="h-4 w-4" /> Call &middot; {CONVEYCLEAR_PHONE}
           </a>
-          <Link
-            href="/partner/enquiries"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#1B2E6B] px-4 py-2 text-sm font-medium text-[#1B2E6B] hover:bg-[#1B2E6B]/5"
-          >
+          <Link href="/partner/enquiries" className={actionLink}>
             <MessageSquare className="h-4 w-4" /> New enquiry
           </Link>
           <Link
             href="/partner/refer"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#E8521A] px-4 py-2 text-sm font-medium text-white hover:bg-[#c94415]"
+            className="inline-flex items-center gap-2 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             <PlusCircle className="h-4 w-4" /> Refer a matter
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-[#1B2E6B]/10 p-2.5"><Briefcase className="h-5 w-5 text-[#1B2E6B]" /></div>
-          <div><p className="text-2xl font-bold text-[#1B2E6B]">{totalMatters ?? 0}</p><p className="text-xs text-gray-500">Total matters</p></div>
-        </Card>
-        <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-blue-100 p-2.5"><Clock className="h-5 w-5 text-blue-600" /></div>
-          <div><p className="text-2xl font-bold text-blue-600">{activeMatters ?? 0}</p><p className="text-xs text-gray-500">Active</p></div>
-        </Card>
-        <Card className="flex items-center gap-3">
-          <div className="rounded-lg bg-[#E8521A]/10 p-2.5"><Users className="h-5 w-5 text-[#E8521A]" /></div>
-          <div><p className="text-2xl font-bold text-[#E8521A]">{clientCount ?? 0}</p><p className="text-xs text-gray-500">Clients</p></div>
-        </Card>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <StatTile value={totalMatters ?? 0} label="Total" href="/partner/matters" />
+        <StatTile value={activeMatters ?? 0} label="Active" tone="ok" href="/partner/matters?status=open" />
+        <StatTile value={onHold ?? 0} label="On hold" tone="waiting" href="/partner/matters?status=on_hold" />
+        <StatTile value={clientCount ?? 0} label="Clients" href="/partner/clients" />
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Active matters</h2>
-          <Link href="/partner/matters" className="flex items-center gap-1 text-sm text-[#E8521A] hover:underline">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-[15px] font-bold text-ink">Active matters</h2>
+          <Link
+            href="/partner/matters"
+            className="flex items-center gap-1 text-sm font-medium text-action hover:underline"
+          >
             View all <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
-        <Card padding="none">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Matter</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Phase</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Opened</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {matters.map((m) => {
-                  const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-                  return (
-                  <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-gray-900">
-                      <span className="flex items-center gap-2">
-                        {unread.has(m.id) && <span className="h-2 w-2 rounded-full bg-[#E8521A] shrink-0" title="New activity" />}
-                        <Link href={`/partner/matters/${m.id}`} className="hover:text-[#E8521A] hover:underline">
-                          {m.title || clientDisplayName(m.clients) || "—"}
-                        </Link>
-                      </span>
-                      {serviceLabel(m) && <p className="text-xs font-normal text-gray-400 mt-0.5">{serviceLabel(m)}</p>}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{formatDate(m.created_at)}</td>
-                    <td className="px-5 py-3">{m.status && <Badge label={MATTER_STATUS_LABELS[m.status as MatterStatus]} variant={statusVariant(m.status)} />}</td>
-                    <td className="px-5 py-3 text-right">
-                      <Link href={`/partner/matters/${m.id}`} className="text-[#E8521A] hover:underline text-xs font-medium">View</Link>
-                    </td>
-                  </tr>
-                  );
-                })}
-                {matters.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No matters yet — refer your first client.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+
+        {matters.length === 0 ? (
+          <EmptyState
+            title="No active matters"
+            icon={<Briefcase className="h-6 w-6" />}
+            action={
+              <Link href="/partner/refer" className="text-[12.5px] font-bold text-action hover:underline">
+                Refer your first client
+              </Link>
+            }
+          >
+            Once you refer a client, their matter appears here with its phase, how long it has been
+            running, and whatever is holding it up.
+          </EmptyState>
+        ) : (
+          <ul className="space-y-2.5">
+            {matters.map((m) => {
+              const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
+              const steps = pl ? phaseSteps(pl) : [];
+              const idx = pl ? phaseOrder(pl, m.current_phase) : -1;
+              const open = workdaysSince(m.created_at);
+              const seen = relativeDays(lastActivity.get(m.id));
+              const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
+              const stalled = open !== null && open > 60;
+
+              return (
+                <li
+                  key={m.id}
+                  className="rounded-lg border border-line bg-surface p-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/partner/matters/${m.id}`}
+                        className="flex items-center gap-2 text-[14.5px] font-bold tracking-[-0.01em] text-ink hover:text-action hover:underline"
+                      >
+                        {unread.has(m.id) && (
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full bg-required-fill"
+                            title="New activity"
+                          />
+                        )}
+                        <span className="truncate">
+                          {m.title || clientDisplayName(m.clients) || "Untitled matter"}
+                        </span>
+                      </Link>
+                      {serviceLabel(m) && (
+                        <p className="mt-0.5 text-[12px] text-ink-3">
+                          {serviceLabel(m)}
+                          {m.municipality ? ` · ${m.municipality}` : ""}
+                        </p>
+                      )}
+                    </div>
+                    {m.status && (
+                      <StatusPill tone={tone}>
+                        {MATTER_STATUS_LABELS[m.status as MatterStatus] ?? m.status}
+                      </StatusPill>
+                    )}
+                  </div>
+
+                  {pl && idx >= 0 && (
+                    <div className="mt-3">
+                      <PhaseProgress
+                        phase={idx + 1}
+                        total={steps.length}
+                        label={phaseLabel(pl, m.current_phase, true)}
+                        done={idx === steps.length - 1}
+                      />
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {open !== null && (
+                      <MetaChip
+                        label="Open"
+                        value={`${open} workday${open === 1 ? "" : "s"}`}
+                        tone={stalled ? "waiting" : "neutral"}
+                      />
+                    )}
+                    {seen && <MetaChip label="Last update" value={seen} />}
+                    <MetaChip label="Opened" value={formatDate(m.created_at)} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );

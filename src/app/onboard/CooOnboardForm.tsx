@@ -184,7 +184,7 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
           </div>
         </div>
         <footer className="py-4 text-center border-t border-gray-100">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
             <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
             <span>POPIA Compliant · South Africa</span>
           </div>
@@ -212,7 +212,7 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
               >
                 {i < stage ? "✓" : i + 1}
               </div>
-              <span className={"text-xs hidden sm:block " + (i === stage ? "text-gray-900 font-medium" : "text-gray-400")}>{label}</span>
+              <span className={"text-xs hidden sm:block " + (i === stage ? "text-gray-900 font-medium" : "text-gray-500")}>{label}</span>
             </div>
           ))}
         </div>
@@ -246,7 +246,7 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
                 <h2 className="text-sm font-semibold text-[#1B2E6B] pt-2">{sec.label}</h2>
                 {sec.slots.map((s) => (
                   <div key={s.key} className="space-y-1">
-                    {s.optional && <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Optional — not required</p>}
+                    {s.optional && <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Optional — not required</p>}
                     <DocSlot
                       docType={s.docType}
                       allowNotAvailable={allowNotAvailable || s.optional}
@@ -255,7 +255,7 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
                     />
                   </div>
                 ))}
-                {sec.slots.length === 0 && <p className="text-sm text-gray-400">No documents listed for this party.</p>}
+                {sec.slots.length === 0 && <p className="text-sm text-gray-500">No documents listed for this party.</p>}
               </div>
             ))}
           </>
@@ -295,13 +295,13 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
                 const done = sec.slots.filter(slotDone).length;
                 return (
                   <div key={sec.key} className="flex justify-between gap-4">
-                    <span className="text-gray-400">{sec.label}</span>
+                    <span className="text-gray-500">{sec.label}</span>
                     <span className="text-gray-900 text-right">{done} / {sec.slots.length} provided</span>
                   </div>
                 );
               })}
               <div className="flex justify-between gap-4">
-                <span className="text-gray-400">Consents</span>
+                <span className="text-gray-500">Consents</span>
                 <span className="text-gray-900 text-right">POPIA ✓ Terms ✓{marketing ? " Marketing ✓" : ""}</span>
               </div>
             </div>
@@ -338,12 +338,12 @@ export default function CooOnboardForm({ token, data }: { token: string; data: T
 
         <div className="space-y-3 pb-8 pt-2">
           <div className="flex items-center justify-center gap-2">
-            <Lock className="h-3 w-3 text-gray-400" />
-            <p className="text-xs text-gray-400">Encrypted in transit · Accessible to authorised staff only</p>
+            <Lock className="h-3 w-3 text-gray-500" />
+            <p className="text-xs text-gray-500">Encrypted in transit · Accessible to authorised staff only</p>
           </div>
           <div className="flex items-center justify-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-[#1B2E6B]" />
-            <p className="text-xs text-gray-400">POPIA Compliant · South Africa</p>
+            <p className="text-xs text-gray-500">POPIA Compliant · South Africa</p>
           </div>
         </div>
       </div>

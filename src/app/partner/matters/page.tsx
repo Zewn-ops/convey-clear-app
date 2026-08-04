@@ -100,7 +100,7 @@ export default async function PartnerMatters({
                         {m.title || clientDisplayName(m.clients) || "—"}
                       </Link>
                     </span>
-                    {serviceLabel(m) && <p className="text-xs font-normal text-gray-400 mt-0.5">{serviceLabel(m)}</p>}
+                    {serviceLabel(m) && <p className="text-xs font-normal text-gray-500 mt-0.5">{serviceLabel(m)}</p>}
                   </td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{municipalityLabel(m.municipality)}</td>
                   <td className="px-5 py-3 text-gray-600">
@@ -121,7 +121,7 @@ export default async function PartnerMatters({
                 );
               })}
               {matters.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No matters match your filters</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-500">No matters match your filters</td></tr>
               )}
             </tbody>
           </table>

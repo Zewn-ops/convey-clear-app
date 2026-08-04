@@ -42,7 +42,7 @@ export default function NotifyVolumeControl() {
           <Play className="h-3.5 w-3.5" /> Test
         </button>
       </div>
-      <p className="text-xs text-gray-400">Notification volume is saved on this device.</p>
+      <p className="text-xs text-gray-500">Notification volume is saved on this device.</p>
     </div>
   );
 }

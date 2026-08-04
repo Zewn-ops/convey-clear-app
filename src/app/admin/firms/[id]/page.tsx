@@ -150,7 +150,7 @@ export default async function AdminFirmDetailPage({
             </div>
           ))}
           {users.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-gray-400">
+            <p className="px-5 py-8 text-center text-sm text-gray-500">
               No logins for this firm yet. Create one under Users &amp; Access.
             </p>
           )}
@@ -172,11 +172,11 @@ export default async function AdminFirmDetailPage({
                   {m.partner_file_ref && ` · ${m.partner_file_ref}`}
                 </p>
               </div>
-              <span className="text-xs text-gray-400">{formatDate(m.created_at)}</span>
+              <span className="text-xs text-gray-500">{formatDate(m.created_at)}</span>
             </Link>
           ))}
           {matters.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-gray-400">No matters for this firm yet.</p>
+            <p className="px-5 py-8 text-center text-sm text-gray-500">No matters for this firm yet.</p>
           )}
         </div>
       </Card>
@@ -193,13 +193,13 @@ export default async function AdminFirmDetailPage({
                 <p className="text-sm font-medium text-gray-900">{t.reference}</p>
                 {t.property_description && <p className="text-xs text-gray-500">{t.property_description}</p>}
               </div>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 {t.business_partner_id === firm.id ? "Attorney" : "Estate agent"}
               </span>
             </Link>
           ))}
           {transfers.length === 0 && (
-            <p className="px-5 py-8 text-center text-sm text-gray-400">No property transfers for this firm yet.</p>
+            <p className="px-5 py-8 text-center text-sm text-gray-500">No property transfers for this firm yet.</p>
           )}
         </div>
       </Card>

@@ -1,3 +1,5 @@
+@import "../styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +10,8 @@
   }
 
   body {
-    @apply text-gray-900 bg-gray-50;
+    background:var(--cc-canvas);
+    color:var(--cc-text);
   }
 }
 

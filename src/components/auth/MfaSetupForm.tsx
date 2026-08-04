@@ -73,7 +73,7 @@ export default function MfaSetupForm() {
     window.location.assign("/auth/login");
   };
 
-  if (!ready || !enrolling) return <p className="text-sm text-gray-400">Preparing setup…</p>;
+  if (!ready || !enrolling) return <p className="text-sm text-gray-500">Preparing setup…</p>;
 
   return (
     <div className="space-y-4">

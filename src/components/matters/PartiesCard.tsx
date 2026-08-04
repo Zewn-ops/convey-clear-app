@@ -16,7 +16,7 @@ function Row({ k, v }: { k: string; v: string | null | undefined }) {
   if (!v) return null;
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-gray-400">{k}</dt>
+      <dt className="text-gray-500">{k}</dt>
       <dd className="text-gray-800 text-right break-words">{v}</dd>
     </div>
   );
@@ -43,7 +43,7 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#1B2E6B]">
                   {ROLE_LABELS[p.role] ?? p.role}
                 </p>
-                <span className="text-xs text-gray-400">{p.entity_type.replace("_", " ")}</span>
+                <span className="text-xs text-gray-500">{p.entity_type.replace("_", " ")}</span>
               </div>
               <p className="font-medium text-gray-900">{name || "—"}</p>
               <dl className="space-y-1.5 text-sm">

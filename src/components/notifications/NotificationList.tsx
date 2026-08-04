@@ -106,7 +106,7 @@ export default function NotificationList({
                     <span className="truncate">{n.title}</span>
                   </p>
                   {n.body && <p className="mt-0.5 text-xs text-gray-600">{n.body}</p>}
-                  <p className="mt-1 text-[11px] text-gray-400">
+                  <p className="mt-1 text-[11px] text-gray-500">
                     {new Date(n.created_at).toLocaleString("en-ZA")}
                   </p>
                 </Link>
@@ -115,7 +115,7 @@ export default function NotificationList({
                     type="button"
                     disabled={busy}
                     onClick={() => markRead([n.id])}
-                    className="shrink-0 text-xs font-medium text-gray-400 hover:text-[#1B2E6B] disabled:opacity-50"
+                    className="shrink-0 text-xs font-medium text-gray-500 hover:text-[#1B2E6B] disabled:opacity-50"
                     aria-label={`Mark "${n.title}" as read`}
                   >
                     Mark read

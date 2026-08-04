@@ -43,9 +43,9 @@ export default function CreatePartyAccount({ partyId, partyName }: { partyId: st
             ? `Login created — credentials emailed to ${partyName}`
             : `Login created — hand these to ${partyName}`}
         </p>
-        <p className="text-gray-700"><span className="text-gray-400">Email:</span> {cred.email}</p>
+        <p className="text-gray-700"><span className="text-gray-500">Email:</span> {cred.email}</p>
         <div className="flex items-center gap-2">
-          <p className="text-gray-700"><span className="text-gray-400">Temp password:</span> <code className="font-mono">{cred.password}</code></p>
+          <p className="text-gray-700"><span className="text-gray-500">Temp password:</span> <code className="font-mono">{cred.password}</code></p>
           <button
             onClick={() => { navigator.clipboard.writeText(cred.password); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
             className="text-green-700 hover:text-green-900"
@@ -62,7 +62,7 @@ export default function CreatePartyAccount({ partyId, partyName }: { partyId: st
 
   return (
     <div className="flex items-center gap-2 pt-1">
-      <UserPlus className="h-3.5 w-3.5 text-gray-400" />
+      <UserPlus className="h-3.5 w-3.5 text-gray-500" />
       <button
         onClick={() => create("contact")}
         disabled={loading !== null}

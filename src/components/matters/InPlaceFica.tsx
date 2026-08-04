@@ -181,7 +181,7 @@ function SubjectSection({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-gray-900">{label}</h3>
-          <p className="text-[11px] uppercase tracking-wide text-gray-400">
+          <p className="text-[11px] uppercase tracking-wide text-gray-500">
             {entity === "business" ? "Business" : entity === "trust" ? "Trust" : "Individual"}
           </p>
         </div>
@@ -260,7 +260,7 @@ function SubjectSection({
           {isEntity && (
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {entity === "trust" ? "Trustees" : "Directors"}
                 </p>
                 <button
@@ -276,7 +276,7 @@ function SubjectSection({
                   <Plus className="h-3.5 w-3.5" /> Add
                 </button>
               </div>
-              {directors.length === 0 && <p className="text-xs text-gray-400">None captured.</p>}
+              {directors.length === 0 && <p className="text-xs text-gray-500">None captured.</p>}
               <div className="space-y-2">
                 {directors.map((d, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -318,7 +318,7 @@ function SubjectSection({
 
           {/* ------------------------------------------------------------ consent */}
           <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Consent</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Consent</p>
 
             {portalConsent ? (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-green-700">
