@@ -27,7 +27,7 @@ function partyDisplay(p?: ListParty | null): string {
 }
 type MatterRow = Matter & {
   service_subtype?: string | null;
-  business_partners?: { name: string | null } | null;
+  firms?: { name: string | null } | null;
   services?: { code: string | null } | null;
   matter_parties?: ListParty[] | null;
 };
@@ -78,7 +78,7 @@ export default async function AdminMattersPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, clients(full_name, business_name, first_name, last_name), business_partners(name), services(code), matter_parties(role, entity_type, first_name, last_name, business_name)",
+        "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, clients(full_name, business_name, first_name, last_name), firms(name), services(code), matter_parties(role, entity_type, first_name, last_name, business_name)",
         { count: "exact" }
       ),
     filters
@@ -222,7 +222,7 @@ export default async function AdminMattersPage({
                       {m.municipality && <p>Council: {municipalityLabel(m.municipality)}</p>}
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{m.business_partners?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{m.firms?.name ?? "—"}</td>
                   <td className="px-5 py-3">
                     {m.current_phase ? (
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#1B2E6B]/10 text-[#1B2E6B] whitespace-nowrap">

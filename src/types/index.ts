@@ -365,7 +365,7 @@ export const PARTNER_TYPE_LABELS: Record<PartnerType, string> = {
   other: "Other",
 };
 
-export interface BusinessPartner {
+export interface Firm {
   id: string;
   name: string;
   abbreviation: string | null;

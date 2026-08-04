@@ -23,7 +23,7 @@ function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warn
 }
 
 type TransferRow = PropertyTransfer & {
-  business_partners?: { name: string | null } | null;
+  firms?: { name: string | null } | null;
 };
 
 export default async function AdminTransfersPage({
@@ -40,7 +40,7 @@ export default async function AdminTransfersPage({
   // code change here.
   const [{ data: muniRows }, { data: firmRows }] = await Promise.all([
     supabase.from("municipalities").select("code, name").eq("active", true).order("name"),
-    supabase.from("business_partners").select("id, name").eq("active", true).order("name"),
+    supabase.from("firms").select("id, name").eq("active", true).order("name"),
   ]);
   const municipalities = (muniRows as { code: string; name: string }[] | null) ?? [];
   const firms = (firmRows as { id: string; name: string | null }[] | null) ?? [];
@@ -56,7 +56,7 @@ export default async function AdminTransfersPage({
 
   let query = supabase
     .from("property_transfers")
-    .select("*, business_partners!property_transfers_business_partner_id_fkey(name)")
+    .select("*, firms!property_transfers_business_partner_id_fkey(name)")
     .order("created_at", { ascending: false });
   if (filters.type) query = query.eq("status", filters.type);
   if (muni) query = query.eq("municipality", muni);
@@ -168,7 +168,7 @@ export default async function AdminTransfersPage({
                       <p className="text-xs text-gray-400 mt-0.5">{t.property_description}</p>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{t.business_partners?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{t.firms?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{municipalityLabel(t.municipality)}</td>
                   <td className="px-5 py-3 text-gray-600">{counts.get(t.id) ?? 0}</td>
                   <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{formatDate(t.created_at)}</td>

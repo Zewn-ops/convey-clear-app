@@ -22,7 +22,7 @@ export default async function NewTransferPage() {
 
   const supabase = await createClient();
   const [{ data: firms }, { data: clients }] = await Promise.all([
-    supabase.from("business_partners").select("id, name").eq("active", true).order("name"),
+    supabase.from("firms").select("id, name").eq("active", true).order("name"),
     supabase
       .from("clients")
       .select("id, full_name, first_name, last_name, business_name")

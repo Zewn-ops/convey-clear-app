@@ -349,7 +349,7 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, transfer_id, created_at, updated_at, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), business_partners(name, abbreviation), services(id, code, name, config), property_transfers(id, reference, status)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, transfer_id, created_at, updated_at, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), firms(name, abbreviation), services(id, code, name, config), property_transfers(id, reference, status)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -461,7 +461,7 @@ export default async function AdminMatterDetailPage({
   const ficaSubjects = await buildFicaSubjects(supabase, matterClientId, parties);
 
   const svc = (matter as { services?: { code?: string; name?: string } | null }).services;
-  const firm = (matter as { business_partners?: { name?: string | null; abbreviation?: string | null } | null }).business_partners;
+  const firm = (matter as { firms?: { name?: string | null; abbreviation?: string | null } | null }).firms;
   // COO has no FICA — its document button + onboarding link say "documents" (A7).
   const isCoo = (svc?.code ?? "").toUpperCase() === "COO";
   const pipeline = getPipeline(svc?.code, matter.municipality, (matter as { service_subtype?: string | null }).service_subtype);

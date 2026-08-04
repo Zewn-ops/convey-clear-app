@@ -19,7 +19,7 @@ export default async function PartnerFirmPage() {
   // RLS policy (037) — a regular partner would get nothing here, which is why
   // the page is gated too.
   const [{ data: firm }, { data: bankingRow }, { data: bpRows }] = await Promise.all([
-    supabase.from("business_partners").select("name").eq("id", auth.partnerId).maybeSingle(),
+    supabase.from("firms").select("name").eq("id", auth.partnerId).maybeSingle(),
     supabase.from("firm_banking").select("*").eq("business_partner_id", auth.partnerId).maybeSingle(),
     supabase
       .from("firm_bp_numbers")

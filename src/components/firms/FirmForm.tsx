@@ -10,13 +10,13 @@ import Select from "@/components/ui/Select";
 import {
   PARTNER_TYPES,
   PARTNER_TYPE_LABELS,
-  type BusinessPartner,
+  type Firm,
   type PartnerType,
 } from "@/types";
 
 // Create OR edit a partner firm. `existing` switches it to edit mode (PATCH
 // instead of POST) and pre-fills every field.
-export default function FirmForm({ existing }: { existing?: BusinessPartner }) {
+export default function FirmForm({ existing }: { existing?: Firm }) {
   const router = useRouter();
   const [name, setName] = useState(existing?.name ?? "");
   const [abbreviation, setAbbreviation] = useState(existing?.abbreviation ?? "");

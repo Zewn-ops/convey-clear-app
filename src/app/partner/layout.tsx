@@ -17,7 +17,7 @@ export default async function PartnerLayout({
   if (session.profile?.business_partner_id) {
     const supabase = await createClient();
     const { data } = await supabase
-      .from("business_partners")
+      .from("firms")
       .select("name")
       .eq("id", session.profile.business_partner_id)
       .maybeSingle();

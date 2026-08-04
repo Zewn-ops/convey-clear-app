@@ -25,7 +25,7 @@ export default async function EditTransferPage({ params }: { params: Promise<{ i
   const supabase = await createClient();
   const [{ data: transfer }, { data: firms }, { data: clients }] = await Promise.all([
     supabase.from("property_transfers").select("*").eq("id", id).maybeSingle(),
-    supabase.from("business_partners").select("id, name").eq("active", true).order("name"),
+    supabase.from("firms").select("id, name").eq("active", true).order("name"),
     supabase
       .from("clients")
       .select("id, full_name, first_name, last_name, business_name")

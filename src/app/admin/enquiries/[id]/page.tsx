@@ -16,7 +16,7 @@ function statusVariant(s: EnquiryStatus): "info" | "success" | "warning" | "gray
   return ({ open: "warning", assigned: "info", resolved: "success", closed: "gray" } as const)[s] ?? "gray";
 }
 
-type EnquiryRow = Enquiry & { business_partners?: { name: string } | null };
+type EnquiryRow = Enquiry & { firms?: { name: string } | null };
 
 export default async function AdminEnquiryDetail({ params }: { params: { id: string } }) {
   const session = await getSessionProfile();
@@ -42,7 +42,7 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
   const supabase = await createClient();
   const { data: eData } = await supabase
     .from("enquiries")
-    .select("id, subject, message, status, matter_id, assigned_to, created_at, business_partner_id, business_partners(name)")
+    .select("id, subject, message, status, matter_id, assigned_to, created_at, business_partner_id, firms(name)")
     .eq("id", id)
     .maybeSingle();
   if (!eData) notFound();
@@ -73,7 +73,7 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{enquiry.subject}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {enquiry.business_partners?.name ?? "—"}
+            {enquiry.firms?.name ?? "—"}
             {enquiry.matter_id ? (
               <>
                 {" · Re: "}
@@ -121,7 +121,7 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
 
       <Card className="space-y-4">
         <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-          <p className="text-xs text-gray-400 mb-1">{enquiry.business_partners?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
+          <p className="text-xs text-gray-400 mb-1">{enquiry.firms?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
           <p className="text-sm text-gray-800 whitespace-pre-wrap">{enquiry.message}</p>
         </div>
         {messages.map((m) => (

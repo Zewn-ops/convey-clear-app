@@ -9,7 +9,7 @@ import {
   isStaffRole,
   isAdminRole,
   PARTNER_TYPE_LABELS,
-  type BusinessPartner,
+  type Firm,
 } from "@/types";
 import FilterRail, { type Facet } from "@/components/ui/FilterRail";
 import { parseListFilters, applyTextSearch } from "@/lib/list-filters";
@@ -44,7 +44,7 @@ export default async function AdminFirmsPage({
 
   const supabase = await createClient();
   let query = supabase
-    .from("business_partners")
+    .from("firms")
     .select("*")
     .order("active", { ascending: false })
     .order("name");
@@ -58,7 +58,7 @@ export default async function AdminFirmsPage({
   query = applyTextSearch(query, filters.q, ["name", "abbreviation", "primary_email"]);
 
   const { data } = await query;
-  const firms = (data as BusinessPartner[] | null) ?? [];
+  const firms = (data as Firm[] | null) ?? [];
   const filtering = Boolean(filters.q || filters.type) || status !== "active";
 
   const facets: Facet[] = [

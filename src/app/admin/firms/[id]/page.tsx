@@ -11,7 +11,7 @@ import {
   isAdminRole,
   PARTNER_TYPE_LABELS,
   type AppUser,
-  type BusinessPartner,
+  type Firm,
   type PropertyTransfer,
 } from "@/types";
 
@@ -47,9 +47,9 @@ export default async function AdminFirmDetailPage({
   const canWrite = isAdminRole(session.profile?.role);
 
   const supabase = await createClient();
-  const { data: firmRow } = await supabase.from("business_partners").select("*").eq("id", id).maybeSingle();
+  const { data: firmRow } = await supabase.from("firms").select("*").eq("id", id).maybeSingle();
   if (!firmRow) notFound();
-  const firm = firmRow as BusinessPartner;
+  const firm = firmRow as Firm;
 
   // A transfer references a firm through EITHER the attorney or the estate-agent
   // column, so both are matched here.

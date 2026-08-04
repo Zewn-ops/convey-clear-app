@@ -17,7 +17,7 @@ import {
   composeFullName,
   isSuperAdmin,
   type AppUser,
-  type BusinessPartner,
+  type Firm,
   type UserRole,
 } from "@/types";
 import { formatDate } from "@/lib/utils";
@@ -44,7 +44,7 @@ export default function UserManager({
 }: {
   callerRole: UserRole;
   initialUsers: AppUser[];
-  partners: BusinessPartner[];
+  partners: Firm[];
 }) {
   const router = useRouter();
   const assignable = isSuperAdmin(callerRole)

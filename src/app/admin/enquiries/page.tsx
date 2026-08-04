@@ -15,7 +15,7 @@ function statusVariant(s: EnquiryStatus): "info" | "success" | "warning" | "gray
 }
 const STATUS_ORDER: Record<EnquiryStatus, number> = { open: 0, assigned: 1, resolved: 2, closed: 3 };
 
-type Row = Enquiry & { business_partners?: { name: string } | null };
+type Row = Enquiry & { firms?: { name: string } | null };
 
 export default async function AdminEnquiriesPage() {
   const session = await getSessionProfile();
@@ -24,7 +24,7 @@ export default async function AdminEnquiriesPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("enquiries")
-    .select("id, subject, status, created_at, updated_at, business_partner_id, assigned_to, business_partners(name)")
+    .select("id, subject, status, created_at, updated_at, business_partner_id, assigned_to, firms(name)")
     .order("updated_at", { ascending: false });
 
   const rows = ((data as Row[] | null) ?? []).slice().sort((a, b) => {
@@ -56,7 +56,7 @@ export default async function AdminEnquiriesPage() {
               {rows.map((e) => (
                 <tr key={e.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3 font-medium text-gray-900">{e.subject}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{e.business_partners?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{e.firms?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{formatDateTime(e.updated_at)}</td>
                   <td className="px-5 py-3"><Badge label={ENQUIRY_STATUS_LABELS[e.status]} variant={statusVariant(e.status)} /></td>
                   <td className="px-5 py-3 text-right">

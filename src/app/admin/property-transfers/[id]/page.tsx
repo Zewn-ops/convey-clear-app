@@ -38,7 +38,7 @@ function matterStatusVariant(s: string): "info" | "success" | "danger" | "warnin
   ] ?? "gray";
 }
 
-type Firm = { name: string | null } | null;
+type FirmRef = { name: string | null } | null;
 type ClientRef = {
   id: string;
   full_name: string | null;
@@ -48,11 +48,11 @@ type ClientRef = {
 } | null;
 
 // PostgREST needs the FK constraint name to disambiguate: property_transfers has
-// TWO foreign keys into business_partners (attorney + estate agent) and TWO into
+// TWO foreign keys into firms (attorney + estate agent) and TWO into
 // clients (seller + buyer).
 type TransferDetail = PropertyTransfer & {
-  attorney?: Firm;
-  estate_agent?: Firm;
+  attorney?: FirmRef;
+  estate_agent?: FirmRef;
   seller?: ClientRef;
   buyer?: ClientRef;
 };
@@ -87,7 +87,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const { data: transferData } = await supabase
     .from("property_transfers")
     .select(
-      "*, attorney:business_partners!property_transfers_business_partner_id_fkey(name), estate_agent:business_partners!property_transfers_estate_agent_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
+      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), estate_agent:firms!property_transfers_estate_agent_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
     )
     .eq("id", id)
     .maybeSingle();

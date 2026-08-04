@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("business_partners")
+    .from("firms")
     .insert({ name, ...firmPayload(body), created_by: auth.callerId })
     .select("*")
     .single();
@@ -113,7 +113,7 @@ export async function PATCH(request: Request) {
 
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("business_partners")
+    .from("firms")
     .update({
       name,
       ...firmPayload(body),

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
-import { isAdminRole, type AppUser, type BusinessPartner } from "@/types";
+import { isAdminRole, type AppUser, type Firm } from "@/types";
 import { createClient } from "@/lib/supabase/server";
 import UserManager from "@/components/admin/UserManager";
 
@@ -16,7 +16,7 @@ export default async function AdminUsersPage() {
       .from("users")
       .select("id, email, full_name, phone, role, active, client_id, business_partner_id, last_login_at, created_at")
       .order("created_at", { ascending: false }),
-    supabase.from("business_partners").select("id, name, partner_type, primary_email, primary_cell, active, created_at").order("name"),
+    supabase.from("firms").select("id, name, partner_type, primary_email, primary_cell, active, created_at").order("name"),
   ]);
 
   return (
@@ -31,7 +31,7 @@ export default async function AdminUsersPage() {
       <UserManager
         callerRole={session.profile!.role}
         initialUsers={(usersData as AppUser[] | null) ?? []}
-        partners={(partnersData as BusinessPartner[] | null) ?? []}
+        partners={(partnersData as Firm[] | null) ?? []}
       />
     </div>
   );
