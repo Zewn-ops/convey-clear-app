@@ -1,7 +1,7 @@
 import Sidebar from "@/components/dashboard/Sidebar";
 import MobileNav from "@/components/dashboard/MobileNav";
 import NotificationBell from "@/components/notifications/NotificationBell";
-import { getEntityContext, entityLabel, entityKind } from "@/lib/entity";
+import { getEntityContext } from "@/lib/entity";
 
 export default async function DashboardLayout({
   children,
@@ -16,12 +16,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen bg-canvas">
       {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0">
-        <Sidebar
-          memberships={memberships}
-          activeId={activeId}
-          entityLabel={entityLabel}
-          entityKind={entityKind}
-        />
+        <Sidebar memberships={memberships} activeId={activeId} />
       </div>
 
       {/* Content */}

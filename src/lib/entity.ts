@@ -95,16 +95,8 @@ export async function getEntityContext(): Promise<EntityContext> {
  * That label is per-viewer, and the switcher already sits inside one person's
  * session, so repeating their name on every row is noise. The full form belongs
  * anywhere a party is shown to someone else.
+ *
+ * Implemented in lib/entity-display.ts and re-exported here: this module is
+ * server-only (next/headers above), and the switcher is a Client Component.
  */
-export function entityLabel(m: Membership): string {
-  return m.entityType === "natural_person" ? "Personal" : m.name;
-}
-
-/** Sub-label: what kind of thing this entity is. */
-export function entityKind(m: Membership): string {
-  return m.entityType === "natural_person"
-    ? "Your own affairs"
-    : m.entityType === "trust"
-      ? "Trust"
-      : "Business";
-}
+export { entityLabel, entityKind } from "@/lib/entity-display";

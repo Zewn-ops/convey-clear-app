@@ -14,6 +14,7 @@ import {
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import EntitySwitcher from "@/components/dashboard/EntitySwitcher";
+import { entityLabel, entityKind } from "@/lib/entity-display";
 import type { Membership } from "@/lib/entity";
 
 const navItems = [
@@ -25,13 +26,9 @@ const navItems = [
 export default function Sidebar({
   memberships = [],
   activeId = null,
-  entityLabel,
-  entityKind,
 }: {
   memberships?: Membership[];
   activeId?: string | null;
-  entityLabel?: (m: Membership) => string;
-  entityKind?: (m: Membership) => string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -52,7 +49,7 @@ export default function Sidebar({
 
       {/* Which entity this session is looking at. Renders nothing on a single
           membership, which is every existing client on day one. */}
-      {memberships.length > 1 && entityLabel && entityKind && (
+      {memberships.length > 1 && (
         <div className="border-b border-white/10 px-3 py-3">
           <EntitySwitcher
             memberships={memberships}
