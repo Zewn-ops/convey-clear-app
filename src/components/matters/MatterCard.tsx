@@ -55,11 +55,14 @@ export default function MatterCard({
   href,
   unread = false,
   showStage = false,
+  index,
 }: {
   matter: MatterCardRow;
   href: string;
   unread?: boolean;
   showStage?: boolean;
+  /** 1-based position in the whole result set, continuing across pages. */
+  index?: number;
 }) {
   const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
   const steps = pl ? phaseSteps(pl) : [];
@@ -92,6 +95,11 @@ export default function MatterCard({
             href={href}
             className="flex items-center gap-2 text-[17px] font-semibold tracking-[-0.018em] text-ink hover:text-action hover:underline"
           >
+            {typeof index === "number" && (
+              <span className="shrink-0 text-[13px] font-medium tabular-nums text-ink-3">
+                {index}.
+              </span>
+            )}
             {unread && (
               <span
                 className="h-2 w-2 shrink-0 rounded-full bg-required-fill"

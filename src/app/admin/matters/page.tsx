@@ -16,10 +16,9 @@ import { phaseLabel, getPipeline } from "@/lib/pipelines";
 import {
   parseMatterFilters,
   applyMatterFilters,
-  MATTER_PAGE_SIZE,
   type MatterQueue,
 } from "@/lib/matters-query";
-import MatterPagination from "@/components/matters/MatterPagination";
+import Pagination from "@/components/ui/Pagination";
 import MatterCard, { type MatterCardRow } from "@/components/matters/MatterCard";
 import QueueTabs from "@/components/matters/QueueTabs";
 import FilterBar from "@/components/ui/FilterBar";
@@ -235,11 +234,20 @@ export default async function AdminMattersPage({
 
         <div className="min-w-0 flex-1">
           {matters.length > 0 ? (
-            <div className="space-y-4">
-              {matters.map((m) => (
-                <MatterCard key={m.id} matter={m} href={`/admin/matters/${m.id}`} unread={unread.has(m.id)} showStage />
+            <ol className="space-y-4">
+              {matters.map((m, i) => (
+                <MatterCard
+                  key={m.id}
+                  matter={m}
+                  href={`/admin/matters/${m.id}`}
+                  unread={unread.has(m.id)}
+                  showStage
+                  // Continues across pages: row 1 of page 2 is 26, not 1, so a
+                  // number spoken on a call points at the same matter.
+                  index={(filters.page - 1) * filters.perPage + i + 1}
+                />
               ))}
-            </div>
+            </ol>
           ) : (
         // "No matches" and "nothing exists yet" are different problems needing
         // different next actions — saying "no matches" to someone with an empty
@@ -279,7 +287,7 @@ export default async function AdminMattersPage({
           )}
 
           <div className="mt-6">
-            <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
+            <Pagination page={filters.page} pageSize={filters.perPage} total={total} noun="matters" />
           </div>
         </div>
       </div>
