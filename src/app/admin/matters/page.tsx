@@ -210,7 +210,14 @@ export default async function AdminMattersPage({
         </Link>
       </div>
 
-      <div className="space-y-3">
+      {/* Sticky because this is a scanning surface: on a long list the queue
+          counts and the active filters are the context that stops you losing
+          your place, and re-scrolling to the top to change a filter is the
+          small repeated cost that makes a tool tiring.
+
+          The page title deliberately scrolls away — pinning it would spend a
+          third of the sticky height on a word you already know. */}
+      <div className="sticky top-0 z-20 space-y-3 border-b border-line bg-canvas py-3">
         <QueueTabs
           active={filters.queue}
           counts={{
