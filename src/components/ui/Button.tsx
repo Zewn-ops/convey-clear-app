@@ -15,8 +15,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClasses: Record<Variant, string> = {
   primary:
     "bg-action-fill text-white hover:opacity-90 focus-visible:ring-action",
+  // ConveyClear orange. White measures 4.65:1 on #c74d24 and passes AA; it was
+  // ink only because the lighter amber fill next to it could not carry white.
   secondary:
-    "bg-required-fill text-[#1c2232] hover:opacity-90 focus-visible:ring-required",
+    "bg-required-fill text-white hover:opacity-90 focus-visible:ring-required",
   outline:
     "border border-line text-ink-2 bg-transparent hover:bg-raised hover:text-ink focus-visible:ring-action",
   ghost:

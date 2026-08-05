@@ -13,11 +13,14 @@ import type { ReactNode } from "react";
 export type StatusTone = "required" | "waiting" | "ok" | "action" | "danger" | "neutral";
 
 const TONE: Record<StatusTone, string> = {
-  // Label colours are solved per fill, not chosen. White on the orange and
-  // amber fills is under 3:1 and fails; ink passes on both.
-  required: "bg-required-fill text-[#1c2232]",
-  waiting: "bg-waiting-fill text-[#1c2232]",
-  ok: "bg-ok-fill text-[#1c2232]",
+  // Label colours are solved per fill, not chosen. White is now used on every
+  // fill, which was only possible by deepening the amber and green fills one
+  // step down their own scale (tokens.css): white on the previous #df911a was
+  // 2.56:1 and on #2e9c4e 3.51:1, both failing. At #ad6200 and #08863a they
+  // measure 4.64:1 and 4.69:1. Re-measure before changing any fill.
+  required: "bg-required-fill text-white",
+  waiting: "bg-waiting-fill text-white",
+  ok: "bg-ok-fill text-white",
   action: "bg-action-fill text-white",
   danger: "bg-danger-fill text-white",
   neutral: "bg-raised text-ink-2 ring-1 ring-inset ring-line",

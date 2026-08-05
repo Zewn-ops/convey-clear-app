@@ -18,16 +18,19 @@ export default function MetaChip({
   tone?: "neutral" | "waiting" | "required";
   icon?: ReactNode;
 }) {
+  // No ring: the chips sit on the card they describe, so an outline made each
+  // one read as a separate object. They carry the card's own surface colour and
+  // lift off it with a shadow instead, which groups them as one row of facts.
   const toned =
     tone === "waiting"
-      ? "ring-waiting/25 bg-waiting-tint text-waiting"
+      ? "bg-waiting-tint text-waiting"
       : tone === "required"
-        ? "ring-required/25 bg-required-tint text-required"
-        : "ring-line/70 bg-raised text-ink-2";
+        ? "bg-required-tint text-required"
+        : "bg-surface text-ink-2";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-[12px] font-medium tabular-nums ring-1 ring-inset ${toned}`}
+      className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium tabular-nums shadow-sm ${toned}`}
     >
       {icon}
       {label} <b className="font-semibold text-ink">{value}</b>

@@ -104,8 +104,12 @@ export default function MatterCard({
           </Link>
           {subtitle && <p className="mt-1.5 text-[13px] font-medium text-ink-3">{subtitle}</p>}
         </div>
+        {/* "Status:" is carried because the word alone is ambiguous on a card
+            that also badges parties and document states — "New" could be a new
+            matter or a new document until the label says which. */}
         {m.status && (
           <StatusPill tone={tone}>
+            <span className="font-normal opacity-80">Status:</span>{" "}
             {MATTER_STATUS_LABELS[m.status as MatterStatus] ?? m.status}
           </StatusPill>
         )}

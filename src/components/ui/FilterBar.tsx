@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState } from "react";
 import { Search, X } from "lucide-react";
+import FacetSelect from "@/components/ui/FacetSelect";
 import { cn } from "@/lib/utils";
 import type { Facet } from "@/components/ui/FilterRail";
 
@@ -47,6 +48,8 @@ export default function FilterBar({
   const pathname = usePathname();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get(searchKey) ?? "");
+  // One open at a time: six expanded facets would outrun the sticky rail.
+  const [openKey, setOpenKey] = useState<string | null>(null);
 
   const current = (f: Facet) => sp.get(f.key) ?? f.defaultValue;
   const isSet = (f: Facet) => current(f) !== f.defaultValue;
@@ -100,50 +103,23 @@ export default function FilterBar({
           onChange={(e) => setQ(e.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          className="w-full rounded-lg border border-line bg-surface py-2 pl-9 pr-3 text-sm text-ink placeholder:text-ink-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-action"
+          className="w-full rounded-lg bg-raised py-2 pl-9 pr-3 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
         />
       </form>
 
-      {facets.map((f) => {
-        const value = current(f);
-        const set = isSet(f);
-        const label = f.options.find((o) => o.value === value)?.label ?? f.label;
-        return (
-          <label key={f.key} className={cn("relative", vertical && "block w-full")}>
-            <span className="sr-only">{f.label}</span>
-            <select
-              value={value}
-              onChange={(e) => setFacet(f, e.target.value)}
-              className={cn(
-                "cursor-pointer appearance-none rounded-lg border py-2 pl-3 pr-8 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-action",
-                vertical && "w-full",
-                set
-                  ? "border-action/40 bg-action-fill/10 font-medium text-action"
-                  : "border-line bg-surface text-ink-2 hover:border-line/70"
-              )}
-            >
-              {f.options.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.value === f.defaultValue ? f.label : `${f.label}: ${o.label}`}
-                </option>
-              ))}
-            </select>
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 12 12"
-              className={cn(
-                "pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2",
-                set ? "text-action" : "text-ink-3"
-              )}
-            >
-              <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {/* The trigger shows the value, so the closed state still says what
-                is on. Screen readers get the field name from the sr-only span. */}
-            <span className="sr-only">{set ? `filtered by ${label}` : "not filtered"}</span>
-          </label>
-        );
-      })}
+      {facets.map((f) => (
+        <FacetSelect
+          key={f.key}
+          facet={f}
+          value={current(f)}
+          open={openKey === f.key}
+          onToggle={() => setOpenKey(openKey === f.key ? null : f.key)}
+          onSelect={(v) => {
+            setFacet(f, v);
+            setOpenKey(null);
+          }}
+        />
+      ))}
 
       {activeCount > 0 && (
         <button

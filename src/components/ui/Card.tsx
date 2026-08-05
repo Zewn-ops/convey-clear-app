@@ -16,11 +16,19 @@ import { cn } from "@/lib/utils";
 // them here, in one place, when he answers.
 export type CardAccent = "client" | "firm" | "service" | "internal";
 
+// Accents are a tint plus a shadow now, not an outline. Borders are reserved
+// for the cases where they carry meaning (form controls, table rules); a card
+// is an object and lifts off the page instead of being drawn on it.
+//
+// ⚠️ Dark mode still keeps a hairline, and that is not an oversight: a shadow
+// against #171b24 reads as mud rather than as elevation, so the surface steps
+// lighter than the canvas and holds a 1px ring to find its edge. Removing that
+// ring makes every card in dark mode edgeless.
 const accentClasses: Record<CardAccent, string> = {
-  client: "border-2 border-emerald-600/40",
-  firm: "border-2 border-violet-600/40",
-  service: "border-2 border-sky-600/40",
-  internal: "border-2 border-line/40",
+  client: "bg-emerald-500/[0.04] dark:ring-1 dark:ring-emerald-400/25",
+  firm: "bg-violet-500/[0.04] dark:ring-1 dark:ring-violet-400/25",
+  service: "bg-sky-500/[0.04] dark:ring-1 dark:ring-sky-400/25",
+  internal: "dark:ring-1 dark:ring-line",
 };
 
 interface CardProps {
