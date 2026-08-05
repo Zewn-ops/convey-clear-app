@@ -99,15 +99,19 @@ worse than a consistently weekend-only one. Verified against seven hand-counted 
 
 | Migration | State |
 |---|---|
-| 048 `client_members` + backfill + `app_user_client_ids()` | ✅ applied to staging, backfill verified |
-| 049 helper swap to membership | ✅ applied, proven by impersonation across five roles |
-| 050 `locations` | ⬜ |
-| 051 `transfer_parties` | ⬜ delivers the parked 07-28 asks |
-| 052/053 access grants + enforce | ⬜ |
-| 054/055 councils hierarchy, compliance columns | ⬜ |
+| 046/047 `business_partners` → `firms` + shim drop | ✅ applied to staging |
+| 048 `client_members` + backfill + `app_user_client_ids()` | ✅ backfill verified |
+| 049 helper swap to membership | ✅ proven across five roles |
+| 050 `transfer_parties` + UI on both portals | ✅ all three identity paths proven |
+| 051 `transfer_access_grants` + backfill | ✅ mirrors pointers exactly, both directions |
+| 052 `can_access_transfer()` reads the grants | ✅ revocation survives a reopen |
+| `locations` | ⬜ Section 3 needs it |
+| councils hierarchy, compliance columns | ⬜ |
 
-**Not yet built on top:** the `client_members` admin UI and the entity switcher. The database supports
-multi-entity now; the app still shows one entity, because nothing reads the new table yet.
+**Built on top:** entity switcher, membership admin card, transfer parties card.
+
+**Not built:** a UI for grants. Revoking a firm's access is still SQL. The table
+and the enforcement exist; the button does not.
 
 Staging has a deliberate two-entity fixture: `dryrun.client@example.com` is a member of both their own
 person record and Brookfield Props, so the switcher has something to switch between when it exists.
