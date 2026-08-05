@@ -3,52 +3,39 @@ import { getSessionProfile } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
-import { Plus } from "lucide-react";
-import { formatDate, municipalityLabel } from "@/lib/utils";
+import { Plus, Briefcase } from "lucide-react";
 import {
   isStaffRole,
-  clientDisplayName,
-  composeFullName,
   MATTER_STATUS_LABELS,
   PRIORITY_LABELS,
   type Matter,
   type MatterPriority,
   type MatterStatus,
 } from "@/types";
-import { getPipeline, phaseLabel, stageLabel } from "@/lib/pipelines";
-import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
-
-// Row party (subset embedded on the list query).
-type ListParty = { role: string; entity_type: string; first_name: string | null; last_name: string | null; business_name: string | null };
-function partyDisplay(p?: ListParty | null): string {
-  if (!p) return "";
-  return (p.entity_type === "natural_person" ? composeFullName(p.first_name, p.last_name) : p.business_name) || "";
-}
-type MatterRow = Matter & {
-  service_subtype?: string | null;
-  firms?: { name: string | null } | null;
-  services?: { code: string | null } | null;
-  matter_parties?: ListParty[] | null;
-};
+import { phaseLabel, getPipeline } from "@/lib/pipelines";
+import {
+  parseMatterFilters,
+  applyMatterFilters,
+  MATTER_PAGE_SIZE,
+  type MatterQueue,
+} from "@/lib/matters-query";
 import MatterPagination from "@/components/matters/MatterPagination";
-import FilterRail, { type Facet } from "@/components/ui/FilterRail";
+import MatterCard, { type MatterCardRow } from "@/components/matters/MatterCard";
+import QueueTabs from "@/components/matters/QueueTabs";
+import FilterBar from "@/components/ui/FilterBar";
+import type { Facet } from "@/components/ui/FilterRail";
 
-export const metadata = { title: "All Matters — ConveyClear Admin" };
+export const metadata = { title: "Matters — ConveyClear Admin" };
 
-function statusVariant(status: string): "info" | "success" | "danger" | "warning" | "gray" {
-  const map: Record<string, "info" | "success" | "danger" | "warning" | "gray"> = {
-    new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning",
+type MatterRow = Matter &
+  MatterCardRow & {
+    service_subtype?: string | null;
+    firms?: { name: string | null } | null;
+    services?: { code: string | null; name: string | null } | null;
   };
-  return map[status] ?? "gray";
-}
 
-function priorityVariant(priority: string): "default" | "danger" | "warning" | "info" | "gray" {
-  const map: Record<string, "default" | "danger" | "warning" | "info" | "gray"> = {
-    whale: "default", urgent: "danger", priority: "warning", complex: "info", standard: "gray", emerging: "info",
-  };
-  return map[priority] ?? "gray";
-}
+const LIST_SELECT =
+  "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, updated_at, business_partner_id, clients(full_name, business_name, first_name, last_name), firms(name), services(code, name)";
 
 export default async function AdminMattersPage({
   searchParams,
@@ -60,29 +47,45 @@ export default async function AdminMattersPage({
 
   const supabase = await createClient();
 
-  // Facet sources come from the DB, not a hardcoded list, so a council added in
-  // `municipalities` shows up as a filter without a code change. Phases are read
-  // from the rows themselves because the phase vocabulary is per-pipeline
-  // (service × municipality) — there is no single global list to enumerate.
-  const [{ data: muniRows }, { data: phaseRows }] = await Promise.all([
+  // Facet sources come from the DB, not a hardcoded list, so a council or firm
+  // added later shows up as a filter without a code change. Phases are read from
+  // the rows themselves because the phase vocabulary is per-pipeline (service ×
+  // municipality) and there is no single global list to enumerate.
+  const [{ data: muniRows }, { data: firmRows }, { data: phaseRows }] = await Promise.all([
     supabase.from("municipalities").select("code, name").eq("active", true).order("name"),
+    supabase.from("firms").select("id, name").order("name"),
     supabase.from("matters").select("current_phase").not("current_phase", "is", null),
   ]);
   const municipalities = (muniRows as { code: string; name: string }[] | null) ?? [];
+  const firms = (firmRows as { id: string; name: string | null }[] | null) ?? [];
   const phases = Array.from(
     new Set(((phaseRows as { current_phase: string | null }[] | null) ?? []).map((r) => r.current_phase!).filter(Boolean))
   ).sort();
 
-  const filters = parseMatterFilters(searchParams, municipalities.map((m) => m.code));
-  const { data, count } = await applyMatterFilters(
-    supabase
-      .from("matters")
-      .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, clients(full_name, business_name, first_name, last_name), firms(name), services(code), matter_parties(role, entity_type, first_name, last_name, business_name)",
-        { count: "exact" }
-      ),
-    filters
+  // Staff land on their own work, not on everything. See QueueTabs.
+  const filters = parseMatterFilters(
+    searchParams,
+    municipalities.map((m) => m.code),
+    firms.map((f) => f.id),
+    "ours"
   );
+
+  // Counts for the three tabs, each carrying the *other* active filters so the
+  // numbers describe the list you would actually land on. head:true means no
+  // rows travel — three counts cost less than one page of data.
+  const countFor = (queue: MatterQueue) =>
+    applyMatterFilters(supabase.from("matters").select("id", { count: "exact", head: true }), {
+      ...filters,
+      queue,
+      page: 1,
+    });
+
+  const [{ data, count }, oursCount, councilCount, allCount] = await Promise.all([
+    applyMatterFilters(supabase.from("matters").select(LIST_SELECT, { count: "exact" }), filters),
+    countFor("ours"),
+    countFor("council"),
+    countFor("all"),
+  ]);
 
   const matters = (data as MatterRow[] | null) ?? [];
   const total = count ?? 0;
@@ -97,30 +100,35 @@ export default async function AdminMattersPage({
       .eq("user_id", meId)
       .is("read_at", null)
       .in("matter_id", matters.map((m) => m.id));
-    (notes ?? []).forEach((n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id));
+    (notes ?? []).forEach(
+      (n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id)
+    );
   }
 
   const hasActiveFilters =
     filters.status !== "active" ||
     filters.scope !== "all" ||
-    Boolean(filters.q || filters.municipality || filters.priority || filters.phase);
+    Boolean(filters.q || filters.municipality || filters.firm || filters.priority || filters.phase);
 
   // A facet with nothing to choose between is noise — drop it rather than render
-  // an empty heading (which is what a fresh database would otherwise show).
+  // a control with one option (which is what a fresh database would show).
   const facets: Facet[] = [
-    {
-      key: "status",
-      label: "Status",
-      defaultValue: "active",
-      options: [
-        { value: "active", label: "Active" },
-        ...(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => ({
-          value: s,
-          label: MATTER_STATUS_LABELS[s],
-        })),
-        { value: "all", label: "All statuses" },
-      ],
-    },
+    // Shown from the first firm onward, not the second: with one firm the
+    // control still separates that firm's matters from those with no firm at
+    // all, which is a real distinction on a staff list.
+    ...(firms.length > 0
+      ? [
+          {
+            key: "firm",
+            label: "Firm",
+            defaultValue: "",
+            options: [
+              { value: "", label: "Any firm" },
+              ...firms.map((f) => ({ value: f.id, label: f.name ?? "Unnamed firm" })),
+            ],
+          } as Facet,
+        ]
+      : []),
     ...(municipalities.length
       ? [
           {
@@ -134,6 +142,19 @@ export default async function AdminMattersPage({
           } as Facet,
         ]
       : []),
+    {
+      key: "status",
+      label: "Status",
+      defaultValue: "active",
+      options: [
+        { value: "active", label: "Active" },
+        ...(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => ({
+          value: s,
+          label: MATTER_STATUS_LABELS[s],
+        })),
+        { value: "all", label: "All statuses" },
+      ],
+    },
     {
       key: "priority",
       label: "Priority",
@@ -152,7 +173,12 @@ export default async function AdminMattersPage({
             key: "phase",
             label: "Phase",
             defaultValue: "",
-            options: [{ value: "", label: "Any phase" }, ...phases.map((p) => ({ value: p, label: p }))],
+            options: [
+              { value: "", label: "Any phase" },
+              // Phase keys are pipeline slugs; show the human name. The three
+              // pipelines share one phase vocabulary, so any of them resolves it.
+              ...phases.map((p) => ({ value: p, label: phaseLabel(getPipeline("COO", "COT"), p) })),
+            ],
           } as Facet,
         ]
       : []),
@@ -168,11 +194,13 @@ export default async function AdminMattersPage({
   ];
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">All Matters</h1>
-          <p className="text-sm text-ink-3 mt-1">{total} matter{total === 1 ? "" : "s"}</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Matters</h1>
+          <p className="text-sm text-ink-3 mt-1">
+            {total} {total === 1 ? "matter" : "matters"} in this view
+          </p>
         </div>
         <Link
           href="/admin/matters/new"
@@ -182,109 +210,63 @@ export default async function AdminMattersPage({
         </Link>
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <FilterRail facets={facets} searchPlaceholder="Search title, ref, firm…" />
-
-        <div className="min-w-0 flex-1 space-y-6">
-        <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line bg-raised">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Firm</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Priority</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Deadline</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {matters.map((m) => {
-                const seller = partyDisplay(m.matter_parties?.find((p) => p.role === "seller"));
-                const buyer = partyDisplay(m.matter_parties?.find((p) => p.role === "buyer"));
-                const pipeline = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-                return (
-                <tr key={m.id} className="hover:bg-raised transition-colors">
-                  <td className="px-5 py-3">
-                    <span className="flex items-center gap-2">
-                      {unread.has(m.id) && <span className="h-2 w-2 rounded-full bg-action-fill shrink-0" title="New activity" />}
-                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
-                        {m.title || clientDisplayName(m.clients) || "Untitled"}
-                      </Link>
-                    </span>
-                    <div className="text-xs text-ink-3 mt-0.5 space-y-0.5">
-                      {seller && <p>Seller: {seller}</p>}
-                      {buyer && <p>Buyer: {buyer}</p>}
-                      {!seller && !buyer && m.clients && <p>Client: {clientDisplayName(m.clients)}</p>}
-                      {m.municipality && <p>Council: {municipalityLabel(m.municipality)}</p>}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">{m.firms?.name ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    {m.current_phase ? (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-action-fill/10 text-action whitespace-nowrap">
-                        {pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase}
-                      </span>
-                    ) : (
-                      <span className="text-ink-3">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-ink-3 hidden md:table-cell max-w-[140px] truncate">
-                    {pipeline ? (m.current_stage ? stageLabel(pipeline, m.current_stage) : "—") : (m.current_stage || "—")}
-                  </td>
-                  <td className="px-5 py-3 hidden md:table-cell">
-                    {m.priority && (
-                      <Badge
-                        label={PRIORITY_LABELS[m.priority as MatterPriority]}
-                        variant={priorityVariant(m.priority)}
-                      />
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
-                    {m.deadline ? formatDate(m.deadline) : "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    {m.status && (
-                      <Badge
-                        label={MATTER_STATUS_LABELS[m.status as MatterStatus]}
-                        variant={statusVariant(m.status)}
-                      />
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <Link href={`/admin/matters/${m.id}`} className="text-action hover:underline text-xs font-medium">
-                      Manage
-                    </Link>
-                  </td>
-                </tr>
-                );
-              })}
-              {matters.length === 0 && (
-                <tr>
-                  {/* "No matches" and "nothing exists yet" are different problems
-                      and need different next actions — saying "no matches" to
-                      someone with an empty database sends them hunting for a
-                      filter they never set. */}
-                  <td colSpan={8} className="px-5 py-10 text-center text-ink-3">
-                    {hasActiveFilters ? (
-                      <>No matters match your filters — try clearing them.</>
-                    ) : (
-                      <>No matters yet. Create the first one with <span className="font-medium text-ink-3">New matter</span>.</>
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        </Card>
-
-          <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
-        </div>
+      <div className="space-y-3">
+        <QueueTabs
+          active={filters.queue}
+          counts={{
+            ours: oursCount.count ?? 0,
+            council: councilCount.count ?? 0,
+            all: allCount.count ?? 0,
+          }}
+        />
+        <FilterBar facets={facets} searchPlaceholder="Search title, ref, firm…" />
       </div>
+
+      {matters.length > 0 ? (
+        <div className="space-y-4">
+          {matters.map((m) => (
+            <MatterCard key={m.id} matter={m} href={`/admin/matters/${m.id}`} unread={unread.has(m.id)} showStage />
+          ))}
+        </div>
+      ) : (
+        // "No matches" and "nothing exists yet" are different problems needing
+        // different next actions — saying "no matches" to someone with an empty
+        // database sends them hunting for a filter they never set.
+        <Card className="py-12 text-center">
+          <Briefcase className="mx-auto mb-3 h-10 w-10 text-ink-3" />
+          {hasActiveFilters ? (
+            <>
+              <p className="font-medium text-ink">Nothing matches these filters</p>
+              <p className="mt-1 text-sm text-ink-3">Clear them to see the rest of this queue.</p>
+            </>
+          ) : filters.queue === "ours" ? (
+            <>
+              <p className="font-medium text-ink">Nothing waiting on us</p>
+              <p className="mt-1 text-sm text-ink-3">
+                Every active matter is with the council. Check{" "}
+                <span className="font-medium text-ink-2">With council</span> above.
+              </p>
+            </>
+          ) : filters.queue === "council" ? (
+            <>
+              <p className="font-medium text-ink">Nothing sitting with the council</p>
+              <p className="mt-1 text-sm text-ink-3">Matters appear here once submitted or escalated.</p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-ink">No matters yet</p>
+              <Link
+                href="/admin/matters/new"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-action-fill px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" /> New matter
+              </Link>
+            </>
+          )}
+        </Card>
+      )}
+
+      <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
     </div>
   );
 }

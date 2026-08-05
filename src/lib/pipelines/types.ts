@@ -31,6 +31,18 @@ export interface PipelineStage {
   name: string;
   clientVisible: boolean;     // orange = client+admin · false = admin-only (blue)
   ownerRole?: PipelineOwnerRole;
+  // Who the matter is actually blocked on while it sits here. Absent means US —
+  // ConveyClear has the next move. Set it ONLY where the stage unambiguously
+  // means "submitted / escalated, now waiting for the council to respond".
+  //
+  // ownerRole cannot answer this: every stage has a staff owner, including the
+  // ones where that staff member is doing nothing but waiting. The distinction
+  // drives the admin queue split (DESIGN.md: orange = we are the blocker, amber
+  // = the council is), and it is the difference between a work list and a list.
+  //
+  // Deliberately conservative: anything unmarked counts as ours. Over-surfacing
+  // work is recoverable; silently parking a matter as "waiting" is not.
+  waitingOn?: "council";
   // When set, this stage is a DECISION POINT — staff pick one outcome, and some
   // outcomes require a one-of reason. Stored on the matter as
   // service_data.stage_outcome / service_data.stage_reason.

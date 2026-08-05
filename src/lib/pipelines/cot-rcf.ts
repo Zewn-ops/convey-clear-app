@@ -26,8 +26,8 @@ export const cotRcf: Pipeline = {
       clientName: "Escalation in Progress",
       clientVisible: true,
       stages: [
-        { key: "escalated_with_cot", name: "Escalated with COT", clientVisible: false, ownerRole: "staff_ops" },
-        { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops" },
+        { key: "escalated_with_cot", name: "Escalated with COT", clientVisible: false, ownerRole: "staff_ops", waitingOn: "council" },
+        { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         {
           key: "cot_decision",
           name: "COT Decision",

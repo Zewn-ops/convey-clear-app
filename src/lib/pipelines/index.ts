@@ -129,3 +129,25 @@ export function phaseSteps(p: Pipeline): { key: string; label: string }[] {
     { key: p.terminal.key, label: p.terminal.name },
   ];
 }
+
+/**
+ * Every stage key across every pipeline that means "waiting on the council".
+ *
+ * Derived from config rather than hand-listed so a stage marked waitingOn in a
+ * pipeline file is immediately reflected in the admin queue. Stage keys repeat
+ * across pipelines (RCF and RCC share escalated_with_cot), which is fine: the
+ * queue filter matches on current_stage alone and a shared key means the same
+ * thing in both.
+ */
+export const COUNCIL_WAIT_STAGE_KEYS: string[] = Array.from(
+  new Set(
+    PIPELINES.flatMap((p) =>
+      p.phases.flatMap((ph) => ph.stages.filter((s) => s.waitingOn === "council").map((s) => s.key))
+    )
+  )
+);
+
+/** Is this matter sitting on a stage where the council owes us a response? */
+export function isWaitingOnCouncil(stageKey?: string | null): boolean {
+  return !!stageKey && COUNCIL_WAIT_STAGE_KEYS.includes(stageKey);
+}

@@ -25,8 +25,8 @@ export const cotCoo: Pipeline = {
       clientName: "COO in Progress",
       clientVisible: true,
       stages: [
-        { key: "coo_submitted", name: "COO Submitted", clientVisible: true, ownerRole: "staff_ops" },
-        { key: "escalation_initiated", name: "Escalation Initiated", clientVisible: true, ownerRole: "staff_ops" },
+        { key: "coo_submitted", name: "COO Submitted", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
+        { key: "escalation_initiated", name: "Escalation Initiated", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         { key: "welcome_letter_received", name: "Welcome Letter Received", clientVisible: false, ownerRole: "staff_ops" },
       ],
     },
