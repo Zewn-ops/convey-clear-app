@@ -23,6 +23,7 @@ import ClientDetailsForm from "@/components/clients/ClientDetailsForm";
 import CreateLoginButton from "@/components/clients/CreateLoginButton";
 import { signedDocUrls } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
+import EntityMembers, { type MemberRow, type CandidateUser } from "@/components/clients/EntityMembers";
 
 export const metadata = { title: "Client Details — ConveyClear Admin" };
 
@@ -93,6 +94,51 @@ export default async function AdminClientDetailPage({
   const hasLogin = !!loginRow;
   const loginEmail = (loginRow as { email: string | null } | null)?.email ?? null;
 
+  // Membership: who may act for this entity. Read past RLS with the admin
+  // client for the same reason as the login lookup above — the page is
+  // staff-gated, but a client's user rows are not staff-readable.
+  const admin = createAdminClient();
+  const { data: memberRows } = await admin
+    .from("client_members")
+    .select("id, role, is_default, users(id, full_name, email)")
+    .eq("client_id", id)
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: true });
+
+  type RawMember = {
+    id: string;
+    role: "owner" | "member";
+    is_default: boolean;
+    users: { id: string; full_name: string | null; email: string | null } | null;
+  };
+  const members: MemberRow[] = ((memberRows as RawMember[] | null) ?? [])
+    .filter((r) => r.users)
+    .map((r) => ({
+      id: r.id,
+      role: r.role,
+      isDefault: r.is_default,
+      userId: r.users!.id,
+      userName: r.users!.full_name?.trim() || r.users!.email || "Unnamed",
+      userEmail: r.users!.email ?? "—",
+    }));
+
+  // Only client-role logins can be attached. Staff and partner users reach
+  // matters through their own routes; giving them a membership as well would
+  // create a second, quieter path to the same data.
+  const { data: candidateRows } = await admin
+    .from("users")
+    .select("id, full_name, email")
+    .eq("role", "client")
+    .eq("active", true)
+    .not("auth_user_id", "is", null)
+    .order("full_name", { ascending: true })
+    .limit(200);
+  const candidates: CandidateUser[] = ((candidateRows as { id: string; full_name: string | null; email: string | null }[] | null) ?? []).map((u) => ({
+    id: u.id,
+    name: u.full_name?.trim() || u.email || "Unnamed",
+    email: u.email ?? "—",
+  }));
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -134,8 +180,12 @@ export default async function AdminClientDetailPage({
         canDelete={isAdminRole(session.profile?.role)}
       />
 
+      <Card>
+        <EntityMembers clientId={id} members={members} candidates={candidates} />
+      </Card>
+
       <div>
-        <h2 className="font-semibold text-ink mb-3">
+        <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">
           Matters ({matters.length})
         </h2>
         {matters.length > 0 ? (
