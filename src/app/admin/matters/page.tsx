@@ -210,14 +210,11 @@ export default async function AdminMattersPage({
         </Link>
       </div>
 
-      {/* Sticky because this is a scanning surface: on a long list the queue
-          counts and the active filters are the context that stops you losing
-          your place, and re-scrolling to the top to change a filter is the
-          small repeated cost that makes a tool tiring.
-
-          The page title deliberately scrolls away — pinning it would spend a
-          third of the sticky height on a word you already know. */}
-      <div className="sticky top-0 z-20 space-y-3 border-b border-line bg-canvas py-3">
+      {/* The queue split stays pinned across the full width: it is the view you
+          are in, not a filter, and losing track of it on a long list is the
+          thing that makes you scroll back up. The page title is deliberately
+          not pinned — it would spend sticky height restating a word you know. */}
+      <div className="sticky top-0 z-20 border-b border-line bg-canvas py-3">
         <QueueTabs
           active={filters.queue}
           counts={{
@@ -226,16 +223,24 @@ export default async function AdminMattersPage({
             all: allCount.count ?? 0,
           }}
         />
-        <FilterBar facets={facets} searchPlaceholder="Search title, ref, firm…" />
       </div>
 
-      {matters.length > 0 ? (
-        <div className="space-y-4">
-          {matters.map((m) => (
-            <MatterCard key={m.id} matter={m} href={`/admin/matters/${m.id}`} unread={unread.has(m.id)} showStage />
-          ))}
-        </div>
-      ) : (
+      {/* row-reverse rather than putting the rail second in the DOM: the filters
+          precede the list for keyboard and screen-reader order, and still render
+          on the right, in the space a single column of cards was wasting. */}
+      <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
+        <aside className="lg:sticky lg:top-[76px] lg:w-56 lg:shrink-0">
+          <FilterBar orientation="vertical" facets={facets} searchPlaceholder="Search title, ref, firm…" />
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          {matters.length > 0 ? (
+            <div className="space-y-4">
+              {matters.map((m) => (
+                <MatterCard key={m.id} matter={m} href={`/admin/matters/${m.id}`} unread={unread.has(m.id)} showStage />
+              ))}
+            </div>
+          ) : (
         // "No matches" and "nothing exists yet" are different problems needing
         // different next actions — saying "no matches" to someone with an empty
         // database sends them hunting for a filter they never set.
@@ -270,10 +275,14 @@ export default async function AdminMattersPage({
               </Link>
             </>
           )}
-        </Card>
-      )}
+            </Card>
+          )}
 
-      <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
+          <div className="mt-6">
+            <MatterPagination page={filters.page} pageSize={MATTER_PAGE_SIZE} total={total} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

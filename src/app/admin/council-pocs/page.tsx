@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import CouncilPocManager from "@/components/admin/CouncilPocManager";
-import FilterRail, { type Facet } from "@/components/ui/FilterRail";
+import FilterBar from "@/components/ui/FilterBar";
+import { type Facet } from "@/components/ui/FilterRail";
 import { municipalityLabel } from "@/lib/utils";
 import { isStaffRole, type CouncilPoc } from "@/types";
 
@@ -82,8 +83,10 @@ export default async function AdminCouncilPocsPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <FilterRail facets={facets} searchPlaceholder="Search name, council, dept…" />
+      <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
+        <aside className="lg:sticky lg:top-4 lg:w-56 lg:shrink-0">
+          <FilterBar orientation="vertical" facets={facets} searchPlaceholder="Search name, council, dept…" />
+        </aside>
         <div className="min-w-0 flex-1">
           <CouncilPocManager initialPocs={pocs} />
         </div>

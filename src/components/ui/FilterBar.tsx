@@ -28,13 +28,21 @@ export default function FilterBar({
   facets,
   searchKey = "q",
   searchPlaceholder = "Search…",
+  orientation = "horizontal",
   className,
 }: {
   facets: Facet[];
   searchKey?: string;
   searchPlaceholder?: string;
+  /**
+   * "vertical" stacks the controls for a side rail. Same controls, same set
+   * state, full width instead of wrapped — a rail that wraps mid-row reads as
+   * a mistake rather than as a column.
+   */
+  orientation?: "horizontal" | "vertical";
   className?: string;
 }) {
+  const vertical = orientation === "vertical";
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -75,8 +83,16 @@ export default function FilterBar({
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <form onSubmit={submitSearch} className="relative min-w-0 flex-1 sm:max-w-xs">
+    <div
+      className={cn(
+        vertical ? "flex flex-col gap-2" : "flex flex-wrap items-center gap-2",
+        className
+      )}
+    >
+      <form
+        onSubmit={submitSearch}
+        className={cn("relative min-w-0", vertical ? "w-full" : "flex-1 sm:max-w-xs")}
+      >
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" />
         <input
           type="search"
@@ -93,13 +109,14 @@ export default function FilterBar({
         const set = isSet(f);
         const label = f.options.find((o) => o.value === value)?.label ?? f.label;
         return (
-          <label key={f.key} className="relative">
+          <label key={f.key} className={cn("relative", vertical && "block w-full")}>
             <span className="sr-only">{f.label}</span>
             <select
               value={value}
               onChange={(e) => setFacet(f, e.target.value)}
               className={cn(
                 "cursor-pointer appearance-none rounded-lg border py-2 pl-3 pr-8 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-action",
+                vertical && "w-full",
                 set
                   ? "border-action/40 bg-action-fill/10 font-medium text-action"
                   : "border-line bg-surface text-ink-2 hover:border-line/70"
@@ -132,7 +149,10 @@ export default function FilterBar({
         <button
           type="button"
           onClick={clearAll}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-3 transition-colors hover:text-ink"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-3 transition-colors hover:text-ink",
+            vertical && "self-start"
+          )}
         >
           <X className="h-3.5 w-3.5" />
           Clear {activeCount}

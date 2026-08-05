@@ -8,7 +8,8 @@ import { formatDate } from "@/lib/utils";
 import { isStaffRole, clientDisplayName, type Client } from "@/types";
 import ClientRow from "@/components/clients/ClientRow";
 import NewClientButton from "@/components/clients/NewClientButton";
-import FilterRail, { type Facet } from "@/components/ui/FilterRail";
+import FilterBar from "@/components/ui/FilterBar";
+import { type Facet } from "@/components/ui/FilterRail";
 import { parseListFilters, applyTextSearch, startOfMonthISO } from "@/lib/list-filters";
 
 export const metadata = { title: "Clients — ConveyClear Admin" };
@@ -85,8 +86,13 @@ export default async function AdminClientsPage({
         <NewClientButton />
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <FilterRail facets={facets} searchPlaceholder="Search name, email, cell…" />
+      {/* Filters render on the right, in the space the table was not
+          using, but sit FIRST in the DOM so keyboard and screen-reader
+          order still reaches them before the rows they filter. */}
+      <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
+        <aside className="lg:sticky lg:top-4 lg:w-56 lg:shrink-0">
+          <FilterBar orientation="vertical" facets={facets} searchPlaceholder="Search name, email, cell…" />
+        </aside>
         <div className="min-w-0 flex-1">
       <Card padding="none">
         <div className="overflow-x-auto">
