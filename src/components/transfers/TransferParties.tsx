@@ -4,9 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Plus, Trash2, User, Building2, Landmark, Scale } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  User,
+  Building2,
+  Landmark,
+  Scale,
+  ChevronDown,
+  Mail,
+  Phone,
+  MapPin,
+  Fingerprint,
+  Hash,
+  ArrowUpRight,
+} from "lucide-react";
 import StatusPill from "@/components/ui/StatusPill";
 import EmptyState from "@/components/ui/EmptyState";
+import { cn } from "@/lib/utils";
 
 /**
  * Who is involved in this transaction.
@@ -15,6 +30,11 @@ import EmptyState from "@/components/ui/EmptyState";
  * inline when there is no record yet. Linking is offered first and inline is
  * the fallback, because a linked party carries its own FICA vault and history
  * while an inline one is a name on a page.
+ *
+ * Each row opens into a CONTACT CARD in place. The detail staff actually leave
+ * this page for is a phone number, and a linked party's number lived one
+ * navigation away while a captured party's was not rendered anywhere at all —
+ * it had been typed into the capture form and then never shown again.
  */
 
 export const PARTY_ROLES = [
@@ -27,6 +47,16 @@ export const PARTY_ROLES = [
   { value: "other", label: "Other" },
 ] as const;
 
+/** Whatever contact detail the row carries, from the client, the firm, or the capture. */
+export type PartyContact = {
+  email: string | null;
+  cell: string | null;
+  address: string | null;
+  /** FICA PII — only passed in on staff surfaces. See `showIdNumbers`. */
+  idNumber: string | null;
+  registrationNo: string | null;
+};
+
 export type PartyRow = {
   id: string;
   role: string;
@@ -34,6 +64,7 @@ export type PartyRow = {
   via: "entity" | "firm" | "inline";
   clientId: string | null;
   detail: string | null;
+  contact?: PartyContact;
 };
 
 export type PartyOption = { id: string; name: string; kind: string };
@@ -49,21 +80,64 @@ function viaIcon(via: PartyRow["via"], kind?: string) {
   return <User className={cls} />;
 }
 
+/** One labelled line of the contact card. Renders nothing when there is no value. */
+function ContactLine({
+  icon: Icon,
+  label,
+  value,
+  href,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: string | null;
+  href?: string;
+}) {
+  if (!value?.trim()) return null;
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-3" />
+      <div className="min-w-0">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">{label}</p>
+        {href ? (
+          // mailto/tel rather than plain text: on a transfer the next action
+          // after finding a number is almost always to use it.
+          <a href={href} className="block break-words text-[13.5px] text-action hover:underline">
+            {value}
+          </a>
+        ) : (
+          <p className="break-words text-[13.5px] text-ink-2">{value}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TransferParties({
   transferId,
   parties,
   entities,
   firms,
   canEdit,
+  clientHrefBase,
+  showIdNumbers = false,
 }: {
   transferId: string;
   parties: PartyRow[];
   entities: PartyOption[];
   firms: PartyOption[];
   canEdit: boolean;
+  /**
+   * Where a linked client's record lives, e.g. "/admin/clients". Omitted on the
+   * partner portal, which has no such route — there the contact card is the
+   * whole answer rather than a step toward one.
+   */
+  clientHrefBase?: string;
+  /** FICA ID numbers are staff-only. Off unless a caller opts in. */
+  showIdNumbers?: boolean;
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [role, setRole] = useState<string>("seller");
   const [mode, setMode] = useState<"entity" | "firm" | "inline">("entity");
@@ -145,7 +219,7 @@ export default function TransferParties({
       </div>
 
       {adding && (
-        <div className="space-y-3 rounded-lg bg-raised p-4 ring-1 ring-inset ring-line">
+        <div className="space-y-3 rounded-lg bg-raised p-4 shadow-sm dark:ring-1 dark:ring-line">
           <div className="flex flex-col gap-3 sm:flex-row">
             <label className="flex-1 text-sm">
               <span className="mb-1 block font-medium text-ink-2">Role</span>
@@ -261,47 +335,106 @@ export default function TransferParties({
         </EmptyState>
       ) : (
         <ul className="space-y-2.5">
-          {parties.map((p) => (
-            <li
-              key={p.id}
-              className="flex items-center justify-between gap-4 rounded-lg bg-surface px-4 py-3.5 shadow-sm dark:ring-1 dark:ring-line"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                {viaIcon(p.via, p.detail ?? undefined)}
-                <div className="min-w-0">
-                  {p.clientId ? (
-                    <Link
-                      href={`/admin/clients/${p.clientId}`}
-                      className="block truncate text-[14.5px] font-semibold text-ink hover:text-action hover:underline"
-                    >
-                      {p.who}
-                    </Link>
-                  ) : (
-                    <p className="truncate text-[14.5px] font-semibold text-ink">{p.who}</p>
-                  )}
-                  <p className="truncate text-[12.5px] text-ink-3">
-                    {roleLabel(p.role)}
-                    {p.via === "inline" && " · captured, not a client record"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <StatusPill tone={p.via === "inline" ? "waiting" : "neutral"}>
-                  {p.via === "entity" ? "Client" : p.via === "firm" ? "Firm" : "Captured"}
-                </StatusPill>
-                {canEdit && (
+          {parties.map((p) => {
+            const open = openId === p.id;
+            const c = p.contact;
+            const hasDetail = Boolean(
+              c && (c.email || c.cell || c.address || c.registrationNo || (showIdNumbers && c.idNumber))
+            );
+            const clientHref = p.clientId && clientHrefBase ? `${clientHrefBase}/${p.clientId}` : null;
+
+            return (
+              <li
+                key={p.id}
+                className="overflow-hidden rounded-lg bg-surface shadow-sm dark:ring-1 dark:ring-line"
+              >
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                  {/* The whole name block is the toggle. The delete button and
+                      the client link are siblings, never descendants — a button
+                      inside a button is invalid and the inner one stops working. */}
                   <button
-                    title="Remove this party"
-                    disabled={busy === p.id}
-                    onClick={() => remove(p.id)}
-                    className="rounded p-1.5 text-ink-3 transition-colors hover:bg-danger-tint hover:text-danger disabled:opacity-50"
+                    type="button"
+                    onClick={() => setOpenId(open ? null : p.id)}
+                    aria-expanded={open}
+                    aria-controls={`party-${p.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {viaIcon(p.via, p.detail ?? undefined)}
+                    <div className="min-w-0">
+                      <p className="truncate text-[14.5px] font-semibold text-ink">{p.who}</p>
+                      <p className="truncate text-[12.5px] text-ink-3">
+                        {roleLabel(p.role)}
+                        {p.via === "inline" && " · captured, not a client record"}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-ink-3 transition-transform",
+                        open && "rotate-180"
+                      )}
+                    />
                   </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusPill tone={p.via === "inline" ? "waiting" : "neutral"}>
+                      {p.via === "entity" ? "Client" : p.via === "firm" ? "Firm" : "Captured"}
+                    </StatusPill>
+                    {canEdit && (
+                      <button
+                        title="Remove this party"
+                        disabled={busy === p.id}
+                        onClick={() => remove(p.id)}
+                        className="rounded p-1.5 text-ink-3 transition-colors hover:bg-danger-tint hover:text-danger disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {open && (
+                  <div id={`party-${p.id}`} className="border-t border-line bg-raised px-4 py-3.5">
+                    {hasDetail ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <ContactLine
+                          icon={Mail}
+                          label="Email"
+                          value={c!.email}
+                          href={c!.email ? `mailto:${c!.email}` : undefined}
+                        />
+                        <ContactLine
+                          icon={Phone}
+                          label="Cell"
+                          value={c!.cell}
+                          // Spaces are display formatting, not part of the number.
+                          href={c!.cell ? `tel:${c!.cell.replace(/\s+/g, "")}` : undefined}
+                        />
+                        <ContactLine icon={MapPin} label="Address" value={c!.address} />
+                        <ContactLine icon={Hash} label="Registration no." value={c!.registrationNo} />
+                        {showIdNumbers && (
+                          <ContactLine icon={Fingerprint} label="ID number" value={c!.idNumber} />
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[13px] text-ink-3">
+                        {p.via === "inline"
+                          ? "No contact details were captured for this party."
+                          : "This record carries no contact details yet."}
+                      </p>
+                    )}
+
+                    {clientHref && (
+                      <Link
+                        href={clientHref}
+                        className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-action hover:underline"
+                      >
+                        Open client record <ArrowUpRight className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
+                  </div>
                 )}
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

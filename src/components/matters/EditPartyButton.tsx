@@ -68,7 +68,7 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
   }
 
   return (
-    <div className="rounded-lg border border-line bg-raised p-3 space-y-3">
+    <div className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="Entity type"
@@ -97,7 +97,7 @@ export default function EditPartyButton({ party }: { party: MatterParty }) {
       </div>
       <Input label="Physical address" value={form.physical_address} onChange={(e) => set({ physical_address: e.target.value })} />
       {!isPerson && (
-        <div className="rounded-lg border border-line bg-surface p-3 space-y-3">
+        <div className="space-y-3 rounded-lg bg-surface p-3 shadow-sm dark:ring-1 dark:ring-line">
           <p className="text-xs font-medium text-ink-2">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="First name" value={form.contact_first_name} onChange={(e) => set({ contact_first_name: e.target.value })} />

@@ -317,7 +317,7 @@ function SubjectSection({
           )}
 
           {/* ------------------------------------------------------------ consent */}
-          <div className="rounded-lg border border-line bg-raised/60 p-3">
+          <div className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line/60 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Consent</p>
 
             {portalConsent ? (

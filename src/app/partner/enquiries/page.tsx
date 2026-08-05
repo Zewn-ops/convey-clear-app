@@ -49,7 +49,7 @@ export default async function PartnerEnquiries() {
               <li key={e.id}>
                 <Link
                   href={`/partner/enquiries/${e.id}`}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface px-5 py-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow"
+                  className="flex items-center justify-between gap-4 rounded-lg bg-surface px-5 py-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow dark:ring-1 dark:ring-line"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-ink">{e.subject}</p>

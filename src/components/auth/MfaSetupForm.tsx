@@ -82,7 +82,7 @@ export default function MfaSetupForm() {
         authenticator app (Google Authenticator, 1Password, Authy…), then enter the
         6-digit code it shows.
       </p>
-      <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg border border-line bg-surface p-2" />
+      <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg bg-surface p-2 shadow-sm dark:ring-1 dark:ring-line" />
       <p className="text-xs text-ink-3">
         Can&rsquo;t scan? Enter this key manually: <code className="font-mono text-ink-2 break-all">{enrolling.secret}</code>
       </p>

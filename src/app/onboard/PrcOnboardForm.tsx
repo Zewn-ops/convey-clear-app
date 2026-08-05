@@ -176,7 +176,7 @@ export default function PrcOnboardForm({ token, data }: { token: string; data: T
               </p>
             </div>
 
-            <div className="bg-surface rounded-xl border border-line shadow-sm p-4">
+            <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-ink-2">Required documents completed</span>
                 <span className="text-xs font-semibold text-action">{complete} / {requiredSlots.length}</span>
@@ -215,7 +215,7 @@ export default function PrcOnboardForm({ token, data }: { token: string; data: T
 
         {stage === 2 && (
           <div className="space-y-3">
-            <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-2 text-sm">
+            <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-2 text-sm">
               <h2 className="font-semibold text-ink-2 mb-2">Review</h2>
               <div className="flex justify-between gap-4">
                 <span className="text-ink-3">Documents</span>
@@ -226,7 +226,7 @@ export default function PrcOnboardForm({ token, data }: { token: string; data: T
                 <span className="text-ink text-right">POPIA ✓ Terms ✓{marketing ? " Marketing ✓" : ""}</span>
               </div>
             </div>
-            <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl border border-line shadow-sm p-4">
+            <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4">
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#1B2E6B]" />
               <span className="text-sm text-ink-2">I confirm the documents provided are correct and complete.</span>
             </label>

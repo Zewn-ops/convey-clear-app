@@ -155,7 +155,7 @@ export default function SignupForm() {
       />
 
       {/* POPIA Data Handling Notice */}
-      <div className="rounded-lg border border-line/20 bg-action-fill/5 p-4 space-y-2">
+      <div className="space-y-2 rounded-lg bg-action-fill/5 p-4">
         <p className="text-xs font-semibold text-action uppercase tracking-wide">
           POPIA — Data Handling Notice
         </p>

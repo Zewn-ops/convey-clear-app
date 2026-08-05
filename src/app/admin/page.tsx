@@ -66,11 +66,15 @@ export default async function AdminPage() {
       </div>
 
       {/* Three routes into work, each a live count and a destination. Not stat
-          tiles: every one of these is a link to the list it describes. */}
+          tiles: every one of these is a link to the list it describes.
+
+          The hover used to warm the border. With the border gone the tile LIFTS
+          instead — the affordance has to move somewhere, not just be deleted.
+          Dark mode has no usable shadow, so there the ring warms as before. */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
           href="/admin/matters?queue=ours"
-          className="group rounded-xl border border-line bg-surface p-5 transition-colors hover:border-action/40"
+          className="group rounded-xl bg-surface p-5 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line dark:hover:ring-action/40"
         >
           <Inbox className="h-5 w-5 text-action" />
           <p className="mt-3 text-[26px] font-semibold tabular-nums tracking-[-0.025em] text-ink">{oursCount ?? 0}</p>
@@ -82,7 +86,7 @@ export default async function AdminPage() {
 
         <Link
           href="/admin/matters?queue=council"
-          className="group rounded-xl border border-line bg-surface p-5 transition-colors hover:border-action/40"
+          className="group rounded-xl bg-surface p-5 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line dark:hover:ring-action/40"
         >
           <Landmark className="h-5 w-5 text-ink-3" />
           <p className="mt-3 text-[26px] font-semibold tabular-nums tracking-[-0.025em] text-ink">
@@ -96,7 +100,7 @@ export default async function AdminPage() {
 
         <Link
           href="/admin/approvals"
-          className="group rounded-xl border border-line bg-surface p-5 transition-colors hover:border-action/40"
+          className="group rounded-xl bg-surface p-5 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line dark:hover:ring-action/40"
         >
           <FileCheck2 className="h-5 w-5 text-ink-3" />
           <p className="mt-3 text-[26px] font-semibold tabular-nums tracking-[-0.025em] text-ink">{pendingDocs ?? 0}</p>

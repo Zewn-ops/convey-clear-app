@@ -99,7 +99,7 @@ export default function MatterPocsCard({
       {linked.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           {linked.map((p) => (
-            <div key={p.id} className="rounded-lg border border-line bg-raised p-3 text-sm">
+            <div key={p.id} className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <p className="font-medium text-ink">{councilPocName(p)}</p>
                 <button onClick={() => unlink(p.id)} disabled={busy} title="Remove from this matter" className="text-ink-3 hover:text-red-600 disabled:opacity-50">

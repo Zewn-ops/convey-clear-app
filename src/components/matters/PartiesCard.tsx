@@ -56,7 +56,7 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                 <Row k="Address" v={p.physical_address} />
               </dl>
               {isEntity && (contactPersonName(p) || p.contact_email || p.contact_cell || p.id_number) && (
-                <div className="rounded-lg border border-line bg-raised p-3 text-sm space-y-1.5">
+                <div className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3 text-sm space-y-1.5">
                   <p className="text-xs font-medium text-ink-2">Contact person</p>
                   <dl className="space-y-1.5">
                     <Row k="Name" v={contactPersonName(p) || null} />

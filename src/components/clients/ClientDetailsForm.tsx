@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Pencil, ShieldAlert } from "lucide-react";
 import Card from "@/components/ui/Card";
+import DetailFields, { type DetailField } from "@/components/ui/DetailFields";
 import { ficaFields } from "@/lib/fica";
 import type { Client } from "@/types";
 
@@ -69,12 +70,33 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
 
   /* ------------------------------------------------------------------ read -- */
   if (!editing) {
-    const rows = fields.filter((f) => {
-      const v = (client as unknown as Record<string, unknown>)[f.key];
-      // A blank optional field is noise on a read view; a blank REQUIRED one is
-      // information — it tells staff the record is incomplete.
-      return f.required || (v != null && String(v).trim() !== "");
+    const valueOf = (key: string) =>
+      key === "municipal_password"
+        ? client.municipal_password
+          ? "••••••••"
+          : null
+        : ((client as unknown as Record<string, unknown>)[key] as string | null);
+
+    const toDetail = (f: (typeof fields)[number]): DetailField => ({
+      label: f.label,
+      value: valueOf(f.key),
+      wide: f.type === "textarea",
+      required: f.required,
     });
+
+    // Who they are and how to reach them stays open. Everything else — address,
+    // industry, designation, the council credentials — sits behind the toggle,
+    // INCLUDING when blank: the previous card dropped empty optional fields
+    // entirely, so a half-captured record was indistinguishable from a complete
+    // one. Now the toggle counts what is still missing.
+    const primary = fields.filter((f) => f.required).map(toDetail);
+    const extra = fields.filter((f) => !f.required).map(toDetail);
+
+    // ID number is a required field for a person and already in `fields`; for a
+    // business or trust it is not asked for at all, so nothing is added here.
+    if (showIdNumber && !fields.some((f) => f.key === "id_number")) {
+      primary.unshift({ label: "ID number", value: client.id_number, required: true });
+    }
 
     return (
       <Card>
@@ -89,24 +111,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
           </button>
         </div>
 
-        <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-          {showIdNumber && (
-            <Field label="ID number" value={client.id_number} />
-          )}
-          {rows.map((f) => (
-            <Field
-              key={f.key}
-              label={f.label}
-              value={
-                f.key === "municipal_password"
-                  ? (client.municipal_password ? "••••••••" : null)
-                  : ((client as unknown as Record<string, unknown>)[f.key] as string | null)
-              }
-              wide={f.type === "textarea"}
-              required={f.required}
-            />
-          ))}
-        </dl>
+        <DetailFields primary={primary} extra={extra} />
       </Card>
     );
   }
@@ -211,24 +216,3 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
   );
 }
 
-function Field({
-  label,
-  value,
-  wide,
-  required,
-}: {
-  label: string;
-  value: string | null | undefined;
-  wide?: boolean;
-  required?: boolean;
-}) {
-  const empty = value == null || String(value).trim() === "";
-  return (
-    <div className={wide ? "sm:col-span-2" : undefined}>
-      <dt className="text-xs text-ink-3">{label}</dt>
-      <dd className={`mt-0.5 font-medium ${empty ? "text-ink-3" : ""}`}>
-        {empty ? (required ? "Not captured" : "—") : value}
-      </dd>
-    </div>
-  );
-}

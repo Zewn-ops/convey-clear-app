@@ -7,6 +7,12 @@ import Badge from "@/components/ui/Badge";
 import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import UnlinkMatterButton from "@/components/transfers/UnlinkMatterButton";
 import TransferParties, { type PartyRow as TPartyRow, type PartyOption } from "@/components/transfers/TransferParties";
+import {
+  TRANSFER_PARTY_SELECT,
+  mapTransferParties,
+  type RawTransferParty,
+} from "@/lib/transfer-parties";
+import DetailFields from "@/components/ui/DetailFields";
 import { getPipeline, phaseLabel, stageLabel } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
@@ -128,30 +134,16 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   // and the legacy seller/buyer picker agree until those reads are retired.
   const { data: partyRows } = await supabase
     .from("transfer_parties")
-    .select("id, role, client_id, firm_id, full_name, business_name, entity_type, clients(full_name, business_name, entity_type), firms(name)")
+    .select(TRANSFER_PARTY_SELECT)
     .eq("transfer_id", id)
     .order("role", { ascending: true });
 
-  type RawParty = {
-    id: string; role: string; client_id: string | null; firm_id: string | null;
-    full_name: string | null; business_name: string | null; entity_type: string | null;
-    clients: { full_name: string | null; business_name: string | null; entity_type: string } | null;
-    firms: { name: string | null } | null;
-  };
-  const partyList: TPartyRow[] = ((partyRows as RawParty[] | null) ?? []).map((r) => ({
-    id: r.id,
-    role: r.role,
-    via: r.client_id ? "entity" : r.firm_id ? "firm" : "inline",
-    clientId: r.client_id,
-    detail: r.clients?.entity_type ?? r.entity_type,
-    who:
-      r.clients?.business_name?.trim() ||
-      r.clients?.full_name?.trim() ||
-      r.firms?.name?.trim() ||
-      r.business_name?.trim() ||
-      r.full_name?.trim() ||
-      "Unnamed party",
-  }));
+  // Staff surface: parties link out to their client record and the card carries
+  // ID numbers.
+  const partyList: TPartyRow[] = mapTransferParties(
+    partyRows as RawTransferParty[] | null,
+    { linkClients: true }
+  );
 
   const [{ data: entityOpts }, { data: firmOpts }] = await Promise.all([
     supabase.from("clients").select("id, full_name, business_name, entity_type")
@@ -249,6 +241,8 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           entities={entityOptions}
           firms={firmOptions}
           canEdit
+          clientHrefBase="/admin/clients"
+          showIdNumbers
         />
         {!transfer.business_partner_id && (
           <div className="mt-4 rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
@@ -263,28 +257,25 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         )}
       </Card>
 
-      {/* Facts */}
+      {/* Facts. Showed three fields and stopped — the reference, the property and
+          the attorney firm all lived only in the page header or behind Edit. */}
       <Card accent="service">
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <div>
-            <dt className="text-xs text-ink-3">Status</dt>
-            <dd className="text-ink mt-0.5">{TRANSFER_STATUS_LABELS[transfer.status]}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-3">Council</dt>
-            <dd className="text-ink mt-0.5">{municipalityLabel(transfer.municipality)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-3">Opened</dt>
-            <dd className="text-ink mt-0.5">{formatDate(transfer.created_at)}</dd>
-          </div>
-        </dl>
-        {transfer.notes && (
-          <div className="mt-4 pt-4 border-t border-line">
-            <dt className="text-xs text-ink-3 mb-1">Notes</dt>
-            <p className="text-sm text-ink-2 whitespace-pre-wrap">{transfer.notes}</p>
-          </div>
-        )}
+        <DetailFields
+          primary={[
+            { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
+            { label: "Council", value: municipalityLabel(transfer.municipality) },
+            { label: "Attorney firm", value: transfer.attorney?.name ?? null, required: true },
+            { label: "Reference", value: transfer.reference },
+            { label: "Property", value: transfer.property_description, wide: true },
+          ]}
+          extra={[
+            { label: "Estate agency", value: transfer.estate_agent?.name ?? null },
+            { label: "Matters linked", value: String(linked.length) },
+            { label: "Opened", value: formatDate(transfer.created_at) },
+            { label: "Last updated", value: formatDate(transfer.updated_at) },
+            { label: "Notes", value: transfer.notes, wide: true },
+          ]}
+        />
       </Card>
 
       {/* Linked matters — the point of the hub */}

@@ -71,7 +71,7 @@ function PartySection({
 }) {
   const isPerson = party.entity_type === "natural_person";
   return (
-    <div className="rounded-xl border border-line bg-surface shadow-sm p-4 space-y-4">
+    <div className="space-y-4 rounded-xl bg-surface p-4 shadow-sm dark:ring-1 dark:ring-line">
       <div>
         <h2 className="text-sm font-semibold text-ink">{title}</h2>
         {subtitle && <p className="text-xs text-ink-3">{subtitle}</p>}
@@ -104,7 +104,7 @@ function PartySection({
       </div>
       <Input label="Physical address" value={party.physical_address} onChange={(e) => onChange({ physical_address: e.target.value })} placeholder="Street, suburb, city" />
       {!isPerson && (
-        <div className="rounded-lg border border-line bg-raised p-3 space-y-3">
+        <div className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3 space-y-3">
           <p className="text-xs font-medium text-ink-2">Contact person</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="First name" value={party.contact_first_name} onChange={(e) => onChange({ contact_first_name: e.target.value })} placeholder="Authorised representative" />
@@ -274,7 +274,7 @@ export default function ReferForm({
         <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any context for ConveyClear" />
 
         {isCoo && (
-          <p className="text-xs text-action bg-action-fill/5 border border-line/10 rounded-lg px-3 py-2">
+          <p className="rounded-lg bg-action-fill/5 px-3 py-2 text-xs text-action">
             Change of Ownership has two sides — capture both the <strong>seller</strong> (current owner) and the{" "}
             <strong>buyer</strong> (new owner / Open Rates Account) below.
           </p>

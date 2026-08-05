@@ -61,7 +61,7 @@ function PartyFields({
 }) {
   const set = (patch: Partial<PartyDraft>) => onChange({ ...value, ...patch });
   return (
-    <div className="rounded-lg border border-line p-3 space-y-3">
+    <div className="space-y-3 rounded-lg bg-raised p-3 shadow-sm dark:ring-1 dark:ring-line">
       <p className="text-sm font-semibold text-ink">{title}</p>
       <Select
         label="Entity type"
@@ -200,7 +200,7 @@ export default function CreateMatterForm({
   return (
     <Card className="space-y-4">
       {transfer && (
-        <div className="flex items-start gap-2 rounded-lg border border-line/30 bg-action-fill/[0.04] px-3 py-2.5">
+        <div className="flex items-start gap-2 rounded-lg bg-action-fill/[0.04] px-3 py-2.5">
           <Home className="mt-0.5 h-4 w-4 shrink-0 text-action" />
           <div className="min-w-0 text-xs">
             <p className="font-medium text-ink">Creating a matter inside transfer {transfer.reference}</p>
@@ -317,7 +317,7 @@ export default function CreateMatterForm({
         </div>
       )}
 
-      <div className="rounded-lg bg-raised border border-line p-3">
+      <div className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3">
         <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter title (auto)</p>
         <p className="text-sm font-mono text-action mt-1">{previewTitle}</p>
       </div>

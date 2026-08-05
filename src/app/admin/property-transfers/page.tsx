@@ -14,7 +14,14 @@ import {
 } from "@/types";
 import FilterBar from "@/components/ui/FilterBar";
 import { type Facet } from "@/components/ui/FilterRail";
-import { parseListFilters, applyTextSearch, startOfMonthISO, periodFacet } from "@/lib/list-filters";
+import {
+  parseListFilters,
+  applyTextSearch,
+  startOfMonthISO,
+  periodFacet,
+  applyPaging,
+} from "@/lib/list-filters";
+import Pagination from "@/components/ui/Pagination";
 
 export const metadata = { title: "Property Transfers — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
@@ -57,7 +64,7 @@ export default async function AdminTransfersPage({
 
   let query = supabase
     .from("property_transfers")
-    .select("*, firms!property_transfers_business_partner_id_fkey(name)")
+    .select("*, firms!property_transfers_business_partner_id_fkey(name)", { count: "exact" })
     .order("created_at", { ascending: false });
   if (filters.type) query = query.eq("status", filters.type);
   if (muni) query = query.eq("municipality", muni);
@@ -67,8 +74,9 @@ export default async function AdminTransfersPage({
   // property_transfers; the erf lives inside property_description.
   query = applyTextSearch(query, filters.q, ["reference", "property_description"]);
 
-  const { data } = await query;
+  const { data, count } = await applyPaging(query, filters);
   const transfers = (data as TransferRow[] | null) ?? [];
+  const total = count ?? 0;
   const filtering = Boolean(filters.q || filters.type || muni || firmId) || filters.scope !== "all";
 
   const facets: Facet[] = [
@@ -129,8 +137,9 @@ export default async function AdminTransfersPage({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Property Transfers</h1>
+          {/* The TOTAL, not the page — `transfers.length` caps at the page size. */}
           <p className="text-sm text-ink-3 mt-1">
-            {transfers.length} transfer{transfers.length === 1 ? "" : "s"} · one transaction, many matters
+            {total} transfer{total === 1 ? "" : "s"} · one transaction, many matters
           </p>
         </div>
         <Link
@@ -201,6 +210,10 @@ export default async function AdminTransfersPage({
           </table>
         </div>
       </Card>
+
+          <div className="mt-6">
+            <Pagination page={filters.page} pageSize={filters.perPage} total={total} noun="transfers" />
+          </div>
         </div>
       </div>
     </div>

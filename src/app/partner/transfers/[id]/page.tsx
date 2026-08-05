@@ -5,6 +5,12 @@ import Card from "@/components/ui/Card";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
 import TransferParties, { type PartyRow as TPartyRow, type PartyOption } from "@/components/transfers/TransferParties";
+import {
+  TRANSFER_PARTY_SELECT,
+  mapTransferParties,
+  type RawTransferParty,
+} from "@/lib/transfer-parties";
+import DetailFields from "@/components/ui/DetailFields";
 import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
@@ -74,31 +80,19 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   // so these rows exist only for transfers this firm already works.
   const { data: partyRows } = await supabase
     .from("transfer_parties")
-    .select("id, role, client_id, firm_id, full_name, business_name, entity_type, clients(full_name, business_name, entity_type), firms(name)")
+    .select(TRANSFER_PARTY_SELECT)
     .eq("transfer_id", id)
     .order("role", { ascending: true });
 
-  type RawParty = {
-    id: string; role: string; client_id: string | null; firm_id: string | null;
-    full_name: string | null; business_name: string | null; entity_type: string | null;
-    clients: { full_name: string | null; business_name: string | null; entity_type: string } | null;
-    firms: { name: string | null } | null;
-  };
-  const partyList: TPartyRow[] = ((partyRows as RawParty[] | null) ?? []).map((r) => ({
-    id: r.id,
-    role: r.role,
-    via: r.client_id ? "entity" : r.firm_id ? "firm" : "inline",
-    // Partners have no /admin/clients route, so a party never links out here.
-    clientId: null,
-    detail: r.clients?.entity_type ?? r.entity_type,
-    who:
-      r.clients?.business_name?.trim() ||
-      r.clients?.full_name?.trim() ||
-      r.firms?.name?.trim() ||
-      r.business_name?.trim() ||
-      r.full_name?.trim() ||
-      "Unnamed party",
-  }));
+  // Partners have no /admin/clients route, so a party never links out here —
+  // the contact card in place IS the answer rather than a step toward one.
+  // ID numbers are withheld: the firm works this transfer and legitimately sees
+  // the parties, but FICA identity numbers are staff-only until Jukka says
+  // otherwise.
+  const partyList: TPartyRow[] = mapTransferParties(
+    partyRows as RawTransferParty[] | null,
+    { linkClients: false }
+  );
 
   // Pickers are RLS-scoped too: a firm links only to clients it can already see.
   const [{ data: entityOpts }, { data: firmOpts }] = await Promise.all([
@@ -213,18 +207,24 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         />
       </Card>
 
+      {/* Same two-tier card as the admin side. `notes` is deliberately NOT here:
+          it is ConveyClear's internal working note on the transaction, and the
+          admin card is the only place it belongs. */}
       <Card>
         <p className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Transaction</p>
-        <dl className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Council</dt>
-            <dd className="mt-1 text-[14.5px] font-medium text-ink">{municipalityLabel(transfer.municipality)}</dd>
-          </div>
-          <div>
-            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Opened</dt>
-            <dd className="mt-1 text-[14.5px] font-medium text-ink">{formatDate(transfer.created_at)}</dd>
-          </div>
-        </dl>
+        <DetailFields
+          primary={[
+            { label: "Reference", value: transfer.reference },
+            { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
+            { label: "Council", value: municipalityLabel(transfer.municipality) },
+            { label: "Property", value: transfer.property_description, wide: true },
+          ]}
+          extra={[
+            { label: "Matters linked", value: String(linked.length) },
+            { label: "Opened", value: formatDate(transfer.created_at) },
+            { label: "Last updated", value: formatDate(transfer.updated_at) },
+          ]}
+        />
       </Card>
 
       <Card padding="none">

@@ -6,6 +6,8 @@
 // as NO searchParam, so a clean URL is the default view and FilterRail's
 // "active filters" count means what it says.
 
+import { parsePageSize } from "@/components/ui/Pagination";
+
 export type SP = Record<string, string | string[] | undefined>;
 
 export interface ListFilters {
@@ -14,6 +16,9 @@ export interface ListFilters {
   type: string;
   /** "all" (default) | "month" */
   scope: "all" | "month";
+  /** 1-indexed. */
+  page: number;
+  perPage: number;
 }
 
 export function parseListFilters(sp: SP | undefined, allowedTypes: readonly string[] = []): ListFilters {
@@ -28,7 +33,25 @@ export function parseListFilters(sp: SP | undefined, allowedTypes: readonly stri
     // that matched a known list get through.
     type: type && allowedTypes.includes(type) ? type : "",
     scope: get("scope") === "month" ? "month" : "all",
+    // Same param names as the matters list (?page / ?per) so the URLs read the
+    // same across screens and Pagination needs no per-list configuration.
+    page: Math.max(1, parseInt(get("page") ?? "1", 10) || 1),
+    perPage: parsePageSize(get("per")),
   };
+}
+
+/**
+ * Apply the page window. Call LAST, after every filter — `.range()` is an offset
+ * into the filtered set, so ranging before a filter pages the wrong rows.
+ *
+ * Pair it with `{ count: "exact" }` on the select: without the count there is no
+ * page total, and Pagination would render a single page over a truncated list,
+ * which is worse than no paging at all because it looks complete.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function applyPaging(query: any, f: ListFilters): any {
+  const from = (f.page - 1) * f.perPage;
+  return query.range(from, from + f.perPage - 1);
 }
 
 export function startOfMonthISO(d = new Date()): string {

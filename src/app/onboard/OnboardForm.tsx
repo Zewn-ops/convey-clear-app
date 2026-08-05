@@ -459,7 +459,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
           <div className="space-y-3">
             {isBusiness ? (
               <>
-                <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-3">
+                <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-3">
                   <h2 className="text-sm font-semibold text-ink-2">Business / Trust</h2>
                   <Field label="Business / Trust name (as per CIPC)" required>
                     <input className={inputCls} value={details.business_name} onChange={(e) => setField("business_name", e.target.value)} />
@@ -477,7 +477,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                     <input className={inputCls} value={details.home_address} onChange={(e) => setField("home_address", e.target.value)} placeholder="Street, suburb, city" />
                   </Field>
                 </div>
-                <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-3">
+                <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-3">
                   <h2 className="text-sm font-semibold text-ink-2">Authorised representative / trustee</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field label="First name(s)" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
@@ -489,7 +489,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                 </div>
 
                 {/* Directors / linked persons */}
-                <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-3">
+                <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h2 className="text-sm font-semibold text-ink-2">Directors / linked persons</h2>
                     <button type="button" onClick={addDirector} className="inline-flex items-center gap-1 text-xs text-action font-medium hover:underline">
@@ -497,8 +497,11 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                     </button>
                   </div>
                   {directors.length === 0 && <p className="text-xs text-ink-3">Optional — add additional directors or contacts.</p>}
+                  {/* A director block had only an outline to separate it. With the
+                      outline gone it needs a GROUND of its own — a shadow with no
+                      surface behind it has nothing to lift off. */}
                   {directors.map((d, i) => (
-                    <div key={i} className="rounded-lg border border-line p-3 space-y-2 relative">
+                    <div key={i} className="relative space-y-2 rounded-lg bg-raised p-3 shadow-sm dark:ring-1 dark:ring-line">
                       <button type="button" onClick={() => removeDirector(i)} className="absolute top-2 right-2 text-ink-3 hover:text-red-500">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -518,7 +521,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
                 </div>
               </>
             ) : (
-              <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-3">
+              <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-3">
                 <h2 className="text-sm font-semibold text-ink-2">Your details</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="First name(s)" required><input className={inputCls} value={details.full_name} onChange={(e) => setField("full_name", e.target.value)} /></Field>
@@ -546,7 +549,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
             )}
 
             {/* Optional municipal login */}
-            <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-3">
+            <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-3">
               <h2 className="text-sm font-semibold text-ink-2">Municipal profile login <span className="font-normal text-ink-3">(optional)</span></h2>
               <p className="text-xs text-ink-3">If provided, this lets us pull your municipal account statements for you.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -560,7 +563,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
         {/* STAGE 1 — DOCUMENTS */}
         {stage === 1 && (
           <div className="space-y-3">
-            <div className="bg-surface rounded-xl border border-line shadow-sm p-4">
+            <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-ink-2">Documents completed</span>
                 <span className="text-xs font-semibold text-action">{docsComplete} / {requiredDocs.length}</span>
@@ -594,7 +597,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
         {/* STAGE 3 — REVIEW */}
         {stage === 3 && (
           <div className="space-y-3">
-            <div className="bg-surface rounded-xl border border-line shadow-sm p-4 space-y-2 text-sm">
+            <div className="bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4 space-y-2 text-sm">
               <h2 className="font-semibold text-ink-2 mb-2">Review your details</h2>
               <Row k="Entity type" v={isBusiness ? "Business / Trust" : "Natural person"} />
               {isBusiness ? (
@@ -616,7 +619,7 @@ export default function OnboardForm({ token, data }: OnboardFormProps) {
               <Row k="Documents" v={`${docsComplete} / ${requiredDocs.length} provided`} />
               <Row k="Consents" v={`POPIA ✓  Terms ✓${marketing ? "  Marketing ✓" : ""}`} />
             </div>
-            <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl border border-line shadow-sm p-4">
+            <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4">
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#1B2E6B]" />
               <span className="text-sm text-ink-2">I confirm the information above is correct and complete.</span>
             </label>
@@ -681,7 +684,7 @@ export function ConsentBox({
   checked, onChange, title, body, required, optional,
 }: { checked: boolean; onChange: (b: boolean) => void; title: string; body: string; required?: boolean; optional?: boolean }) {
   return (
-    <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl border border-line shadow-sm p-4">
+    <label className="flex items-start gap-3 cursor-pointer bg-surface rounded-xl shadow-sm dark:ring-1 dark:ring-line p-4">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#1B2E6B] shrink-0" />
       <div>
         <p className="text-sm font-medium text-ink">

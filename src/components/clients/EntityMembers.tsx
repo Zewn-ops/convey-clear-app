@@ -99,7 +99,7 @@ export default function EntityMembers({
       </div>
 
       {adding && (
-        <div className="rounded-lg bg-raised p-4 ring-1 ring-inset ring-line">
+        <div className="rounded-lg bg-raised p-4 shadow-sm dark:ring-1 dark:ring-line">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="flex-1 text-sm">
               <span className="mb-1 block font-medium text-ink-2">Person</span>

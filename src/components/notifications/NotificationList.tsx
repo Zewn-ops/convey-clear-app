@@ -83,14 +83,14 @@ export default function NotificationList({
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-line bg-surface px-4 py-12 text-center">
+        <div className="rounded-xl bg-surface px-4 py-12 text-center shadow-sm dark:ring-1 dark:ring-line">
           <Inbox className="mx-auto h-8 w-8 text-ink-3" />
           <p className="mt-2 text-sm text-ink-3">
             {filter === "unread" ? "Nothing unread — you're all caught up." : "No notifications yet."}
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-sm dark:ring-1 dark:ring-line">
           {items.map((n) => (
             <li key={n.id} className={n.read_at ? "" : "bg-action-fill/5"}>
               <div className="flex items-start gap-3 px-4 py-3">

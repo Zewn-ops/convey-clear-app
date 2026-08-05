@@ -24,7 +24,7 @@ export default function AuthLayout({
       {/* Form card */}
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          <div className="bg-surface rounded-2xl shadow-sm border border-line p-8">
+          <div className="rounded-2xl bg-surface p-8 shadow-lg dark:ring-1 dark:ring-line">
             <div className="mb-6">
               <h1 className="text-2xl font-bold text-action">{title}</h1>
               <p className="mt-1 text-sm text-ink-3">{subtitle}</p>

@@ -10,7 +10,8 @@ import ClientRow from "@/components/clients/ClientRow";
 import NewClientButton from "@/components/clients/NewClientButton";
 import FilterBar from "@/components/ui/FilterBar";
 import { type Facet } from "@/components/ui/FilterRail";
-import { parseListFilters, applyTextSearch, startOfMonthISO } from "@/lib/list-filters";
+import { parseListFilters, applyTextSearch, startOfMonthISO, applyPaging } from "@/lib/list-filters";
+import Pagination from "@/components/ui/Pagination";
 
 export const metadata = { title: "Clients — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
@@ -40,7 +41,10 @@ export default async function AdminClientsPage({
   const supabase = await createClient();
   let query = supabase
     .from("clients")
-    .select("id, entity_type, full_name, business_name, primary_email, primary_cell, created_at")
+    .select(
+      "id, entity_type, full_name, business_name, primary_email, primary_cell, created_at",
+      { count: "exact" }
+    )
     .order("created_at", { ascending: false });
   if (filters.type) query = query.eq("entity_type", filters.type);
   if (filters.scope === "month") query = query.gte("created_at", startOfMonthISO());
@@ -51,8 +55,9 @@ export default async function AdminClientsPage({
     "primary_cell",
   ]);
 
-  const { data } = await query;
+  const { data, count } = await applyPaging(query, filters);
   const clients = (data as Client[] | null) ?? [];
+  const total = count ?? 0;
   const filtering = Boolean(filters.q || filters.type) || filters.scope !== "all";
 
   const facets: Facet[] = [
@@ -81,7 +86,9 @@ export default async function AdminClientsPage({
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Clients</h1>
-          <p className="text-sm text-ink-3 mt-1">{clients.length} registered client{clients.length === 1 ? "" : "s"}</p>
+          {/* The TOTAL, not the page: `clients.length` caps at the page size, so
+              it would report "25 registered clients" forever once there were more. */}
+          <p className="text-sm text-ink-3 mt-1">{total} registered client{total === 1 ? "" : "s"}</p>
         </div>
         <NewClientButton />
       </div>
@@ -145,6 +152,10 @@ export default async function AdminClientsPage({
           </table>
         </div>
       </Card>
+
+          <div className="mt-6">
+            <Pagination page={filters.page} pageSize={filters.perPage} total={total} noun="clients" />
+          </div>
         </div>
       </div>
     </div>

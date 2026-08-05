@@ -130,7 +130,7 @@ export default function MfaCard() {
         <div className="space-y-3">
           <p className="text-sm text-ink-2">Scan this with your authenticator app, then enter the 6-digit code it shows.</p>
           {/* Supabase returns qr_code as an SVG data URI */}
-          <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg border border-line bg-surface p-2" />
+          <img src={enrolling.qr} alt="TOTP QR code" className="h-44 w-44 rounded-lg bg-surface p-2 shadow-sm dark:ring-1 dark:ring-line" />
           <p className="text-xs text-ink-3">
             Can&rsquo;t scan? Enter this key manually: <code className="font-mono text-ink-2 break-all">{enrolling.secret}</code>
           </p>
@@ -152,7 +152,7 @@ export default function MfaCard() {
       ) : verified.length > 0 ? (
         <div className="space-y-2">
           {verified.map((f) => (
-            <div key={f.id} className="flex items-center justify-between rounded-lg border border-line bg-raised px-3 py-2.5">
+            <div key={f.id} className="flex items-center justify-between rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line px-3 py-2.5">
               <span className="flex items-center gap-2 text-sm text-ink">
                 <Smartphone className="h-4 w-4 text-ink-3" /> Authenticator app <span className="text-xs text-green-600 font-medium">· active</span>
               </span>

@@ -120,12 +120,12 @@ export default async function AdminEnquiryDetail({ params }: { params: { id: str
       </Card>
 
       <Card className="space-y-4">
-        <div className="rounded-lg bg-raised border border-line p-3">
+        <div className="rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3">
           <p className="text-xs text-ink-3 mb-1">{enquiry.firms?.name ?? "Partner"} · {formatDateTime(enquiry.created_at)}</p>
           <p className="text-sm text-ink whitespace-pre-wrap">{enquiry.message}</p>
         </div>
         {messages.map((m) => (
-          <div key={m.id} className="rounded-lg border border-line p-3">
+          <div key={m.id} className="rounded-lg bg-raised p-3 shadow-sm dark:ring-1 dark:ring-line">
             <p className="text-xs text-ink-3 mb-1">{m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}</p>
             <p className="text-sm text-ink whitespace-pre-wrap">{m.body}</p>
           </div>

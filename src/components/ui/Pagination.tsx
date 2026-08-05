@@ -42,6 +42,11 @@ export default function Pagination({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
+  // A page past the end is reachable without any broken control: bookmark page
+  // 4, have rows archived under you, reload. Left alone the summary inverts to
+  // "76–50 of 50" beside an empty list, which reads as a loading failure rather
+  // than as a page that no longer exists. Prev still works from here.
+  const outOfRange = page > pageCount;
 
   function go(p: number) {
     const params = new URLSearchParams(sp.toString());
@@ -75,7 +80,11 @@ export default function Pagination({
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-ink-3">
       <span>
-        {total === 0 ? `No ${noun}` : `${from}–${to} of ${total} ${noun}`}
+        {total === 0
+          ? `No ${noun}`
+          : outOfRange
+            ? `Page ${page} is past the end — ${total} ${noun} in total`
+            : `${from}–${to} of ${total} ${noun}`}
       </span>
 
       <div className="flex flex-wrap items-center gap-4">

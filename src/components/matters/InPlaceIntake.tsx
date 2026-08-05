@@ -181,7 +181,7 @@ export default function InPlaceIntake({
           is reachable regardless of what the service's slot matrix happens to
           contain — attached at matter level (no party). */}
       {transferDocs.length > 0 && (
-        <div className="rounded-lg border border-line/30 bg-action-fill/[0.03] p-3">
+        <div className="rounded-lg bg-action-fill/[0.03] p-3">
           <div className="mb-2 flex items-center gap-1.5">
             <Link2 className="h-3.5 w-3.5 text-action" />
             <h3 className="text-xs font-semibold text-ink">From this property transfer</h3>
@@ -216,7 +216,7 @@ export default function InPlaceIntake({
       )}
 
       {groups.map((g) => (
-        <div key={g.key} className="rounded-lg border border-line">
+        <div key={g.key} className="overflow-hidden rounded-lg shadow-sm dark:ring-1 dark:ring-line">
           <div className="border-b border-line bg-raised px-4 py-2">
             <p className="text-sm font-medium text-ink">{g.title}</p>
             {g.subtitle && <p className="text-xs text-ink-3">{g.subtitle}</p>}

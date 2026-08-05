@@ -95,7 +95,7 @@ export default function MatterEnquiries({
       </p>
 
       {composing && (
-        <div className="space-y-2 rounded-lg border border-line bg-raised p-3">
+        <div className="space-y-2 rounded-lg bg-raised shadow-sm dark:ring-1 dark:ring-line p-3">
           <input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
@@ -125,7 +125,7 @@ export default function MatterEnquiries({
 
       <div className="space-y-2">
         {threads.map((t) => (
-          <details key={t.id} className="group rounded-lg border border-line">
+          <details key={t.id} className="group overflow-hidden rounded-lg shadow-sm dark:ring-1 dark:ring-line">
             <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 list-none">
               <span className="min-w-0">
                 <span className="flex items-center gap-2">
