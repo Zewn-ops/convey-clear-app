@@ -15,6 +15,8 @@ import {
   type MatterPriority,
   type MatterStatus,
 } from "@/types";
+import PhaseProgress from "@/components/ui/PhaseProgress";
+import { getPipeline, phaseLabel, phaseOrder, phaseSteps } from "@/lib/pipelines";
 import { ArrowLeft, FileText } from "lucide-react";
 import ClientDocUpload from "@/components/dashboard/ClientDocUpload";
 import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
@@ -36,11 +38,18 @@ export default async function MatterDetailPage({
   const { data: matterData } = await supabase
     .from("matters")
     .select(
-      "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_notes, created_at, clients(id, entity_type, full_name, business_name)"
+      "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_subtype, service_notes, created_at, clients(id, entity_type, full_name, business_name), services(code, name)"
     )
     .eq("id", id)
     .maybeSingle();
-  const matter = matterData as Matter | null;
+  // Matter does not model the services relation or service_subtype, and it types
+  // current_phase as MatterPhase ("1".."4") even though the pipeline phases are
+  // slugs. Widened here rather than reshaping the shared type mid-flight.
+  type MatterWithService = Matter & {
+    service_subtype?: string | null;
+    services?: { code?: string | null; name?: string | null } | null;
+  };
+  const matter = matterData as MatterWithService | null;
   if (!matter) notFound();
 
   const { data: docsData } = await supabase
@@ -58,6 +67,17 @@ export default async function MatterDetailPage({
   // The shared enquiry thread (#3). RLS hands a client only the 'shared' threads
   // on this matter — never the firm's own channel with ConveyClear.
   const enquiryThreads = await getMatterEnquiries(supabase, id);
+
+  // Which progress bar this matter gets. A matter on a pipeline phase
+  // ("onboarding", "operations", …) has no numeric phase, so the legacy 4-phase
+  // bar below measured Number("onboarding") = NaN and rendered every segment
+  // grey — an inert bar on the client's own matter. Prefer the pipeline bar,
+  // which is what the partner portal already shows, and keep the legacy bar for
+  // older matters that really do carry "1".."4".
+  const pipeline = getPipeline(matter.services?.code, matter.municipality, matter.service_subtype);
+  const pipelineSteps = pipeline ? phaseSteps(pipeline) : [];
+  const pipelineIdx = pipeline ? phaseOrder(pipeline, matter.current_phase) : -1;
+  const hasPipelineProgress = pipeline !== null && pipelineIdx >= 0;
 
   const phases: MatterPhase[] = ["1", "2", "3", "4"];
   const isClient = session.profile?.role === "client";
@@ -81,9 +101,18 @@ export default async function MatterDetailPage({
         </p>
       </div>
 
-      {/* 4-phase progress */}
       <Card>
         <p className="text-xs font-medium text-ink-3 uppercase tracking-wide mb-3">Progress</p>
+        {hasPipelineProgress ? (
+          <PhaseProgress
+            phase={pipelineIdx + 1}
+            total={pipelineSteps.length}
+            // client=true: the client sees the outward-facing phase name, not
+            // the internal one staff use.
+            label={phaseLabel(pipeline, matter.current_phase, true)}
+            done={pipelineIdx === pipelineSteps.length - 1}
+          />
+        ) : (
         <div className="flex gap-2">
           {phases.map((p) => {
             const active = matter.current_phase === p;
@@ -102,6 +131,7 @@ export default async function MatterDetailPage({
             );
           })}
         </div>
+        )}
       </Card>
 
       {/* Facts */}
