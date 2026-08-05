@@ -7,11 +7,10 @@ import { getSessionProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
-  PHASE_LABELS,
   type Matter,
   type MatterDocument,
-  type MatterPhase,
 } from "@/types";
+import { matterPhaseLabel } from "@/lib/phase-label";
 import { Briefcase, Clock, CheckCircle, FolderOpen, FileText, PlusCircle } from "lucide-react";
 
 export const metadata = { title: "Dashboard — ConveyClear" };
@@ -116,7 +115,7 @@ export default async function DashboardPage() {
                     </div>
                     {m.current_phase && (
                       <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-action-fill/10 text-action">
-                        Phase {m.current_phase}: {PHASE_LABELS[m.current_phase as MatterPhase]}
+                        {matterPhaseLabel(m.current_phase)}
                       </span>
                     )}
                   </div>

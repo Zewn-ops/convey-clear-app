@@ -8,11 +8,10 @@ import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
-  PHASE_LABELS,
   type Matter,
-  type MatterPhase,
   type MatterStatus,
 } from "@/types";
+import { matterPhaseLabel } from "@/lib/phase-label";
 import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
 import MatterFilters from "@/components/matters/MatterFilters";
 import MatterPagination from "@/components/matters/MatterPagination";
@@ -75,7 +74,7 @@ export default async function MattersPage({
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     {m.current_phase && (
                       <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-action-fill/10 text-action">
-                        Phase {m.current_phase}: {PHASE_LABELS[m.current_phase as MatterPhase]}
+                        {matterPhaseLabel(m.current_phase)}
                       </span>
                     )}
                     {m.status && (
