@@ -227,7 +227,7 @@ export default function SignatureBuilder() {
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">HTML source (for the API deploy / advanced)</p>
             <button onClick={copySource} className="text-xs font-medium text-action hover:underline">Copy source</button>
           </div>
-          <textarea readOnly value={html} rows={8} className="w-full rounded-lg border border-line p-3 font-mono text-[11px] text-ink-2" />
+          <textarea readOnly value={html} rows={8} className="bg-surface text-ink w-full rounded-lg border border-line p-3 font-mono text-[11px] text-ink-2" />
         </Card>
       )}
 

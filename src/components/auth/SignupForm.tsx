@@ -177,7 +177,7 @@ export default function SignupForm() {
         <label className="flex items-start gap-2 cursor-pointer">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-line text-action focus:ring-action"
+            className="bg-surface text-ink mt-0.5 h-4 w-4 rounded border-line text-action focus:ring-action"
             {...register("popia_consent")}
           />
           <span className="text-xs text-ink-2">

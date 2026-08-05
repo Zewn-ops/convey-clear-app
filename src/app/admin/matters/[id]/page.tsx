@@ -626,7 +626,7 @@ export default async function AdminMatterDetailPage({
               <input type="hidden" name="author_id" value={authorId ?? ""} />
               <label className="flex-1 text-xs font-medium text-ink-3">
                 Phase
-                <select name="phase" defaultValue={matter.current_phase ?? ""} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                <select name="phase" defaultValue={matter.current_phase ?? ""} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
                   {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
                 </select>
               </label>
@@ -657,7 +657,7 @@ export default async function AdminMatterDetailPage({
                 <input type="hidden" name="author_id" value={authorId ?? ""} />
                 <label className="flex-1 text-xs font-medium text-ink-3">
                   {decisionStage?.name} outcome
-                  <select name="outcomeReason" defaultValue={currentOutcomeValue} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                  <select name="outcomeReason" defaultValue={currentOutcomeValue} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
                     <option value="">— Select outcome —</option>
                     {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
                   </select>
@@ -689,7 +689,7 @@ export default async function AdminMatterDetailPage({
               name="rates_account_no"
               defaultValue={typeof sd.rates_account_no === "string" ? sd.rates_account_no : ""}
               placeholder="Council rates account no."
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
             />
           </label>
           <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Save</SubmitButton>
@@ -747,7 +747,7 @@ export default async function AdminMatterDetailPage({
           <select
             name="status"
             defaultValue={matter.status ?? "new"}
-            className="rounded-lg border border-line px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            className="bg-surface text-ink rounded-lg border border-line px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
           >
             {(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => (
               <option key={s} value={s}>{MATTER_STATUS_LABELS[s]}</option>
@@ -896,7 +896,7 @@ export default async function AdminMatterDetailPage({
               name="body"
               rows={2}
               placeholder="Add a note or update..."
-              className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
+              className="bg-surface text-ink flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
             />
             <SubmitButton
               pendingLabel="Posting…"
