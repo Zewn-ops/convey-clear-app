@@ -95,6 +95,23 @@ worse than a consistently weekend-only one. Verified against seven hand-counted 
 - 8 matters across five phases, backdated 3 to 201 days
 - 4 transfers across open / on hold / registered, one with **zero matters** so that chip has a live case
 
+## Section 1 progress
+
+| Migration | State |
+|---|---|
+| 048 `client_members` + backfill + `app_user_client_ids()` | ✅ applied to staging, backfill verified |
+| 049 helper swap to membership | ✅ applied, proven by impersonation across five roles |
+| 050 `locations` | ⬜ |
+| 051 `transfer_parties` | ⬜ delivers the parked 07-28 asks |
+| 052/053 access grants + enforce | ⬜ |
+| 054/055 councils hierarchy, compliance columns | ⬜ |
+
+**Not yet built on top:** the `client_members` admin UI and the entity switcher. The database supports
+multi-entity now; the app still shows one entity, because nothing reads the new table yet.
+
+Staging has a deliberate two-entity fixture: `dryrun.client@example.com` is a member of both their own
+person record and Brookfield Props, so the switcher has something to switch between when it exists.
+
 ## Known gaps
 
 - **Peer benchmark** ("Tshwane clearances averaging X days") is computable but needs volume. Do not ship
