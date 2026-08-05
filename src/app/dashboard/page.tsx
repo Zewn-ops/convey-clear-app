@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import { createClient } from "@/lib/supabase/server";
+import { getEntityContext } from "@/lib/entity";
 import { getSessionProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import {
@@ -22,14 +23,24 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  // RLS scopes these automatically: client→own, partner→their clients, staff→all.
-  const { data: mattersData } = await supabase
+  const { activeId } = await getEntityContext();
+
+  // RLS scopes these automatically: client→own entities, partner→their clients,
+  // staff→all.
+  let mattersQuery = supabase
     .from("matters")
     .select(
       "id, title, current_phase, status, priority, deadline, created_at, clients(id, entity_type, full_name, business_name)"
     )
     .order("created_at", { ascending: false })
     .limit(8);
+
+  // Narrow to the selected entity. RLS already limits this to entities the user
+  // is a member of, so this is a view preference and not the boundary: dropping
+  // it would show the union of their own entities, never anyone else's.
+  if (activeId) mattersQuery = mattersQuery.eq("client_id", activeId);
+
+  const { data: mattersData } = await mattersQuery;
   const matters = (mattersData as Matter[] | null) ?? [];
 
   const { data: documentsData } = await supabase

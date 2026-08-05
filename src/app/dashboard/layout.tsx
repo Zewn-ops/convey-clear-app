@@ -1,17 +1,27 @@
 import Sidebar from "@/components/dashboard/Sidebar";
 import MobileNav from "@/components/dashboard/MobileNav";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import { getEntityContext, entityLabel, entityKind } from "@/lib/entity";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Resolved on the server. The cookie is re-validated against real membership
+  // here, so a stale or forged value can never reach the client.
+  const { memberships, activeId } = await getEntityContext();
+
   return (
-    <div className="min-h-screen bg-raised flex">
+    <div className="flex min-h-screen bg-canvas">
       {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0">
-        <Sidebar />
+        <Sidebar
+          memberships={memberships}
+          activeId={activeId}
+          entityLabel={entityLabel}
+          entityKind={entityKind}
+        />
       </div>
 
       {/* Content */}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Card from "@/components/ui/Card";
 import { createClient } from "@/lib/supabase/server";
+import { getEntityContext } from "@/lib/entity";
 import { getSessionProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import {
@@ -29,15 +30,21 @@ export default async function MattersPage({
 
   const supabase = await createClient();
   const filters = parseMatterFilters(searchParams);
-  const { data, count } = await applyMatterFilters(
-    supabase
-      .from("matters")
-      .select(
-        "id, title, current_phase, status, priority, deadline, created_at, municipality, clients(id, entity_type, full_name, business_name)",
-        { count: "exact" }
-      ),
-    filters
-  );
+  const { activeId } = await getEntityContext();
+
+  let base = supabase
+    .from("matters")
+    .select(
+      "id, title, current_phase, status, priority, deadline, created_at, municipality, clients(id, entity_type, full_name, business_name)",
+      { count: "exact" }
+    );
+
+  // Narrow to the selected entity. RLS already limits this to entities the user
+  // is a member of, so this is a view preference and not the boundary: dropping
+  // it would show the union of their own entities, never anyone else's.
+  if (activeId) base = base.eq("client_id", activeId);
+
+  const { data, count } = await applyMatterFilters(base, filters);
   const matters = (data as Matter[] | null) ?? [];
   const total = count ?? 0;
 

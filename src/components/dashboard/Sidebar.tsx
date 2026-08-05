@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import EntitySwitcher from "@/components/dashboard/EntitySwitcher";
+import type { Membership } from "@/lib/entity";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -20,7 +22,17 @@ const navItems = [
   { href: "/dashboard/request", label: "Request a service", icon: PlusCircle, exact: false },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  memberships = [],
+  activeId = null,
+  entityLabel,
+  entityKind,
+}: {
+  memberships?: Membership[];
+  activeId?: string | null;
+  entityLabel?: (m: Membership) => string;
+  entityKind?: (m: Membership) => string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -32,11 +44,24 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex flex-col h-full w-64 bg-[#1B2E6B] text-white">
+    <aside className="flex flex-col h-full w-64 bg-chrome text-white">
       {/* Logo */}
       <div className="flex items-center px-6 py-4 border-b border-white/10">
         <img src="/conveyclear-logo-white.png" alt="ConveyClear" className="h-11 w-auto" />
       </div>
+
+      {/* Which entity this session is looking at. Renders nothing on a single
+          membership, which is every existing client on day one. */}
+      {memberships.length > 1 && entityLabel && entityKind && (
+        <div className="border-b border-white/10 px-3 py-3">
+          <EntitySwitcher
+            memberships={memberships}
+            activeId={activeId}
+            label={entityLabel}
+            kind={entityKind}
+          />
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 px-4 py-4 space-y-1">
