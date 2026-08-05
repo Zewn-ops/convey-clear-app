@@ -6,13 +6,12 @@ import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import { formatDate } from "@/lib/utils";
 import {
   clientDisplayName,
-  PHASE_LABELS,
   MATTER_STATUS_LABELS,
   type Client,
   type Matter,
-  type MatterPhase,
   type MatterStatus,
 } from "@/types";
+import { matterPhaseLabel } from "@/lib/phase-label";
 import { ArrowLeft, Mail, Phone, MapPin } from "lucide-react";
 
 export const metadata = { title: "Client — ConveyClear Partner" };
@@ -98,7 +97,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
                   <p className="font-medium text-ink truncate">{m.title || "Untitled matter"}</p>
                   <p className="text-xs text-ink-3">
                     {m.municipality ? `${m.municipality} · ` : ""}
-                    {m.current_phase ? `Phase ${m.current_phase}: ${PHASE_LABELS[m.current_phase as MatterPhase]}` : "—"}
+                    {matterPhaseLabel(m.current_phase)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">

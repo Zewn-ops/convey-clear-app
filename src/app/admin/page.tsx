@@ -5,7 +5,8 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
-import { isStaffRole, clientDisplayName, MATTER_STATUS_LABELS, PHASE_LABELS, type Matter, type MatterPhase, type MatterStatus } from "@/types";
+import { isStaffRole, clientDisplayName, MATTER_STATUS_LABELS, type Matter, type MatterStatus } from "@/types";
+import { matterPhaseLabel } from "@/lib/phase-label";
 import { ClipboardList, Users, Clock, Briefcase, ArrowRight } from "lucide-react";
 
 export const metadata = { title: "Admin Overview — ConveyClear" };
@@ -114,9 +115,7 @@ export default async function AdminPage() {
                       {m.title || clientDisplayName(m.clients) || "—"}
                     </td>
                     <td className="px-5 py-3 text-ink-2">
-                      {m.current_phase
-                        ? `Phase ${m.current_phase}: ${PHASE_LABELS[m.current_phase as MatterPhase]}`
-                        : "—"}
+                      {matterPhaseLabel(m.current_phase)}
                     </td>
                     <td className="px-5 py-3 text-ink-3 hidden md:table-cell">{formatDate(m.created_at)}</td>
                     <td className="px-5 py-3">
