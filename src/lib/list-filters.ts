@@ -6,7 +6,7 @@
 // as NO searchParam, so a clean URL is the default view and FilterRail's
 // "active filters" count means what it says.
 
-import { parsePageSize } from "@/components/ui/Pagination";
+import { parsePageSize } from "@/lib/pagination";
 
 export type SP = Record<string, string | string[] | undefined>;
 

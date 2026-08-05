@@ -3,16 +3,14 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
-export const PAGE_SIZES = [25, 50, 100] as const;
-export const DEFAULT_PAGE_SIZE = 25;
-
-/** Clamp an arbitrary ?per= value to one we actually offer. */
-export function parsePageSize(raw?: string | string[] | null): number {
-  const v = Array.isArray(raw) ? raw[0] : raw;
-  const n = parseInt(v ?? "", 10);
-  return (PAGE_SIZES as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
-}
+// PAGE_SIZES / DEFAULT_PAGE_SIZE / parsePageSize live in @/lib/pagination and are
+// deliberately NOT re-exported from here. Re-exporting would let a Server
+// Component import them through this "use client" module again, which is exactly
+// the bug that took /admin/matters, /admin/clients and /admin/property-transfers
+// down on staging: client exports become reference stubs in a production build,
+// so the call throws at request time while dev stays green.
 
 /**
  * Numbered pagination with a rows-per-page control.

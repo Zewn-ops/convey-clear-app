@@ -1,6 +1,6 @@
 import type { MatterStatus } from "@/types";
 import { COUNCIL_WAIT_STAGE_KEYS } from "@/lib/pipelines";
-import { parsePageSize, DEFAULT_PAGE_SIZE } from "@/components/ui/Pagination";
+import { parsePageSize, DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 // Shared matters-list filtering + pagination. Used by the admin, partner, and
 // client matters pages so all three behave identically. RLS already scopes rows
