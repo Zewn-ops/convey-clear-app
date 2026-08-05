@@ -8,6 +8,7 @@ import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import { DocSlot, ConsentBox, type DocSlotState } from "./OnboardForm";
 import { prcRcfDocs } from "@/lib/prc-docs";
 import type { TokenData } from "@/lib/onboard-token";
+import Wordmark from "@/components/ui/Wordmark";
 
 const STAGES = ["Documents", "Consent", "Review"] as const;
 
@@ -117,7 +118,7 @@ export default function PrcOnboardForm({ token, data }: { token: string; data: T
     return (
       <main className="min-h-screen bg-raised flex flex-col">
         <header className="bg-surface border-b border-line px-6 py-3 flex items-center">
-          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
+          <Wordmark className="h-10" />
         </header>
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md text-center">
@@ -143,7 +144,7 @@ export default function PrcOnboardForm({ token, data }: { token: string; data: T
   return (
     <main className="min-h-screen bg-raised flex flex-col">
       <header className="bg-surface border-b border-line shadow-sm px-6 py-3 sticky top-0 z-10 flex items-center">
-        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
+        <Wordmark className="h-10" />
       </header>
 
       <div className="flex-1 w-full max-w-xl mx-auto px-4 py-8 space-y-5">

@@ -6,6 +6,7 @@ import { logMatterActivity } from "@/lib/activity";
 import { validateOnboardingToken, resolveMatterForFreshLink, type OnboardTokenReason } from "@/lib/onboard-token";
 import { notifyStaff } from "@/lib/notify";
 import { redirect } from "next/navigation";
+import Wordmark from "@/components/ui/Wordmark";
 
 // Re-exported for OnboardForm (which imports `type { TokenData } from "./page"`).
 export type { TokenData } from "@/lib/onboard-token";
@@ -122,7 +123,7 @@ function ErrorPage({
   return (
     <main className="min-h-screen bg-raised flex flex-col">
       <header className="bg-surface border-b border-line shadow-sm px-6 py-3 flex items-center">
-        <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-10 w-auto" />
+        <Wordmark className="h-10" />
       </header>
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">

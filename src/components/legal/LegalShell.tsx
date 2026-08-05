@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import Wordmark from "@/components/ui/Wordmark";
 
 /** A single titled section of a legal document. */
 export function LegalSection({
@@ -50,11 +51,7 @@ export default function LegalShell({
       <header className="bg-action-fill text-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link href="/" className="flex items-center">
-            <img
-              src="/conveyclear-logo.png"
-              alt="ConveyClear"
-              className="h-9 w-auto brightness-0 invert"
-            />
+            <Wordmark className="h-9  brightness-0 invert" />
           </Link>
           <Link href="/" className="text-sm text-white/80 transition-colors hover:text-white">
             ← Home

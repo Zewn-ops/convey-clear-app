@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Wordmark from "@/components/ui/Wordmark";
 
 interface AuthLayoutProps {
   title: string;
@@ -16,7 +17,7 @@ export default function AuthLayout({
       {/* Header */}
       <header className="bg-surface border-b border-line shadow-sm py-3 px-6">
         <Link href="/" className="flex items-center w-fit">
-          <img src="/conveyclear-logo.png" alt="ConveyClear" className="h-9 w-auto" />
+          <Wordmark className="h-9" />
         </Link>
       </header>
 
