@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import Card from "@/components/ui/Card";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
+import TransferParties, { type PartyRow as TPartyRow, type PartyOption } from "@/components/transfers/TransferParties";
 import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
@@ -68,6 +69,51 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
 
   const transfer = transferData as TransferDetail | null;
   if (!transfer) notFound();
+
+  // Parties (050). RLS on transfer_parties routes through can_access_transfer,
+  // so these rows exist only for transfers this firm already works.
+  const { data: partyRows } = await supabase
+    .from("transfer_parties")
+    .select("id, role, client_id, firm_id, full_name, business_name, entity_type, clients(full_name, business_name, entity_type), firms(name)")
+    .eq("transfer_id", id)
+    .order("role", { ascending: true });
+
+  type RawParty = {
+    id: string; role: string; client_id: string | null; firm_id: string | null;
+    full_name: string | null; business_name: string | null; entity_type: string | null;
+    clients: { full_name: string | null; business_name: string | null; entity_type: string } | null;
+    firms: { name: string | null } | null;
+  };
+  const partyList: TPartyRow[] = ((partyRows as RawParty[] | null) ?? []).map((r) => ({
+    id: r.id,
+    role: r.role,
+    via: r.client_id ? "entity" : r.firm_id ? "firm" : "inline",
+    // Partners have no /admin/clients route, so a party never links out here.
+    clientId: null,
+    detail: r.clients?.entity_type ?? r.entity_type,
+    who:
+      r.clients?.business_name?.trim() ||
+      r.clients?.full_name?.trim() ||
+      r.firms?.name?.trim() ||
+      r.business_name?.trim() ||
+      r.full_name?.trim() ||
+      "Unnamed party",
+  }));
+
+  // Pickers are RLS-scoped too: a firm links only to clients it can already see.
+  const [{ data: entityOpts }, { data: firmOpts }] = await Promise.all([
+    supabase.from("clients").select("id, full_name, business_name, entity_type")
+      .order("created_at", { ascending: false }).limit(200),
+    supabase.from("firms").select("id, name, partner_type").eq("active", true)
+      .order("name", { ascending: true }).limit(100),
+  ]);
+  const entityOptions: PartyOption[] = ((entityOpts as { id: string; full_name: string | null; business_name: string | null; entity_type: string }[] | null) ?? []).map((c) => ({
+    id: c.id, name: c.business_name?.trim() || c.full_name?.trim() || "Unnamed",
+    kind: c.entity_type.replace("_", " "),
+  }));
+  const firmOptions: PartyOption[] = ((firmOpts as { id: string; name: string; partner_type: string | null }[] | null) ?? []).map((f) => ({
+    id: f.id, name: f.name, kind: (f.partner_type ?? "firm").replace("_", " "),
+  }));
 
   const { data: linkedData } = await supabase
     .from("matters")
@@ -158,16 +204,18 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
       </div>
 
       <Card>
+        <TransferParties
+          transferId={id}
+          parties={partyList}
+          entities={entityOptions}
+          firms={firmOptions}
+          canEdit
+        />
+      </Card>
+
+      <Card>
         <p className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Transaction</p>
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <div>
-            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Seller</dt>
-            <dd className="mt-1 text-[14.5px] font-medium text-ink">{transfer.seller ? clientDisplayName(transfer.seller) : "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Buyer</dt>
-            <dd className="mt-1 text-[14.5px] font-medium text-ink">{transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}</dd>
-          </div>
+        <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Council</dt>
             <dd className="mt-1 text-[14.5px] font-medium text-ink">{municipalityLabel(transfer.municipality)}</dd>

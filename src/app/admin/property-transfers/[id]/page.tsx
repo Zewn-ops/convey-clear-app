@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import UnlinkMatterButton from "@/components/transfers/UnlinkMatterButton";
+import TransferParties, { type PartyRow as TPartyRow, type PartyOption } from "@/components/transfers/TransferParties";
 import { getPipeline, phaseLabel, stageLabel } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
@@ -122,6 +123,51 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     (m) => ({ id: m.id, label: m.title || `Untitled matter (${municipalityLabel(m.municipality)})` })
   );
 
+  // Parties live in transfer_parties (050). The four legacy FK columns on
+  // property_transfers are still populated and still read below, so this card
+  // and the legacy seller/buyer picker agree until those reads are retired.
+  const { data: partyRows } = await supabase
+    .from("transfer_parties")
+    .select("id, role, client_id, firm_id, full_name, business_name, entity_type, clients(full_name, business_name, entity_type), firms(name)")
+    .eq("transfer_id", id)
+    .order("role", { ascending: true });
+
+  type RawParty = {
+    id: string; role: string; client_id: string | null; firm_id: string | null;
+    full_name: string | null; business_name: string | null; entity_type: string | null;
+    clients: { full_name: string | null; business_name: string | null; entity_type: string } | null;
+    firms: { name: string | null } | null;
+  };
+  const partyList: TPartyRow[] = ((partyRows as RawParty[] | null) ?? []).map((r) => ({
+    id: r.id,
+    role: r.role,
+    via: r.client_id ? "entity" : r.firm_id ? "firm" : "inline",
+    clientId: r.client_id,
+    detail: r.clients?.entity_type ?? r.entity_type,
+    who:
+      r.clients?.business_name?.trim() ||
+      r.clients?.full_name?.trim() ||
+      r.firms?.name?.trim() ||
+      r.business_name?.trim() ||
+      r.full_name?.trim() ||
+      "Unnamed party",
+  }));
+
+  const [{ data: entityOpts }, { data: firmOpts }] = await Promise.all([
+    supabase.from("clients").select("id, full_name, business_name, entity_type")
+      .order("created_at", { ascending: false }).limit(300),
+    supabase.from("firms").select("id, name, partner_type").eq("active", true)
+      .order("name", { ascending: true }).limit(200),
+  ]);
+  const entityOptions: PartyOption[] = ((entityOpts as { id: string; full_name: string | null; business_name: string | null; entity_type: string }[] | null) ?? []).map((c) => ({
+    id: c.id,
+    name: c.business_name?.trim() || c.full_name?.trim() || "Unnamed",
+    kind: c.entity_type.replace("_", " "),
+  }));
+  const firmOptions: PartyOption[] = ((firmOpts as { id: string; name: string; partner_type: string | null }[] | null) ?? []).map((f) => ({
+    id: f.id, name: f.name, kind: (f.partner_type ?? "firm").replace("_", " "),
+  }));
+
   // The transaction's own seller/buyer, offered first when creating a matter in
   // here — on a transfer the matter is nearly always for one of these two.
   const transferParties = [
@@ -195,27 +241,25 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         </div>
       </div>
 
-      {/* Parties to the transaction */}
-      <Card accent="firm">
-        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-3 flex items-center gap-1.5"><Scale className="h-3.5 w-3.5 text-violet-700" /> Parties</p>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <PartyRow label="Conveyancing attorney" value={transfer.attorney?.name ?? "—"} />
-          <PartyRow label="Estate agent" value={transfer.estate_agent?.name ?? "—"} />
-          <PartyRow
-            label="Seller"
-            value={transfer.seller ? clientDisplayName(transfer.seller) : "—"}
-            href={transfer.seller ? `/admin/clients/${transfer.seller.id}` : undefined}
-          />
-          <PartyRow
-            label="Buyer"
-            value={transfer.buyer ? clientDisplayName(transfer.buyer) : "—"}
-            href={transfer.buyer ? `/admin/clients/${transfer.buyer.id}` : undefined}
-          />
-        </dl>
+      {/* Parties to the transaction — transfer_parties (050) */}
+      <Card>
+        <TransferParties
+          transferId={id}
+          parties={partyList}
+          entities={entityOptions}
+          firms={firmOptions}
+          canEdit
+        />
         {!transfer.business_partner_id && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-4">
-            No attorney firm is set, so no partner can see this transfer. Set one on the Edit screen to give the firm access.
-          </p>
+          <div className="mt-4 rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-waiting">
+              No attorney firm set
+            </p>
+            <p className="mt-1 text-[13px] text-ink-2">
+              No partner can see this transfer until a firm is set on the Edit screen. Adding a
+              conveyancing attorney here records the role; it does not grant the firm access.
+            </p>
+          </div>
         )}
       </Card>
 
