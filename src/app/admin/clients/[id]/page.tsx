@@ -16,6 +16,7 @@ import {
   type MatterStatus,
 } from "@/types";
 import { matterPhaseLabel } from "@/lib/phase-label";
+import { getPipeline, stageLabel } from "@/lib/pipelines";
 import { ArrowLeft, Briefcase } from "lucide-react";
 import ClientVault from "@/components/clients/ClientVault";
 import ClientDetailsForm from "@/components/clients/ClientDetailsForm";
@@ -25,6 +26,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import EntityMembers, { type MemberRow, type CandidateUser } from "@/components/clients/EntityMembers";
 
 export const metadata = { title: "Client Details — ConveyClear Admin" };
+
+// Matter models neither the services relation nor service_subtype, both of which
+// getPipeline needs to resolve a stage slug into its real name.
+type MatterRow = Matter & {
+  service_subtype?: string | null;
+  services?: { code?: string | null } | null;
+};
+
+/** current_stage holds a pipeline slug, so rendering it raw showed "inquiry". */
+function matterStageLabel(m: MatterRow): string {
+  if (!m.current_stage) return "No stage set";
+  const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
+  return pl ? stageLabel(pl, m.current_stage) : m.current_stage;
+}
 
 const entityLabels: Record<string, string> = {
   natural_person: "Individual",
@@ -54,7 +69,7 @@ export default async function AdminClientDetailPage({
     supabase.from("clients").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("matters")
-      .select("id, title, current_phase, current_stage, status, priority, deadline, municipality, created_at")
+      .select("id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, services(code)")
       .eq("client_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -72,7 +87,7 @@ export default async function AdminClientDetailPage({
   const client = clientData as Client | null;
   if (!client) notFound();
 
-  const matters = (mattersData as Matter[] | null) ?? [];
+  const matters = (mattersData as MatterRow[] | null) ?? [];
 
   // FICA vault docs + short-lived signed URLs (signed server-side via admin).
   const vaultDocs = (vaultData as ClientDocument[] | null) ?? [];
@@ -201,7 +216,7 @@ export default async function AdminClientDetailPage({
                         </p>
                         <p className="text-xs text-ink-3 mt-0.5">
                           {m.municipality ? `${m.municipality} · ` : ""}
-                          {m.current_stage || "No stage set"} · opened {formatDate(m.created_at)}
+                          {matterStageLabel(m)} · opened {formatDate(m.created_at)}
                         </p>
                       </div>
                     </div>

@@ -16,7 +16,7 @@ import {
   type MatterStatus,
 } from "@/types";
 import PhaseProgress from "@/components/ui/PhaseProgress";
-import { getPipeline, phaseLabel, phaseOrder, phaseSteps } from "@/lib/pipelines";
+import { getPipeline, phaseLabel, phaseOrder, phaseSteps, stageLabel } from "@/lib/pipelines";
 import { ArrowLeft, FileText } from "lucide-react";
 import ClientDocUpload from "@/components/dashboard/ClientDocUpload";
 import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
@@ -139,7 +139,12 @@ export default async function MatterDetailPage({
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <Fact label="Status" value={matter.status ? MATTER_STATUS_LABELS[matter.status as MatterStatus] : "—"} />
           <Fact label="Priority" value={matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"} />
-          <Fact label="Stage" value={matter.current_stage || "—"} />
+          {/* stageLabel, not the raw column: current_stage holds a slug, so this
+              read "inquiry" to the client instead of the stage's real name. */}
+          <Fact
+            label="Stage"
+            value={matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "—"}
+          />
           <Fact label="Deadline" value={matter.deadline ? formatDate(matter.deadline) : "—"} />
           <Fact label="Opened" value={formatDate(matter.created_at)} />
           {matter.service_notes && <Fact label="Notes" value={matter.service_notes} />}

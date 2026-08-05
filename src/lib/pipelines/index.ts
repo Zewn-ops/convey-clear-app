@@ -110,7 +110,15 @@ export function phaseLabel(p: Pipeline | null, key?: string | null, client = fal
 
 export function stageLabel(p: Pipeline | null, key?: string | null): string {
   if (!p || !key) return key ?? "—";
-  return findStage(p, key)?.stage.name ?? key;
+  const found = findStage(p, key)?.stage.name;
+  if (found) return found;
+  // The key is not a stage in this pipeline — seeded and legacy matters carry
+  // values like "inquiry" that no pipeline defines. Humanise rather than print
+  // the raw slug: this string is shown to clients on their own matter.
+  return key
+    .split("_")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
 }
 
 // Ordered phase-key steps for an advance control: pre → phases → terminal.
