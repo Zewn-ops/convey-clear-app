@@ -51,6 +51,11 @@ export default async function AdminNotificationsPage({
   const typeParam = Array.isArray(rawType) ? rawType[0] : rawType;
   const type = NOTIFICATION_TYPES.some((t) => t.value === typeParam) ? typeParam! : "";
 
+  // FilterBar always renders a search box, so the page has to mean it — an input
+  // that silently does nothing is worse than no input.
+  const rawQ = searchParams?.q;
+  const q = (Array.isArray(rawQ) ? rawQ[0] : rawQ ?? "").trim().slice(0, 100);
+
   const supabase = await createClient();
   let query = supabase
     .from("notifications")
@@ -60,6 +65,11 @@ export default async function AdminNotificationsPage({
     .limit(PAGE_SIZE);
   if (filter === "unread") query = query.is("read_at", null);
   if (type) query = query.eq("type", type);
+  if (q) {
+    // Strip PostgREST's or-syntax characters before interpolating free text.
+    const safe = q.replace(/[,()%*]/g, " ").trim();
+    if (safe) query = query.or(`title.ilike.%${safe}%,body.ilike.%${safe}%`);
+  }
 
   const { data, error } = await query;
   const items = (data as NotificationRow[] | null) ?? [];
@@ -81,6 +91,7 @@ export default async function AdminNotificationsPage({
         <aside className="lg:sticky lg:top-4 lg:w-56 lg:shrink-0">
           <FilterBar
             orientation="vertical"
+            searchPlaceholder="Search notifications…"
             facets={[
               {
                 key: "type",
