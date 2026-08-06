@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { findOrCreateClientForParty } from "@/lib/party-client";
 
 export const runtime = "nodejs";
 
@@ -66,8 +67,10 @@ export async function POST(req: Request) {
   } else if (firmId) {
     row.firm_id = firmId;
   } else {
-    // Inline capture. The database enforces this too; checking here turns a
-    // constraint violation into a sentence someone can act on.
+    // Capture. Since 2026-08-06 this no longer writes an inline party: a
+    // captured party BECOMES a real client record, so it carries a FICA vault
+    // and can be reused on the next matter. The inline columns stay on the
+    // table for the rows created before this, and for the PATCH path.
     const entityType = b.entityType as string | undefined;
     const fullName = typeof b.fullName === "string" ? b.fullName.trim() : "";
     const businessName = typeof b.businessName === "string" ? b.businessName.trim() : "";
@@ -77,15 +80,19 @@ export async function POST(req: Request) {
     if (entityType === "natural_person" ? !fullName : !businessName) {
       return NextResponse.json({ error: "A name is required." }, { status: 400 });
     }
-    Object.assign(row, {
-      entity_type: entityType,
-      full_name: fullName || null,
-      business_name: businessName || null,
-      id_number: (b.idNumber as string) || null,
-      registration_no: (b.registrationNo as string) || null,
-      email: (b.email as string) || null,
-      cell: (b.cell as string) || null,
+
+    const made = await findOrCreateClientForParty(supabase, {
+      entityType: entityType as "natural_person" | "business" | "trust",
+      fullName,
+      businessName,
+      idNumber: b.idNumber as string,
+      registrationNo: b.registrationNo as string,
+      email: b.email as string,
+      cell: b.cell as string,
+      physicalAddress: b.physicalAddress as string,
     });
+    if (!made.ok) return NextResponse.json({ error: made.error }, { status: 400 });
+    row.client_id = made.clientId;
   }
 
   const { data, error } = await supabase

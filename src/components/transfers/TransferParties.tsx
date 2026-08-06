@@ -264,6 +264,9 @@ export default function TransferParties({
   const [linkId, setLinkId] = useState("");
   const [entityType, setEntityType] = useState("natural_person");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [cell, setCell] = useState("");
+  const [idNo, setIdNo] = useState("");
 
   const taken = new Set(parties.map((p) => p.role));
 
@@ -280,6 +283,12 @@ export default function TransferParties({
       body.entityType = entityType;
       if (entityType === "natural_person") body.fullName = name;
       else body.businessName = name;
+      if (email.trim()) body.email = email.trim();
+      if (cell.trim()) body.cell = cell.trim();
+      if (idNo.trim()) {
+        if (entityType === "natural_person") body.idNumber = idNo.trim();
+        else body.registrationNo = idNo.trim();
+      }
     }
 
     setBusy("add");
@@ -295,6 +304,9 @@ export default function TransferParties({
       setAdding(false);
       setLinkId("");
       setName("");
+      setEmail("");
+      setCell("");
+      setIdNo("");
       router.refresh();
     } finally {
       setBusy(null);
@@ -392,7 +404,7 @@ export default function TransferParties({
               >
                 <option value="entity">An existing client</option>
                 <option value="firm">A firm</option>
-                <option value="inline">Capture details now</option>
+                <option value="inline">A new client — capture details</option>
               </select>
             </label>
           </div>
@@ -441,10 +453,50 @@ export default function TransferParties({
             </div>
           )}
 
+          {/* Contact details are collected HERE rather than afterwards, because
+              this now creates a real client record and a record with only a name
+              on it cannot be invited, chased or FICA-verified. They also feed the
+              duplicate check, so capturing the same person twice links instead of
+              forking. */}
+          {mode === "inline" && (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="flex-1 text-sm">
+                <span className="mb-1 block font-medium text-ink-2">Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.co.za"
+                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                />
+              </label>
+              <label className="flex-1 text-sm">
+                <span className="mb-1 block font-medium text-ink-2">Cell</span>
+                <input
+                  value={cell}
+                  onChange={(e) => setCell(e.target.value)}
+                  placeholder="+27 82 000 0000"
+                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                />
+              </label>
+              <label className="flex-1 text-sm">
+                <span className="mb-1 block font-medium text-ink-2">
+                  {entityType === "natural_person" ? "ID number" : "Registration no."}
+                </span>
+                <input
+                  value={idNo}
+                  onChange={(e) => setIdNo(e.target.value)}
+                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                />
+              </label>
+            </div>
+          )}
+
           {mode === "inline" && (
             <p className="text-[12.5px] text-ink-3">
-              A captured party is a name on this transfer only. They get no login and no FICA vault
-              until someone creates a client record for them.
+              This creates a <span className="font-medium text-ink-2">client record</span> — with its
+              own FICA vault, reusable on their next matter. If a client already exists with this ID
+              number or email, they are linked instead of duplicated.
             </p>
           )}
 
