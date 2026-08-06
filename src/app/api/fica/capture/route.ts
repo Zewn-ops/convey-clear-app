@@ -86,34 +86,15 @@ export async function POST(request: Request) {
   // client, or be linked to one of the matter's parties.
   let clientId: string | null = null;
 
-  if (body.client_id) {
-    if (matter.client_id === body.client_id) {
-      clientId = body.client_id;
-    } else {
-      const { data: party } = await admin
-        .from("matter_parties")
-        .select("id")
-        .eq("matter_id", matterId)
-        .eq("client_id", body.client_id)
-        .maybeSingle();
-      if (!party) {
-        return NextResponse.json(
-          { message: "That client is not a party to this matter." },
-          { status: 403 }
-        );
-      }
-      clientId = body.client_id;
-    }
-  } else {
-    clientId = (matter.client_id as string | null) ?? null;
-  }
-
-  // No client record yet? Make one from what the party already carries, rather
-  // than dead-ending. This used to return "create one with Contact on the party
-  // first", which sent staff away mid-capture to do by hand the one thing this
-  // route has everything it needs to do — the party row already holds the name,
-  // ID number, email and cell a client record is made of.
-  if (!clientId && typeof body.party_id === "string" && body.party_id) {
+  // ⚠️ party_id is resolved FIRST, ahead of the matter's own client.
+  //
+  // It used to be checked last, behind `if (!clientId)`. On a COO matter that
+  // also carries a client of its own, `clientId` was already filled from
+  // matter.client_id, so the party branch never ran: the request returned 200,
+  // created nothing, linked nothing — and would have captured the party's
+  // details onto the MATTER's client. Caught only by checking the database
+  // after a 200; the response said success either way.
+  if (typeof body.party_id === "string" && body.party_id) {
     const { data: party } = await admin
       .from("matter_parties")
       .select("id, entity_type, full_name, business_name, id_number, registration_no, email, cell, physical_address, client_id")
@@ -152,14 +133,33 @@ export async function POST(request: Request) {
         },
         // Scoped to the matter's firm when it has one: this runs as the service
         // role and the caller may be a partner, so an unscoped match could link
-        // to another firm's client and disclose it. Staff-only matters have no
-        // firm and need no scope.
+        // to another firm's client and disclose it.
         { scopeToFirmId: (matter.business_partner_id as string | null) ?? null }
       );
       if (!made.ok) return NextResponse.json({ message: made.error }, { status: 400 });
       clientId = made.clientId;
       await admin.from("matter_parties").update({ client_id: clientId }).eq("id", pr.id);
     }
+  } else if (body.client_id) {
+    if (matter.client_id === body.client_id) {
+      clientId = body.client_id;
+    } else {
+      const { data: party } = await admin
+        .from("matter_parties")
+        .select("id")
+        .eq("matter_id", matterId)
+        .eq("client_id", body.client_id)
+        .maybeSingle();
+      if (!party) {
+        return NextResponse.json(
+          { message: "That client is not a party to this matter." },
+          { status: 403 }
+        );
+      }
+      clientId = body.client_id;
+    }
+  } else {
+    clientId = (matter.client_id as string | null) ?? null;
   }
 
   if (!clientId) {
