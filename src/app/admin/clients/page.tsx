@@ -101,7 +101,7 @@ export default async function AdminClientsPage({
           <FilterBar orientation="vertical" facets={facets} searchPlaceholder="Search name, email, cell…" />
         </aside>
         <div className="min-w-0 flex-1">
-      <Card padding="none">
+      <Card padding="none" className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

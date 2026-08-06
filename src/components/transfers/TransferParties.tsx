@@ -70,6 +70,14 @@ export type PartyRow = {
 
 export type PartyOption = { id: string; name: string; kind: string };
 
+/** The four roles a transaction is expected to fill, shown as slots. */
+const EXPECTED_ROLES = [
+  { value: "seller", label: "Seller", icon: User },
+  { value: "buyer", label: "Buyer", icon: User },
+  { value: "estate_agent", label: "Estate agent", icon: Building2 },
+  { value: "conveyancing_attorney", label: "Attorney", icon: Scale },
+] as const;
+
 const roleLabel = (r: string) =>
   PARTY_ROLES.find((x) => x.value === r)?.label ?? r.replace(/_/g, " ");
 
@@ -517,6 +525,43 @@ export default function TransferParties({
           </div>
         </div>
       )}
+
+      {/* The four roles a transaction is expected to have, as slots.
+          A list of who IS here cannot show who ISN'T, and "no estate agent yet"
+          and "this deal has no estate agent" look identical when both render as
+          nothing. The slots make the gap legible at a glance; anyone in another
+          role still appears in the list below. */}
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        {EXPECTED_ROLES.map((r) => {
+          const p = parties.find((x) => x.role === r.value);
+          const Icon = r.icon;
+          return (
+            <div
+              key={r.value}
+              className={cn(
+                "rounded-lg px-3 py-2.5 shadow-sm dark:ring-1",
+                p ? "bg-surface dark:ring-line" : "bg-raised/60 dark:ring-line/60"
+              )}
+            >
+              <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                <Icon className="h-3 w-3" /> {r.label}
+              </p>
+              {p ? (
+                <>
+                  <p className="mt-1 truncate text-[13.5px] font-semibold text-ink" title={p.who}>
+                    {p.who}
+                  </p>
+                  <p className="text-[11px] text-ink-3">
+                    {p.via === "entity" ? "Client record" : p.via === "firm" ? "Firm" : "Captured"}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-[13px] text-ink-3">Not linked</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {parties.length === 0 ? (
         <EmptyState title="No parties captured yet">

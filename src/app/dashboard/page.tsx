@@ -139,7 +139,7 @@ export default async function DashboardPage() {
       {documents.length > 0 && (
         <div>
           <h2 className="font-semibold text-ink mb-3">Recent Documents</h2>
-          <Card padding="none">
+          <Card padding="none" className="overflow-hidden">
             <ul className="divide-y divide-line">
               {documents.map((doc) => (
                 <li key={doc.id} className="flex items-center gap-3 px-5 py-3">

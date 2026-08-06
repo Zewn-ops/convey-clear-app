@@ -285,6 +285,30 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             Matters in this transfer · {linked.length}
           </p>
         </div>
+        <div className="px-5 py-4 border-b border-line space-y-4">
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-action hover:underline">
+              <Plus className="h-4 w-4" /> Create a matter in this transfer
+            </summary>
+            <div className="mt-3">
+              <CreateMatterForm
+                services={(servicesData as { id: string; code: string; name: string }[] | null) ?? []}
+                clients={(clientsData as { id: string; full_name: string | null; business_name: string | null }[] | null) ?? []}
+                transfer={{
+                  id,
+                  reference: transfer.reference,
+                  municipality: transfer.municipality,
+                  property_description: transfer.property_description,
+                  parties: transferParties,
+                }}
+              />
+            </div>
+          </details>
+
+          <div className="border-t border-line pt-4">
+            <LinkMatterControl transferId={id} candidates={candidates} />
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -340,30 +364,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
 
             Native <details>: this is a server component, and a disclosure needs no
             JavaScript to be a disclosure. */}
-        <div className="px-5 py-4 border-t border-line space-y-4">
-          <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-action hover:underline">
-              <Plus className="h-4 w-4" /> Create a matter in this transfer
-            </summary>
-            <div className="mt-3">
-              <CreateMatterForm
-                services={(servicesData as { id: string; code: string; name: string }[] | null) ?? []}
-                clients={(clientsData as { id: string; full_name: string | null; business_name: string | null }[] | null) ?? []}
-                transfer={{
-                  id,
-                  reference: transfer.reference,
-                  municipality: transfer.municipality,
-                  property_description: transfer.property_description,
-                  parties: transferParties,
-                }}
-              />
-            </div>
-          </details>
-
-          <div className="border-t border-line pt-4">
-            <LinkMatterControl transferId={id} candidates={candidates} />
-          </div>
-        </div>
       </Card>
 
       {/* Documents about the property itself — reused by every matter above

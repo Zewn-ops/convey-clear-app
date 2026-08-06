@@ -43,8 +43,10 @@ const TABS: { key: ReviewTab; label: string }[] = [
 
 const ROW_TINT: Record<ReviewDoc["state"], string> = {
   pending: "bg-surface hover:bg-raised",
-  approved: "bg-green-50/70 hover:bg-green-50",
-  disapproved: "bg-red-50/70 hover:bg-red-50",
+  // Token tints, not Tailwind's bg-green-50: a fixed light swatch on the dark
+  // canvas rendered as a washed band with the row text barely legible on it.
+  approved: "bg-ok-tint hover:bg-ok-tint/80",
+  disapproved: "bg-danger-tint hover:bg-danger-tint/80",
 };
 
 export default async function AdminApprovalsPage({
@@ -167,7 +169,7 @@ export default async function AdminApprovalsPage({
           </p>
         </Card>
       ) : (
-        <Card padding="none">
+        <Card padding="none" className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-raised text-left text-xs uppercase tracking-wide text-ink-3">

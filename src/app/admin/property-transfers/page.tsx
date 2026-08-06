@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import MetaChip from "@/components/ui/MetaChip";
 import { Plus } from "lucide-react";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
@@ -158,58 +159,52 @@ export default async function AdminTransfersPage({
           <FilterBar orientation="vertical" facets={facets} searchPlaceholder="Search ref, erf, property…" />
         </aside>
         <div className="min-w-0 flex-1">
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line bg-raised">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Reference</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Attorney firm</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Council</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matters</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Opened</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {transfers.map((t) => (
-                <tr key={t.id} className="hover:bg-raised transition-colors">
-                  <td className="px-5 py-3">
-                    <Link href={`/admin/property-transfers/${t.id}`} className="font-medium text-ink hover:text-action hover:underline">
-                      {t.reference}
-                    </Link>
-                    {t.property_description && (
-                      <p className="text-xs text-ink-3 mt-0.5">{t.property_description}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">{t.firms?.name ?? "—"}</td>
-                  <td className="px-5 py-3 text-ink-3 hidden md:table-cell">{municipalityLabel(t.municipality)}</td>
-                  <td className="px-5 py-3 text-ink-2">{counts.get(t.id) ?? 0}</td>
-                  <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">{formatDate(t.created_at)}</td>
-                  <td className="px-5 py-3">
+      {transfers.length > 0 ? (
+        <ol className="space-y-4">
+          {transfers.map((t, i) => (
+            <li key={t.id}>
+              <Link href={`/admin/property-transfers/${t.id}`} className="block">
+                <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="mt-0.5 font-mono text-[13px] tabular-nums text-ink-3">
+                        {(filters.page - 1) * filters.perPage + i + 1}.
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[17px] font-semibold tracking-[-0.01em] text-ink">
+                          {t.reference}
+                        </p>
+                        <p className="mt-0.5 text-[13px] text-ink-3">
+                          {t.property_description || "No property description"}
+                          {t.municipality ? ` · ${municipalityLabel(t.municipality)}` : ""}
+                        </p>
+                      </div>
+                    </div>
                     <Badge label={TRANSFER_STATUS_LABELS[t.status]} variant={statusVariant(t.status)} />
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <Link href={`/admin/property-transfers/${t.id}`} className="text-action hover:underline text-xs font-medium">
-                      Manage
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {transfers.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-ink-3">
-                    {filtering
-                      ? "No transfers match your filters — try clearing them."
-                      : "No property transfers yet. Create one to group the matters of a single transaction."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                  </div>
+
+                  <div className="mt-3.5 flex flex-wrap gap-2">
+                    <MetaChip label="Firm" value={t.firms?.name ?? "—"} />
+                    <MetaChip label="Matters" value={counts.get(t.id) ?? 0} />
+                    <MetaChip label="Opened" value={formatDate(t.created_at)} />
+                  </div>
+                </Card>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <Card className="py-12 text-center">
+          <p className="font-medium text-ink">
+            {filtering ? "Nothing matches these filters" : "No property transfers yet"}
+          </p>
+          <p className="mt-1 text-sm text-ink-3">
+            {filtering
+              ? "Clear them to see the rest."
+              : "Create one to group the matters of a single transaction."}
+          </p>
+        </Card>
+      )}
 
           <div className="mt-6">
             <Pagination page={filters.page} pageSize={filters.perPage} total={total} noun="transfers" />

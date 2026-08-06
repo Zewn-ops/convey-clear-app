@@ -227,7 +227,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         />
       </Card>
 
-      <Card padding="none">
+      <Card padding="none" className="overflow-hidden">
         <div className="px-5 py-4 border-b border-line">
           <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
             Matters in this transfer · {linked.length}

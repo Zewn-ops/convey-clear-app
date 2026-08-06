@@ -54,15 +54,48 @@ function PartyFields({
   title,
   value,
   onChange,
+  clients = [],
 }: {
   title: string;
   value: PartyDraft;
   onChange: (p: PartyDraft) => void;
+  /** Existing clients, so a known party is linked rather than retyped. */
+  clients?: { id: string; full_name: string | null; business_name: string | null }[];
 }) {
   const set = (patch: Partial<PartyDraft>) => onChange({ ...value, ...patch });
+
+  // Picking an existing client COPIES their details into the side rather than
+  // linking by id: the create route deduplicates on ID number and email, so the
+  // same person resolves back to the same client record. Typing a name that
+  // already exists was the thing that made duplicates.
+  function useExisting(id: string) {
+    const c = clients.find((x) => x.id === id);
+    if (!c) return;
+    const isBusiness = Boolean(c.business_name?.trim());
+    set({
+      entity_type: isBusiness ? "business" : "natural_person",
+      business_name: isBusiness ? c.business_name ?? "" : "",
+      first_name: isBusiness ? "" : (c.full_name ?? "").split(" ").slice(0, -1).join(" "),
+      last_name: isBusiness ? "" : (c.full_name ?? "").split(" ").slice(-1).join(""),
+    });
+  }
+
   return (
     <div className="space-y-3 rounded-lg bg-raised p-3 shadow-sm dark:ring-1 dark:ring-line">
       <p className="text-sm font-semibold text-ink">{title}</p>
+      {clients.length > 0 && (
+        <SearchSelect
+          label="Use an existing client"
+          value=""
+          onChange={useExisting}
+          placeholder="Search clients…"
+          emptyLabel="— Or capture the details below —"
+          options={clients.map((c) => ({
+            value: c.id,
+            label: c.business_name || c.full_name || "Unnamed",
+          }))}
+        />
+      )}
       <Select
         label="Entity type"
         value={value.entity_type}
@@ -382,9 +415,12 @@ export default function CreateMatterForm({
               its own document slots. Fill in what you have.
             </p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <PartyFields title="Seller (current owner)" value={seller} onChange={setSeller} />
-            <PartyFields title="Buyer (new owner)" value={buyer} onChange={setBuyer} />
+          {/* Stacked, not side by side. Each side is a full identity — name, ID,
+              email, cell — and two of them in one row halves the field width for
+              no gain; they are filled one after the other, not compared. */}
+          <div className="space-y-4">
+            <PartyFields title="Seller (current owner)" value={seller} onChange={setSeller} clients={clients} />
+            <PartyFields title="Buyer (new owner)" value={buyer} onChange={setBuyer} clients={clients} />
           </div>
         </div>
       )}

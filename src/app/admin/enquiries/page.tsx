@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
+import NewEnquiryButton from "@/components/enquiries/NewEnquiryButton";
 import Badge from "@/components/ui/Badge";
 import { formatDateTime } from "@/lib/utils";
 import { isStaffRole, ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryStatus } from "@/types";
@@ -33,14 +34,28 @@ export default async function AdminEnquiriesPage() {
   });
   const openCount = rows.filter((r) => r.status === "open").length;
 
+  // An enquiry belongs to a firm, so the picker is the firm list.
+  const { data: firmRows } = await supabase
+    .from("firms")
+    .select("id, name")
+    .eq("active", true)
+    .order("name");
+  const firmOptions = ((firmRows as { id: string; name: string | null }[] | null) ?? []).map((f) => ({
+    id: f.id,
+    name: f.name ?? "Unnamed firm",
+  }));
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Enquiries</h1>
-        <p className="text-sm text-ink-3 mt-1">{openCount} open · {rows.length} total — claim one to handle it.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Enquiries</h1>
+          <p className="text-sm text-ink-3 mt-1">{openCount} open · {rows.length} total — claim one to handle it.</p>
+        </div>
+        <NewEnquiryButton firms={firmOptions} />
       </div>
 
-      <Card padding="none">
+      <Card padding="none" className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

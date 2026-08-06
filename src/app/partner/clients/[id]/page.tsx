@@ -89,7 +89,7 @@ export default async function PartnerClientDetail({ params }: { params: { id: st
 
       <div>
         <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Matters ({matters.length})</h2>
-        <Card padding="none">
+        <Card padding="none" className="overflow-hidden">
           <ul className="divide-y divide-line">
             {matters.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-raised transition-colors">

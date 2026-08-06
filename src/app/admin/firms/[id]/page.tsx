@@ -128,7 +128,7 @@ export default async function AdminFirmDetailPage({
         )}
       </Card>
 
-      <Card padding="none">
+      <Card padding="none" className="overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-line">
           <h2 className="text-sm font-semibold text-ink">Partner users ({users.length})</h2>
           {canWrite && (
@@ -157,7 +157,7 @@ export default async function AdminFirmDetailPage({
         </div>
       </Card>
 
-      <Card padding="none">
+      <Card padding="none" className="overflow-hidden">
         <div className="px-5 py-3 border-b border-line">
           <h2 className="text-sm font-semibold text-ink">Matters ({matters.length})</h2>
           <p className="text-xs text-ink-3 mt-0.5">Most recent 25.</p>
@@ -181,7 +181,7 @@ export default async function AdminFirmDetailPage({
         </div>
       </Card>
 
-      <Card padding="none">
+      <Card padding="none" className="overflow-hidden">
         <div className="px-5 py-3 border-b border-line">
           <h2 className="text-sm font-semibold text-ink">Property transfers ({transfers.length})</h2>
           <p className="text-xs text-ink-3 mt-0.5">Where this firm is the conveyancing attorney or the estate agent.</p>

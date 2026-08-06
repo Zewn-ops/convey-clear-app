@@ -558,7 +558,7 @@ export default async function AdminMatterDetailPage({
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">{title} ({list.length})</p>
       {list.length > 0 ? (
-        <Card padding="none"><ul className="divide-y divide-line">{list.map(docRow)}</ul></Card>
+        <Card padding="none" className="overflow-hidden"><ul className="divide-y divide-line">{list.map(docRow)}</ul></Card>
       ) : (
         <Card className="text-center py-5"><p className="text-sm text-ink-3">None</p></Card>
       )}
