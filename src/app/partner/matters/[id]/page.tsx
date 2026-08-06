@@ -229,7 +229,15 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <PartnerDocUpload matterId={matter.id} submitted={docs.length > 0} />
 
       {/* Parties (COO buyer/seller) — renders nothing for single-client matters */}
-      <PartiesCard parties={parties} />
+      {/* Party FICA moved INTO the party card (see PartiesCard). Passing the
+          subjects here keeps the partner's capture where staff's now is, rather
+          than silently removing it when InPlaceFica stopped rendering parties. */}
+      <PartiesCard
+        parties={parties}
+        matterId={params.id}
+        ficaSubjects={ficaSubjects}
+        isStaff={false}
+      />
 
       {/* In-place FICA — client details + consent, without an onboarding link. */}
       <InPlaceFica matterId={params.id} subjects={ficaSubjects} isStaff={false} />

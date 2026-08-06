@@ -834,7 +834,13 @@ export default async function AdminMatterDetailPage({
       )}
 
       {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
-      <PartiesCard parties={parties} manage />
+      <PartiesCard
+        parties={parties}
+        manage
+        matterId={id}
+        ficaSubjects={ficaSubjects}
+        isStaff
+      />
 
       {/* In-place FICA — client details + consent. Together with the document
           checklist below, this is what makes /onboard optional rather than the

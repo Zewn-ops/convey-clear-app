@@ -3,6 +3,7 @@ import { composeFullName, contactPersonName, type MatterParty } from "@/types";
 import { partyRoleOrder } from "@/lib/coo-docs";
 import CreatePartyAccount from "@/components/matters/CreatePartyAccount";
 import EditPartyButton from "@/components/matters/EditPartyButton";
+import { SubjectSection, type FicaSubject } from "@/components/matters/InPlaceFica";
 
 const ROLE_LABELS: Record<string, string> = {
   buyer: "Buyer (new owner)",
@@ -26,14 +27,34 @@ function Row({ k, v }: { k: string; v: string | null | undefined }) {
 // (A3). Returns null for matters with no parties (single-client matters), so it
 // is safe to drop into any matter-detail page unconditionally. When `manage` is
 // set (staff view) each party gets a "Create account" control (A8).
-export default function PartiesCard({ parties, manage = false }: { parties: MatterParty[]; manage?: boolean }) {
+export default function PartiesCard({
+  parties,
+  manage = false,
+  matterId,
+  ficaSubjects = [],
+  isStaff = false,
+}: {
+  parties: MatterParty[];
+  manage?: boolean;
+  /** Required to host FICA capture inside a party card. */
+  matterId?: string;
+  /** Subjects for these parties; the matter's own client is handled elsewhere. */
+  ficaSubjects?: FicaSubject[];
+  isStaff?: boolean;
+}) {
   if (!parties || parties.length === 0) return null;
   const ordered = [...parties].sort((a, b) => partyRoleOrder(a.role) - partyRoleOrder(b.role));
+  const subjectFor = (partyId: string) => ficaSubjects.find((s) => s.partyId === partyId) ?? null;
 
   return (
     <div>
       <h2 className="font-semibold text-ink mb-3">Parties ({parties.length})</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* One card per party now carries the WHOLE of that party: who they are,
+          their FICA details and consent, and the account controls. They were two
+          separate cards listing the same people, so capturing a buyer's details
+          meant reading their name here and then finding them again further down
+          — and the second card repeated every name to make that possible. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {ordered.map((p) => {
           const isEntity = p.entity_type !== "natural_person";
           const name = isEntity ? p.business_name : composeFullName(p.first_name, p.last_name) || p.full_name;
@@ -66,6 +87,19 @@ export default function PartiesCard({ parties, manage = false }: { parties: Matt
                   </dl>
                 </div>
               )}
+              {/* Details + consent for THIS party, in place. The order is the
+                  order of the work: know who they are, capture what FICA needs,
+                  then give them a login. */}
+              {matterId && subjectFor(p.id) && (
+                <div className="border-t border-line pt-3">
+                  <SubjectSection
+                    matterId={matterId}
+                    subject={subjectFor(p.id)!}
+                    isStaff={isStaff}
+                  />
+                </div>
+              )}
+
               {manage && (
                 <div className="space-y-3 border-t border-line pt-3">
                   <EditPartyButton party={p} />

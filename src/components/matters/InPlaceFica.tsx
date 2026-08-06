@@ -57,7 +57,13 @@ export default function InPlaceFica({
   subjects: FicaSubject[];
   isStaff: boolean;
 }) {
-  if (subjects.length === 0) return null;
+  // Party-based subjects now live INSIDE their own party card (PartiesCard), so
+  // capturing a buyer's details is one continuous move from reading their name
+  // rather than a scroll to a second card that repeats the same list of people.
+  // What is left here is the matter's OWN client — the single-client services,
+  // which have no party card to live in.
+  const own = subjects.filter((s) => s.partyId === null);
+  if (own.length === 0) return null;
 
   return (
     <Card accent="client">
@@ -71,7 +77,7 @@ export default function InPlaceFica({
       </p>
 
       <div className="divide-y divide-line">
-        {subjects.map((s) => (
+        {own.map((s) => (
           <SubjectSection key={s.partyId ?? "matter-client"} matterId={matterId} subject={s} isStaff={isStaff} />
         ))}
       </div>
@@ -79,7 +85,7 @@ export default function InPlaceFica({
   );
 }
 
-function SubjectSection({
+export function SubjectSection({
   matterId,
   subject,
   isStaff,
