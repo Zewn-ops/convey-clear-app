@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
-import { UploadCloud, FileText, CheckCircle2, RotateCcw, Trash2, Files, Pencil, Check, X } from "lucide-react";
+import { UploadCloud, FileText, FilePlus2, CheckCircle2, RotateCcw, Trash2, Files, Pencil, Check, X } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { docLabel } from "@/lib/prc-docs";
 import { formatDate } from "@/lib/utils";
@@ -167,6 +167,64 @@ export default function TransferDocuments({
         Documents about the <b>property</b>, not any one matter — the deed search, transfer letter and clearance
         figures. Upload once here, then reuse on every matter in this transfer instead of fetching them again.
       </p>
+
+      {/* The five named documents as five slots, always all five.
+          A list only shows what HAS been uploaded, so "0 of 5" was a number with
+          nothing behind it — you could not see which five, or which one was
+          missing, without opening the dropdown and reading it. Five tiles make
+          the set itself the interface: the gap is the message. */}
+      <ul className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {NAMED_DOC_TYPES.map((t, i) => {
+          const held = presentNamed.has(t);
+          const doc = current.find((d) => d.document_type === t && d.disapproved_at == null);
+          const pending = canManage && held && doc?.approved_at == null;
+          return (
+            <li key={t}>
+              <label
+                className={
+                  "relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-xl p-3 text-center shadow-chip transition-shadow hover:shadow-lg " +
+                  (held ? "bg-ok-tint" : "bg-surface")
+                }
+                title={held ? `${docLabel(t)} — uploaded` : `Upload the ${docLabel(t)}`}
+              >
+                <span className="absolute left-2.5 top-2 font-mono text-[10.5px] font-semibold tabular-nums text-ink-3">
+                  {i + 1}/{NAMED_DOC_TYPES.length}
+                </span>
+                {held && (
+                  <CheckCircle2
+                    className="absolute right-2 top-2 h-4 w-4 text-ok"
+                    aria-label="Uploaded"
+                  />
+                )}
+                {held ? (
+                  <FileText className="h-9 w-9 text-ok" />
+                ) : (
+                  <FilePlus2 className="h-9 w-9 text-ink-3" />
+                )}
+                <span className="text-[12px] font-medium leading-tight text-ink">{docLabel(t)}</span>
+                <span className="text-[10.5px] uppercase tracking-[0.07em] text-ink-3">
+                  {pending ? "Awaiting approval" : held ? "Uploaded" : "Not uploaded"}
+                </span>
+                {canManage && (
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept={ALLOWED.join(",")}
+                    disabled={busy != null}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      // Reset first: picking the same file twice in a row fires no
+                      // change event otherwise, so a failed upload cannot be retried.
+                      e.target.value = "";
+                      if (f) upload(f, t);
+                    }}
+                  />
+                )}
+              </label>
+            </li>
+          );
+        })}
+      </ul>
 
       {current.length > 0 ? (
         <ul className="mb-4 divide-y divide-line">

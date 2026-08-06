@@ -11,7 +11,7 @@ import {
   type Matter,
   type MatterDocument,
 } from "@/types";
-import { matterPhaseLabel } from "@/lib/phase-label";
+import MatterCard, { type MatterCardRow } from "@/components/matters/MatterCard";
 import { Briefcase, Clock, CheckCircle, FolderOpen, FileText, PlusCircle } from "lucide-react";
 
 export const metadata = { title: "Dashboard — ConveyClear" };
@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   let mattersQuery = supabase
     .from("matters")
     .select(
-      "id, title, current_phase, status, priority, deadline, created_at, clients(id, entity_type, full_name, business_name)"
+      "id, title, current_phase, current_stage, status, priority, deadline, created_at, updated_at, municipality, service_subtype, clients(id, entity_type, full_name, business_name), services(code, name)"
     )
     .order("created_at", { ascending: false })
     .limit(8);
@@ -111,29 +111,15 @@ export default async function DashboardPage() {
           </Link>
         </div>
         {matters.length > 0 ? (
-          <div className="space-y-3">
+          <ol className="space-y-4">
             {matters.map((m) => (
-              <Link key={m.id} href={`/dashboard/matters/${m.id}`} className="block">
-                <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-ink truncate">
-                        {m.title || clientDisplayName(m.clients) || "Untitled matter"}
-                      </p>
-                      <p className="text-xs text-ink-3 mt-0.5">
-                        {clientDisplayName(m.clients)} · opened {formatDate(m.created_at)}
-                      </p>
-                    </div>
-                    {m.current_phase && (
-                      <span className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-full bg-action-fill/10 text-action">
-                        {matterPhaseLabel(m.current_phase)}
-                      </span>
-                    )}
-                  </div>
-                </Card>
-              </Link>
+              <MatterCard
+                key={m.id}
+                matter={m as MatterCardRow}
+                href={`/dashboard/matters/${m.id}`}
+              />
             ))}
-          </div>
+          </ol>
         ) : (
           <Card className="text-center py-10">
             <Briefcase className="h-10 w-10 text-ink-3 mx-auto mb-3" />

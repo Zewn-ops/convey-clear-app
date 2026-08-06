@@ -14,6 +14,7 @@ import {
 import { matterPhaseLabel } from "@/lib/phase-label";
 import { parseMatterFilters, applyMatterFilters, MATTER_PAGE_SIZE } from "@/lib/matters-query";
 import MatterFilters from "@/components/matters/MatterFilters";
+import MatterCard, { type MatterCardRow } from "@/components/matters/MatterCard";
 import MatterPagination from "@/components/matters/MatterPagination";
 import { Briefcase } from "lucide-react";
 
@@ -34,7 +35,7 @@ export default async function MattersPage({
   let base = supabase
     .from("matters")
     .select(
-      "id, title, current_phase, status, priority, deadline, created_at, municipality, clients(id, entity_type, full_name, business_name)",
+      "id, title, current_phase, current_stage, status, priority, deadline, created_at, updated_at, municipality, service_subtype, clients(id, entity_type, full_name, business_name), services(code, name)",
       { count: "exact" }
     );
 
@@ -57,37 +58,20 @@ export default async function MattersPage({
       <MatterFilters />
 
       {matters.length > 0 ? (
-        <div className="space-y-3">
-          {matters.map((m) => (
-            <Link key={m.id} href={`/dashboard/matters/${m.id}`} className="block">
-              <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-ink truncate">
-                      {m.title || clientDisplayName(m.clients) || "Untitled matter"}
-                    </p>
-                    <p className="text-xs text-ink-3 mt-0.5">
-                      {clientDisplayName(m.clients)}
-                      {m.municipality ? ` · ${m.municipality}` : ""} · opened {formatDate(m.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    {m.current_phase && (
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-action-fill/10 text-action">
-                        {matterPhaseLabel(m.current_phase)}
-                      </span>
-                    )}
-                    {m.status && (
-                      <span className="text-xs text-ink-3">
-                        {MATTER_STATUS_LABELS[m.status as MatterStatus]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </Link>
+        <ol className="space-y-4">
+          {matters.map((m, i) => (
+            <MatterCard
+              key={m.id}
+              matter={m as MatterCardRow}
+              href={`/dashboard/matters/${m.id}`}
+              // showStage stays OFF for clients: the internal stage vocabulary is
+              // ConveyClear's working language, and MatterCard already filters it
+              // through isStageClientVisible. The phase progress bar is the part
+              // a client actually needs — how far along, out of how many.
+              index={(filters.page - 1) * filters.perPage + i + 1}
+            />
           ))}
-        </div>
+        </ol>
       ) : (
         <Card className="text-center py-12">
           <Briefcase className="h-10 w-10 text-ink-3 mx-auto mb-3" />
