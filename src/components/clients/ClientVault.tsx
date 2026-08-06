@@ -45,12 +45,22 @@ export default function ClientVault({
   entityType,
   docs,
   canDelete = false,
+  readOnly = false,
 }: {
   clientId: string;
   entityType: string | null;
   docs: VaultDoc[];
   /** Hard delete is admin-only; staff archive instead. */
   canDelete?: boolean;
+  /**
+   * Show the vault without any way to change it.
+   *
+   * The client-documents upload / patch / delete routes are STAFF-ONLY, so a
+   * client portal rendering the editable vault would offer buttons that 403.
+   * Clients read their own documents here; adding to the vault stays the staff
+   * and /onboard path until those routes are opened up deliberately.
+   */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -193,6 +203,7 @@ export default function ClientVault({
             <li
               key={t}
               onDragOver={(e) => {
+                if (readOnly) return;
                 e.preventDefault();
                 setDragSlot(t);
               }}
@@ -200,7 +211,7 @@ export default function ClientVault({
               onDrop={(e) => {
                 e.preventDefault();
                 setDragSlot(null);
-                if (e.dataTransfer.files?.length) uploadMany(e.dataTransfer.files, t);
+                if (!readOnly && e.dataTransfer.files?.length) uploadMany(e.dataTransfer.files, t);
               }}
               className={`rounded-lg border p-3 transition-colors ${
                 dragSlot === t
@@ -218,16 +229,18 @@ export default function ClientVault({
                   </p>
                   {empty && (
                     <p className="mt-0.5 text-xs text-ink-3">
-                      {slot.rule.hint ?? "Not on file"} — drop a file here or browse.
+                      {slot.rule.hint ?? "Not on file"}{readOnly ? "" : " — drop a file here or browse."}
                     </p>
                   )}
                 </div>
-                <FilePick
-                  label={empty ? "Upload" : "Add another"}
-                  icon={empty ? "upload" : "plus"}
-                  busy={busy === t}
-                  onPick={(files) => uploadMany(files, t)}
-                />
+                {!readOnly && (
+                  <FilePick
+                    label={empty ? "Upload" : "Add another"}
+                    icon={empty ? "upload" : "plus"}
+                    busy={busy === t}
+                    onPick={(files) => uploadMany(files, t)}
+                  />
+                )}
               </div>
 
               {slot.docs.length > 0 && (
@@ -237,7 +250,7 @@ export default function ClientVault({
                       key={d.id}
                       doc={d}
                       busy={busy === d.id}
-                      canDelete={canDelete}
+                      canDelete={canDelete && !readOnly}
                       onVerify={(v) => patch(d.id, { verified: v }, v ? "Marked verified" : "Verification removed")}
                       onExpiry={(v) => patch(d.id, { expiry_date: v || null }, "Expiry updated")}
                       onArchive={() => patch(d.id, { status: "archived" }, "Archived — it stays available to matters that used it")}
@@ -263,7 +276,7 @@ export default function ClientVault({
                 doc={d}
                 showType
                 busy={busy === d.id}
-                canDelete={canDelete}
+                canDelete={canDelete && !readOnly}
                 onVerify={(v) => patch(d.id, { verified: v }, v ? "Marked verified" : "Verification removed")}
                 onExpiry={(v) => patch(d.id, { expiry_date: v || null }, "Expiry updated")}
                 onArchive={() => patch(d.id, { status: "archived" }, "Archived")}
@@ -275,7 +288,7 @@ export default function ClientVault({
         </div>
       )}
 
-      <AddOther busy={busy === "__other"} onUpload={(f, t) => upload(f, t)} />
+      {!readOnly && <AddOther busy={busy === "__other"} onUpload={(f, t) => upload(f, t)} />}
 
       {archived.length > 0 && (
         <details className="mt-3 border-t border-line pt-3">
