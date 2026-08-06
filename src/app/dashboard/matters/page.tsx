@@ -59,8 +59,8 @@ export default async function MattersPage({
       {matters.length > 0 ? (
         <div className="space-y-3">
           {matters.map((m) => (
-            <Link key={m.id} href={`/dashboard/matters/${m.id}`}>
-              <Card className="hover:border-line/30 transition-colors">
+            <Link key={m.id} href={`/dashboard/matters/${m.id}`} className="block">
+              <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium text-ink truncate">

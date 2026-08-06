@@ -37,7 +37,7 @@ export default function NotifyVolumeControl() {
         <button
           type="button"
           onClick={() => playDing(vol)}
-          className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-ink-2 hover:border-gray-400"
+          className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-ink-2 hover:border-ink-3"
         >
           <Play className="h-3.5 w-3.5" /> Test
         </button>

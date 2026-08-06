@@ -21,6 +21,10 @@ export default function MetaChip({
   // No ring: the chips sit on the card they describe, so an outline made each
   // one read as a separate object. They carry the card's own surface colour and
   // lift off it with a shadow instead, which groups them as one row of facts.
+  //
+  // That shadow is `shadow-chip`, NOT `shadow-sm`. A neutral chip is bg-surface
+  // on a bg-surface card, so at 5% opacity there was no visible edge at all —
+  // the chips read as loose text. See --cc-shadow-chip in tokens.css.
   const toned =
     tone === "waiting"
       ? "bg-waiting-tint text-waiting"
@@ -30,7 +34,7 @@ export default function MetaChip({
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium tabular-nums shadow-sm ${toned}`}
+      className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium tabular-nums shadow-chip ${toned}`}
     >
       {icon}
       {label} <b className="font-semibold text-ink">{value}</b>

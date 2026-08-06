@@ -67,7 +67,7 @@ export default function ReuseVaultDoc({
       <select
         value={sel}
         onChange={(e) => setSel(e.target.value)}
-        className="rounded-lg border border-line px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-action"
+        className="rounded-lg border border-line bg-surface text-ink px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-action"
       >
         {options.map((o) => (
           <option key={o.id} value={o.id}>{o.file_name || "Document"}</option>

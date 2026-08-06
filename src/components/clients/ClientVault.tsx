@@ -395,7 +395,7 @@ function DocRow({
           defaultValue={doc.expiry_date ?? ""}
           disabled={busy}
           onChange={(e) => onExpiry(e.target.value)}
-          className="rounded border border-line px-1.5 py-0.5 text-[11px] text-ink-2 focus:outline-none focus:ring-1 focus:ring-action"
+          className="rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink-2 focus:outline-none focus:ring-1 focus:ring-action"
         />
       </label>
 
@@ -518,7 +518,7 @@ function AddOther({ busy, onUpload }: { busy: boolean; onUpload: (f: File, t: st
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+          className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
         >
           {allVaultDocTypes().map((t) => (
             <option key={t} value={t}>

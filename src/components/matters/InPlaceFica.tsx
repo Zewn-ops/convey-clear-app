@@ -241,7 +241,7 @@ function SubjectSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder={f.hint}
-                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   />
                 ) : (
                   <input
@@ -249,7 +249,7 @@ function SubjectSection({
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     placeholder={f.hint}
-                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   />
                 )}
               </label>
@@ -298,7 +298,7 @@ function SubjectSection({
                           onChange={(e) =>
                             setDirectors((ds) => ds.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))
                           }
-                          className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-action"
+                          className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-action"
                         />
                       ))}
                     </div>
@@ -346,7 +346,7 @@ function SubjectSection({
                       <select
                         value={method}
                         onChange={(e) => setMethod(e.target.value as CaptureMethod)}
-                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+                        className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
                       >
                         <option value="">Select…</option>
                         {CAPTURE_METHODS.map((m) => (
@@ -368,7 +368,7 @@ function SubjectSection({
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="e.g. signed FICA pack dated 12 July, on file"
-                        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+                        className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
                       />
                     </label>
                   </div>

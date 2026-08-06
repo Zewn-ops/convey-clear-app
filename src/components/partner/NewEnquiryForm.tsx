@@ -54,7 +54,7 @@ export default function NewEnquiryForm({ matters }: { matters: { id: string; tit
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
           placeholder="How can ConveyClear help?"
-          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action resize-none"
+          className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action resize-none"
         />
       </label>
       <Button onClick={submit} loading={loading} className="w-full sm:w-auto" size="lg">

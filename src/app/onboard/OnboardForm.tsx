@@ -236,7 +236,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 const inputCls =
-  "w-full rounded-lg border border-line px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] focus:border-transparent";
 
 // ---------------------------------------------------------------------------
 // Main form

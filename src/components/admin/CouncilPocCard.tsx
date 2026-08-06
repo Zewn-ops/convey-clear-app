@@ -37,7 +37,7 @@ export default function CouncilPocCard({ poc }: { poc: CouncilPoc }) {
     notes: poc.notes ?? "",
   });
 
-  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
+  const input = "rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function save(e: React.FormEvent) {
     e.preventDefault();

@@ -112,6 +112,94 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: data.id });
 }
 
+/**
+ * Edit an INLINE-captured party's contact details.
+ *
+ * Only the inline columns are writable. A party linked to a client or a firm
+ * reads its details through to that record, so editing it here would either be
+ * ignored or quietly create a second, divergent copy of a client's contact
+ * details — the guard below refuses rather than letting that happen. Those are
+ * edited on the client or firm page, which is where the pencil points.
+ */
+export async function PATCH(req: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+
+  if (!rateLimit(`transfer-parties-patch:${clientIp(req)}`, 30, 60_000)) {
+    return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
+  }
+
+  let b: Record<string, unknown>;
+  try {
+    b = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+  }
+
+  const id = typeof b.id === "string" ? b.id : null;
+  if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
+
+  // Read it first so the refusal below is a sentence, not a silent no-op. RLS
+  // applies to this select too, so a transfer the caller cannot reach 404s here.
+  const { data: existing, error: readErr } = await supabase
+    .from("transfer_parties")
+    .select("id, client_id, firm_id, entity_type")
+    .eq("id", id)
+    .maybeSingle();
+  if (readErr) return NextResponse.json({ error: readErr.message }, { status: 400 });
+  if (!existing) return NextResponse.json({ error: "Party not found." }, { status: 404 });
+
+  const row = existing as { client_id: string | null; firm_id: string | null; entity_type: string | null };
+  if (row.client_id || row.firm_id) {
+    return NextResponse.json(
+      { error: "This party's details live on its client or firm record. Edit them there." },
+      { status: 409 }
+    );
+  }
+
+  const str = (k: string) => {
+    const v = b[k];
+    if (typeof v !== "string") return undefined;
+    const t = v.trim();
+    return t === "" ? null : t;
+  };
+
+  const patch: Record<string, unknown> = {};
+  for (const [key, col] of [
+    ["fullName", "full_name"],
+    ["businessName", "business_name"],
+    ["idNumber", "id_number"],
+    ["registrationNo", "registration_no"],
+    ["email", "email"],
+    ["cell", "cell"],
+    ["physicalAddress", "physical_address"],
+  ] as const) {
+    const v = str(key);
+    if (v !== undefined) patch[col] = v;
+  }
+  if (!Object.keys(patch).length) {
+    return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
+  }
+
+  // An inline row must keep a name — the same rule the create path enforces.
+  const nameCol = row.entity_type === "natural_person" ? "full_name" : "business_name";
+  if (nameCol in patch && !patch[nameCol]) {
+    return NextResponse.json({ error: "A name is required." }, { status: 400 });
+  }
+
+  const { error } = await supabase.from("transfer_parties").update(patch).eq("id", id);
+  if (error) {
+    if (error.code === "42501") {
+      return NextResponse.json({ error: "You cannot edit this transfer." }, { status: 403 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(req: Request) {
   const supabase = await createClient();
   const {

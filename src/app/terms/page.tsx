@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalShell title="Terms & Conditions" lastUpdated="16 June 2026">
-      <p className="mt-6 text-[15px] leading-relaxed text-gray-700">
+      <p className="mt-6 text-[15px] leading-relaxed text-ink-2">
         These Terms &amp; Conditions (&ldquo;Terms&rdquo;) govern your access to and use of the client
         portal and the conveyancing-related services provided by <strong>Convey Clear (Pty) Ltd</strong>{" "}
         (&ldquo;ConveyClear&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an account, submitting

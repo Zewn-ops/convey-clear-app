@@ -288,7 +288,7 @@ export default function TransferDocuments({
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
+              className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
             >
               {TRANSFER_DOC_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -396,7 +396,7 @@ function RenameDoc({
           if (e.key === "Escape") setEditing(false);
         }}
         disabled={busy}
-        className="w-44 rounded border border-line px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-action"
+        className="w-44 rounded border border-line bg-surface text-ink px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-action"
       />
       <button type="button" onClick={commit} disabled={busy} title="Save" className="text-green-600 hover:text-green-800">
         <Check className="h-3.5 w-3.5" />

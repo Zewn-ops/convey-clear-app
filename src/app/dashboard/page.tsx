@@ -3,6 +3,7 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import { createClient } from "@/lib/supabase/server";
 import { getEntityContext } from "@/lib/entity";
+import { entityKind } from "@/lib/entity-display";
 import { getSessionProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import {
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  const { activeId } = await getEntityContext();
+  const { activeId, active } = await getEntityContext();
 
   // RLS scopes these automatically: client→own entities, partner→their clients,
   // staff→all.
@@ -54,6 +55,16 @@ export default async function DashboardPage() {
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
   const isClient = profile?.role === "client";
 
+  // The heading names WHOSE affairs you are looking at, not who you are. On a
+  // business entity "Welcome back, Thabo" was actively wrong: the matters below
+  // belong to Brookfield Props, and Thabo may be one of several people acting
+  // for it. A personal entity is still the person, so the greeting stays there.
+  const onBusinessEntity = Boolean(active && active.entityType !== "natural_person");
+  const heading = onBusinessEntity ? `${active!.name} — Matters` : `Welcome back, ${firstName}`;
+  const subheading = onBusinessEntity
+    ? `${entityKind(active!)} entity · here's a summary of its matters.`
+    : "Here's a summary of your matters.";
+
   const stats = [
     { label: "Matters", value: matters.length, icon: Briefcase, tone: "text-action bg-action-fill/10" },
     { label: "Active", value: activeCount, icon: Clock, tone: "text-amber-600 bg-amber-100" },
@@ -65,8 +76,8 @@ export default async function DashboardPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">Welcome back, {firstName}</h1>
-          <p className="text-sm text-ink-3 mt-1">Here&apos;s a summary of your matters.</p>
+          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">{heading}</h1>
+          <p className="text-sm text-ink-3 mt-1">{subheading}</p>
         </div>
         {isClient && (
           <Link
@@ -102,8 +113,8 @@ export default async function DashboardPage() {
         {matters.length > 0 ? (
           <div className="space-y-3">
             {matters.map((m) => (
-              <Link key={m.id} href={`/dashboard/matters/${m.id}`}>
-                <Card className="hover:border-line/30 transition-colors">
+              <Link key={m.id} href={`/dashboard/matters/${m.id}`} className="block">
+                <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-medium text-ink truncate">

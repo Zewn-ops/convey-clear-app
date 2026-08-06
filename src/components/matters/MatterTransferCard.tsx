@@ -87,7 +87,7 @@ export default function MatterTransferCard({
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+              className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
             >
               <option value="">— None (standalone) —</option>
               {options.map((o) => (

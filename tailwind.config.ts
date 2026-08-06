@@ -62,6 +62,7 @@ const config: Config = {
         sm: "var(--cc-shadow-sm)",
         DEFAULT: "var(--cc-shadow)",
         lg: "var(--cc-shadow-lg)",
+        chip: "var(--cc-shadow-chip)",
       },
       transitionTimingFunction: { out: "var(--cc-ease)" },
       fontFamily: {

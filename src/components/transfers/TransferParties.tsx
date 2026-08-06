@@ -18,6 +18,7 @@ import {
   Fingerprint,
   Hash,
   ArrowUpRight,
+  Pencil,
 } from "lucide-react";
 import StatusPill from "@/components/ui/StatusPill";
 import EmptyState from "@/components/ui/EmptyState";
@@ -80,7 +81,14 @@ function viaIcon(via: PartyRow["via"], kind?: string) {
   return <User className={cls} />;
 }
 
-/** One labelled line of the contact card. Renders nothing when there is no value. */
+/**
+ * One labelled line of the contact card.
+ *
+ * A blank field still renders its LABEL. Hiding empty fields made a
+ * half-captured party look identical to a fully captured one — you could not
+ * tell "no cell number recorded" from "this card does not track cell numbers",
+ * which is the difference between chasing the client and not.
+ */
 function ContactLine({
   icon: Icon,
   label,
@@ -92,13 +100,15 @@ function ContactLine({
   value: string | null;
   href?: string;
 }) {
-  if (!value?.trim()) return null;
+  const empty = !value?.trim();
   return (
     <div className="flex items-start gap-2.5">
       <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-3" />
       <div className="min-w-0">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">{label}</p>
-        {href ? (
+        {empty ? (
+          <p className="text-[13.5px] text-ink-3">Not captured</p>
+        ) : href ? (
           // mailto/tel rather than plain text: on a transfer the next action
           // after finding a number is almost always to use it.
           <a href={href} className="block break-words text-[13.5px] text-action hover:underline">
@@ -107,6 +117,115 @@ function ContactLine({
         ) : (
           <p className="break-words text-[13.5px] text-ink-2">{value}</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+export type PartyPatch = {
+  fullName?: string;
+  businessName?: string;
+  email?: string;
+  cell?: string;
+  physicalAddress?: string;
+  idNumber?: string;
+  registrationNo?: string;
+};
+
+/** In-place editor for an inline-captured party. */
+function PartyEditor({
+  party,
+  showIdNumbers,
+  busy,
+  onCancel,
+  onSave,
+}: {
+  party: PartyRow;
+  showIdNumbers: boolean;
+  busy: boolean;
+  onCancel: () => void;
+  onSave: (patch: PartyPatch) => void;
+}) {
+  const isPerson = party.detail !== "business" && party.detail !== "trust";
+  const c = party.contact;
+  const [form, setForm] = useState<PartyPatch>({
+    fullName: isPerson ? party.who : "",
+    businessName: isPerson ? "" : party.who,
+    email: c?.email ?? "",
+    cell: c?.cell ?? "",
+    physicalAddress: c?.address ?? "",
+    idNumber: c?.idNumber ?? "",
+    registrationNo: c?.registrationNo ?? "",
+  });
+
+  const set = (k: keyof PartyPatch) => (e: { target: { value: string } }) =>
+    setForm((s) => ({ ...s, [k]: e.target.value }));
+
+  const field =
+    "mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action";
+  const lbl = "text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3";
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="sm:col-span-2">
+          <span className={lbl}>{isPerson ? "Full name" : "Registered name"}</span>
+          <input
+            value={(isPerson ? form.fullName : form.businessName) ?? ""}
+            onChange={set(isPerson ? "fullName" : "businessName")}
+            className={field}
+          />
+        </label>
+        <label>
+          <span className={lbl}>Email</span>
+          <input type="email" value={form.email ?? ""} onChange={set("email")} className={field} />
+        </label>
+        <label>
+          <span className={lbl}>Cell</span>
+          <input value={form.cell ?? ""} onChange={set("cell")} className={field} />
+        </label>
+        <label className="sm:col-span-2">
+          <span className={lbl}>Address</span>
+          <input
+            value={form.physicalAddress ?? ""}
+            onChange={set("physicalAddress")}
+            className={field}
+          />
+        </label>
+        {isPerson
+          ? showIdNumbers && (
+              <label>
+                <span className={lbl}>ID number</span>
+                <input value={form.idNumber ?? ""} onChange={set("idNumber")} className={field} />
+              </label>
+            )
+          : (
+              <label>
+                <span className={lbl}>Registration no.</span>
+                <input
+                  value={form.registrationNo ?? ""}
+                  onChange={set("registrationNo")}
+                  className={field}
+                />
+              </label>
+            )}
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onSave(form)}
+          className="rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {busy ? "Saving…" : "Save details"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded px-3.5 py-2 text-sm font-semibold text-ink-2 hover:bg-raised"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
@@ -138,6 +257,7 @@ export default function TransferParties({
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [role, setRole] = useState<string>("seller");
   const [mode, setMode] = useState<"entity" | "firm" | "inline">("entity");
@@ -175,6 +295,24 @@ export default function TransferParties({
       setAdding(false);
       setLinkId("");
       setName("");
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveParty(id: string, patch: PartyPatch) {
+    setBusy(`edit-${id}`);
+    try {
+      const res = await fetch("/api/transfer-parties", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...patch }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) return toast.error(out.error ?? "Could not save those details.");
+      toast.success("Details saved.");
+      setEditingId(null);
       router.refresh();
     } finally {
       setBusy(null);
@@ -338,9 +476,6 @@ export default function TransferParties({
           {parties.map((p) => {
             const open = openId === p.id;
             const c = p.contact;
-            const hasDetail = Boolean(
-              c && (c.email || c.cell || c.address || c.registrationNo || (showIdNumbers && c.idNumber))
-            );
             const clientHref = p.clientId && clientHrefBase ? `${clientHrefBase}/${p.clientId}` : null;
 
             return (
@@ -354,7 +489,7 @@ export default function TransferParties({
                       inside a button is invalid and the inner one stops working. */}
                   <button
                     type="button"
-                    onClick={() => setOpenId(open ? null : p.id)}
+                    onClick={() => { setOpenId(open ? null : p.id); setEditingId(null); }}
                     aria-expanded={open}
                     aria-controls={`party-${p.id}`}
                     className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -392,43 +527,81 @@ export default function TransferParties({
                 </div>
 
                 {open && (
-                  <div id={`party-${p.id}`} className="border-t border-line bg-raised px-4 py-3.5">
-                    {hasDetail ? (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <ContactLine
-                          icon={Mail}
-                          label="Email"
-                          value={c!.email}
-                          href={c!.email ? `mailto:${c!.email}` : undefined}
-                        />
-                        <ContactLine
-                          icon={Phone}
-                          label="Cell"
-                          value={c!.cell}
-                          // Spaces are display formatting, not part of the number.
-                          href={c!.cell ? `tel:${c!.cell.replace(/\s+/g, "")}` : undefined}
-                        />
-                        <ContactLine icon={MapPin} label="Address" value={c!.address} />
-                        <ContactLine icon={Hash} label="Registration no." value={c!.registrationNo} />
-                        {showIdNumbers && (
-                          <ContactLine icon={Fingerprint} label="ID number" value={c!.idNumber} />
-                        )}
-                      </div>
+                  <div id={`party-${p.id}`} className="border-t border-line bg-surface px-4 py-3.5">
+                    {editingId === p.id ? (
+                      <PartyEditor
+                        party={p}
+                        showIdNumbers={showIdNumbers}
+                        busy={busy === `edit-${p.id}`}
+                        onCancel={() => setEditingId(null)}
+                        onSave={(patch) => saveParty(p.id, patch)}
+                      />
                     ) : (
-                      <p className="text-[13px] text-ink-3">
-                        {p.via === "inline"
-                          ? "No contact details were captured for this party."
-                          : "This record carries no contact details yet."}
-                      </p>
-                    )}
+                      <>
+                        {/* Every field renders, blank or not — see ContactLine. A card
+                            that hides what it does not have cannot be read as a
+                            checklist, and this one is used as exactly that. */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <ContactLine
+                            icon={Mail}
+                            label="Email"
+                            value={c?.email ?? null}
+                            href={c?.email ? `mailto:${c.email}` : undefined}
+                          />
+                          <ContactLine
+                            icon={Phone}
+                            label="Cell"
+                            value={c?.cell ?? null}
+                            // Spaces are display formatting, not part of the number.
+                            href={c?.cell ? `tel:${c.cell.replace(/\s+/g, "")}` : undefined}
+                          />
+                          <ContactLine icon={MapPin} label="Address" value={c?.address ?? null} />
+                          {p.via !== "firm" && (
+                            <ContactLine
+                              icon={Hash}
+                              label="Registration no."
+                              value={c?.registrationNo ?? null}
+                            />
+                          )}
+                          {showIdNumbers && p.via !== "firm" && (
+                            <ContactLine
+                              icon={Fingerprint}
+                              label="ID number"
+                              value={c?.idNumber ?? null}
+                            />
+                          )}
+                        </div>
 
-                    {clientHref && (
-                      <Link
-                        href={clientHref}
-                        className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-action hover:underline"
-                      >
-                        Open client record <ArrowUpRight className="h-3.5 w-3.5" />
-                      </Link>
+                        <div className="mt-3.5 flex flex-wrap items-center gap-4 border-t border-line pt-3">
+                          {/* Where "edit" lives depends on what the party IS. An inline
+                              capture is edited here because there is nowhere else; a
+                              linked party is edited on its own record, so that one
+                              copy stays the truth. */}
+                          {p.via === "inline" && canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingId(p.id)}
+                              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-action hover:underline"
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Edit details
+                            </button>
+                          )}
+                          {clientHref && (
+                            <Link
+                              href={clientHref}
+                              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-action hover:underline"
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Edit on client record
+                              <ArrowUpRight className="h-3.5 w-3.5" />
+                            </Link>
+                          )}
+                          {p.via === "firm" && (
+                            <span className="text-[13px] text-ink-3">
+                              Firm details are edited on the firm&apos;s own page.
+                            </span>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
                 )}

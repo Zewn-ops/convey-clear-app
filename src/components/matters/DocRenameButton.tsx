@@ -48,7 +48,7 @@ export default function DocRenameButton({ documentId, current }: { documentId: s
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
         disabled={saving}
-        className="w-44 rounded border border-line px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-action"
+        className="w-44 rounded border border-line bg-surface text-ink px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-action"
       />
       <button onClick={save} disabled={saving} className="text-green-600 hover:text-green-800" title="Save"><Check className="h-3.5 w-3.5" /></button>
       <button onClick={() => setEditing(false)} disabled={saving} className="text-ink-3 hover:text-ink-2" title="Cancel"><X className="h-3.5 w-3.5" /></button>

@@ -68,7 +68,7 @@ export default function ReviewDocActions({
           rows={2}
           placeholder="Reason (shown to the uploader)…"
           disabled={busy !== null}
-          className="w-64 rounded-md border border-line px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+          className="w-64 rounded-md border border-line bg-surface text-ink px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
         />
         <div className="flex items-center gap-2">
           <button

@@ -22,7 +22,7 @@ export default function NewClientButton() {
   });
 
   const isPerson = form.entity_type === "natural_person";
-  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
+  const input = "rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

@@ -87,7 +87,7 @@ export default function SignatureBuilder() {
 
   const html = buildSignature({ name, title, phone, email, signoff });
   const input =
-    "w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
+    "w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function copySignature() {
     const text = new DOMParser().parseFromString(html, "text/html").body.innerText;

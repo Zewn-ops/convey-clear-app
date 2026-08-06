@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <LegalShell title="Privacy Policy" lastUpdated="16 June 2026">
-      <p className="mt-6 text-[15px] leading-relaxed text-gray-700">
+      <p className="mt-6 text-[15px] leading-relaxed text-ink-2">
         This Privacy Policy explains how <strong>Convey Clear (Pty) Ltd</strong> (&ldquo;ConveyClear&rdquo;,
         &ldquo;we&rdquo;, &ldquo;us&rdquo;) collects, uses, shares, stores and protects your personal
         information when you use our client portal and conveyancing-related services. We are committed

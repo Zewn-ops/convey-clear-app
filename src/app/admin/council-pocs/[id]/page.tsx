@@ -83,8 +83,8 @@ export default async function AdminCouncilPocDetailPage({
         {linkedMatters.length > 0 ? (
           <div className="space-y-3">
             {linkedMatters.map((m) => (
-              <Link key={m.id} href={`/admin/matters/${m.id}`}>
-                <Card className="hover:border-line/30 transition-colors">
+              <Link key={m.id} href={`/admin/matters/${m.id}`} className="block">
+                <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <Briefcase className="h-4 w-4 text-ink-3 mt-0.5 shrink-0" />

@@ -75,7 +75,7 @@ export default function TransferFeed({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Add a note about this transfer…"
-            className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+            className="flex-1 rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
           />
           <button
             type="button"

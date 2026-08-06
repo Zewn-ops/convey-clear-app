@@ -33,7 +33,7 @@ export default function MatterPocsCard({
   const linkedIds = useMemo(() => new Set(linked.map((p) => p.id)), [linked]);
   const assignable = useMemo(() => all.filter((p) => !linkedIds.has(p.id)), [all, linkedIds]);
 
-  const input = "rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
+  const input = "rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
   async function assign() {
     if (!assignId) return;

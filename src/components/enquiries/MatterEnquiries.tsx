@@ -100,14 +100,14 @@ export default function MatterEnquiries({
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Subject — e.g. Clearance figures query"
-            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+            className="w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
           />
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={3}
             placeholder="What do you need?"
-            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action resize-none"
+            className="w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action resize-none"
           />
           <button
             onClick={create}
@@ -153,7 +153,7 @@ export default function MatterEnquiries({
               </div>
 
               {t.messages.map((m) => (
-                <div key={m.id} className="border-t border-gray-50 pt-3">
+                <div key={m.id} className="border-t border-line pt-3">
                   <p className="text-xs text-ink-3 mb-1">
                     {m.author_label || "ConveyClear"} · {formatDateTime(m.created_at)}
                   </p>

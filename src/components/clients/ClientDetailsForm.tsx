@@ -138,7 +138,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
               setForm((cur) => ({ ...seed(next), ...cur }));
               setEntity(next);
             }}
-            className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+            className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
           >
             {ENTITY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -159,7 +159,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
             <input
               value={form.id_number ?? ""}
               onChange={(e) => setForm((s) => ({ ...s, id_number: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
             />
           </label>
         )}
@@ -184,7 +184,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
                 value={form[f.key] ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                 placeholder={f.hint}
-                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
               />
             ) : (
               <input
@@ -192,7 +192,7 @@ export default function ClientDetailsForm({ client }: { client: Client }) {
                 value={form[f.key] ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                 placeholder={f.hint}
-                className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
               />
             )}
           </label>

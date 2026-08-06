@@ -48,7 +48,7 @@ export default function MatterFilters() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search title, ref, firm…"
-          className="w-full rounded-lg border border-line pl-8 pr-3 py-1.5 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+          className="w-full rounded-lg border border-line bg-surface pl-8 pr-3 py-1.5 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
         />
       </form>
       <select
