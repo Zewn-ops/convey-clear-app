@@ -172,9 +172,11 @@ export default function TransferDocuments({
           A list only shows what HAS been uploaded, so "0 of 5" was a number with
           nothing behind it — you could not see which five, or which one was
           missing, without opening the dropdown and reading it. Five tiles make
-          the set itself the interface: the gap is the message. */}
+          the set itself the interface: the gap is the message. The count stays
+          on the heading — repeating 1/5 … 5/5 on every tile numbered the tiles
+          rather than the progress, which is not the thing being counted. */}
       <ul className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {NAMED_DOC_TYPES.map((t, i) => {
+        {NAMED_DOC_TYPES.map((t) => {
           const held = presentNamed.has(t);
           const doc = current.find((d) => d.document_type === t && d.disapproved_at == null);
           const pending = canManage && held && doc?.approved_at == null;
@@ -187,9 +189,6 @@ export default function TransferDocuments({
                 }
                 title={held ? `${docLabel(t)} — uploaded` : `Upload the ${docLabel(t)}`}
               >
-                <span className="absolute left-2.5 top-2 font-mono text-[10.5px] font-semibold tabular-nums text-ink-3">
-                  {i + 1}/{NAMED_DOC_TYPES.length}
-                </span>
                 {held && (
                   <CheckCircle2
                     className="absolute right-2 top-2 h-4 w-4 text-ok"
