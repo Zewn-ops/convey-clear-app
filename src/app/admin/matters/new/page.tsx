@@ -13,10 +13,53 @@ export default async function NewMatterPage() {
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
   const supabase = await createClient();
-  const [{ data: services }, { data: clients }] = await Promise.all([
+  // Open transfers, each with the parties already captured on it. Jukka's model:
+  // the property transfer is the primary object and roughly 90% of matters hang
+  // off one, so linking is offered at creation rather than as a later chore —
+  // and the transfer's seller and buyer are then already known.
+  const [{ data: services }, { data: clients }, { data: transferRows }] = await Promise.all([
     supabase.from("services").select("id, code, name").order("name"),
     supabase.from("clients").select("id, full_name, business_name").order("created_at", { ascending: false }).limit(200),
+    supabase
+      .from("property_transfers")
+      .select(
+        "id, reference, property_description, municipality, status, transfer_parties(role, client_id, full_name, business_name, clients(id, full_name, business_name))"
+      )
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
+
+  type RawTransfer = {
+    id: string;
+    reference: string;
+    property_description: string | null;
+    municipality: string | null;
+    transfer_parties: {
+      role: string;
+      client_id: string | null;
+      full_name: string | null;
+      business_name: string | null;
+      clients: { id: string; full_name: string | null; business_name: string | null } | null;
+    }[] | null;
+  };
+
+  const transfers = ((transferRows as RawTransfer[] | null) ?? []).map((t) => ({
+    id: t.id,
+    reference: t.reference,
+    property_description: t.property_description,
+    municipality: t.municipality,
+    // Only parties that ARE client records can be pre-selected as the matter's
+    // client — a matter's client_id is a clients FK, so an uncaptured party has
+    // nothing to point at.
+    parties: (t.transfer_parties ?? [])
+      .filter((p) => p.client_id && p.clients)
+      .map((p) => ({
+        id: p.clients!.id,
+        role: p.role,
+        label: p.clients!.business_name || p.clients!.full_name || "Unnamed",
+      })),
+  }));
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -30,6 +73,7 @@ export default async function NewMatterPage() {
       <CreateMatterForm
         services={(services as { id: string; code: string; name: string }[] | null) ?? []}
         clients={(clients as { id: string; full_name: string | null; business_name: string | null }[] | null) ?? []}
+        transferOptions={transfers}
       />
     </div>
   );

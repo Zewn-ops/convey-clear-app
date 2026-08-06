@@ -104,6 +104,7 @@ export default function CreateMatterForm({
   services,
   clients,
   transfer,
+  transferOptions = [],
 }: {
   services: { id: string; code: string; name: string }[];
   clients: { id: string; full_name: string | null; business_name: string | null }[];
@@ -114,6 +115,13 @@ export default function CreateMatterForm({
    * seller/buyer are offered first as the client.
    */
   transfer?: CreateInTransfer;
+  /**
+   * Transfers this matter can be linked to, offered when it is NOT already being
+   * created inside one. Picking one inherits the property and municipality and
+   * offers its parties as the client — the same behaviour as creating inside a
+   * transfer, reached from the other direction.
+   */
+  transferOptions?: CreateInTransfer[];
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"existing" | "new">(clients.length ? "existing" : "new");
@@ -132,6 +140,31 @@ export default function CreateMatterForm({
   const [buyer, setBuyer] = useState<PartyDraft>(emptyParty());
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<{ matterId: string; title: string; token: string } | null>(null);
+  /** A transfer chosen on this form, when the matter was not opened inside one. */
+  const [pickedTransferId, setPickedTransferId] = useState("");
+
+  // Whichever transfer is in play: the one we were opened inside, or the one
+  // picked here. Everything downstream reads this, so the two routes into the
+  // same state cannot behave differently.
+  const linkedTransfer =
+    transfer ?? transferOptions.find((t) => t.id === pickedTransferId) ?? null;
+  // Picking a transfer inherits what describes the TRANSACTION rather than the
+  // matter. Only fills blanks — retyped values are not overwritten, because a
+  // correction made by hand is a decision and silently reverting it is worse
+  // than leaving a field empty.
+  function pickTransfer(id: string) {
+    setPickedTransferId(id);
+    const t = transferOptions.find((x) => x.id === id);
+    if (!t) return;
+    if (t.municipality) setMunicipality(t.municipality);
+    if (t.property_description && !property.trim()) setProperty(t.property_description);
+    const sellerParty = t.parties.find((p) => p.role === "seller");
+    const buyerParty = t.parties.find((p) => p.role === "buyer");
+    // The matter's own client is the seller (Zewn, 2026-08-06: on a COO the
+    // client is the seller and the buyer rides along as a party).
+    if (sellerParty) { setMode("existing"); setClientId(sellerParty.id); }
+    else if (buyerParty) { setMode("existing"); setClientId(buyerParty.id); }
+  }
 
   const svcCode = services.find((s) => s.id === serviceId)?.code ?? "";
   const isCoo = svcCode.toUpperCase() === "COO";
@@ -158,7 +191,7 @@ export default function CreateMatterForm({
         last_name: entityType === "natural_person" ? lastName : undefined,
         business_name: entityType !== "natural_person" ? name : undefined,
         email, cell, service_id: serviceId, municipality, property_description: property, priority,
-        transfer_id: transfer?.id,
+        transfer_id: linkedTransfer?.id,
         // Only sent for COO — the API seeds both sides regardless, but an
         // untouched side is left undefined so it gets a placeholder rather than
         // a party row full of empty strings.
@@ -212,6 +245,46 @@ export default function CreateMatterForm({
         </div>
       )}
 
+      {/* SERVICE FIRST. It decides the pipeline AND the shape of the parties —
+          a Change of Ownership has a seller and a buyer, everything else has one
+          client — so asking "who is this for" before "what is it" asks a question
+          whose right answer is not yet knowable. */}
+      <Select
+        label="Service"
+        value={serviceId}
+        onChange={(e) => setServiceId(e.target.value)}
+        options={services.map((s) => ({ value: s.id, label: s.name }))}
+      />
+
+      {/* Then the transaction it belongs to. ~90% of matters hang off a property
+          transfer, so linking is offered at creation rather than left as a chore
+          afterwards — and linking is what makes the seller and buyer already known. */}
+      {!transfer && transferOptions.length > 0 && (
+        <div className="space-y-2">
+          <Select
+            label="Property transfer"
+            value={pickedTransferId}
+            onChange={(e) => pickTransfer(e.target.value)}
+            options={[
+              { value: "", label: "— None (standalone matter) —" },
+              ...transferOptions.map((t) => ({
+                value: t.id,
+                label: `${t.reference}${t.property_description ? ` · ${t.property_description}` : ""}`,
+              })),
+            ]}
+          />
+          {linkedTransfer && (
+            <p className="text-xs text-ink-3">
+              Property and council inherited from {linkedTransfer.reference}
+              {linkedTransfer.parties.length > 0
+                ? ` · ${linkedTransfer.parties.length} part${linkedTransfer.parties.length === 1 ? "y" : "ies"} available as the client`
+                : " · no parties captured on it yet"}
+              .
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -234,10 +307,10 @@ export default function CreateMatterForm({
           {/* The transfer's own seller and buyer, one click away. On a transfer,
               the matter is nearly always for one of them — and hunting for that
               person in a list of every client is the thing Jukka complained about. */}
-          {transfer && transfer.parties.length > 0 && (
+          {linkedTransfer && linkedTransfer.parties.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-ink-3">This transfer:</span>
-              {transfer.parties.map((p) => (
+              {linkedTransfer.parties.map((p) => (
                 <button
                   key={p.id}
                   type="button"
@@ -289,7 +362,6 @@ export default function CreateMatterForm({
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Select label="Service" value={serviceId} onChange={(e) => setServiceId(e.target.value)} options={services.map((s) => ({ value: s.id, label: s.name }))} />
         <Select label="Municipality" value={municipality} onChange={(e) => setMunicipality(e.target.value)} options={MUNI} />
         <Input label="Property description" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="ERF 123 VALHALLA" />
         <Select label="Priority" value={priority} onChange={(e) => setPriority(e.target.value as MatterPriority)} options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))} />
