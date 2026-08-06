@@ -50,7 +50,20 @@ const clean = (v: string | null | undefined) => {
  */
 export async function findOrCreateClientForParty(
   supabase: SupabaseClient,
-  identity: PartyIdentity
+  identity: PartyIdentity,
+  opts: {
+    /**
+     * Restrict matching to one firm's own clients, and stamp a newly created
+     * record with that firm.
+     *
+     * Required whenever the SERVICE ROLE is doing the lookup on behalf of a
+     * partner firm — the partner-referral route has no caller-scoped client, so
+     * without this the deduplicator would happily match another firm's client
+     * and render their name, email and cell onto the referring firm's party
+     * card. Staff paths pass nothing, because staff can see everything anyway.
+     */
+    scopeToFirmId?: string | null;
+  } = {}
 ): Promise<FindOrCreateResult> {
   const entityType = identity.entityType;
   const fullName = clean(identity.fullName);
@@ -67,13 +80,12 @@ export async function findOrCreateClientForParty(
     return { ok: false, error: "A name is required to create a client record." };
   }
 
+  const firmId = opts.scopeToFirmId ?? null;
+
   const tryMatch = async (column: string, value: string) => {
-    const { data } = await supabase
-      .from("clients")
-      .select("id")
-      .eq(column, value)
-      .limit(1)
-      .maybeSingle();
+    let q = supabase.from("clients").select("id").eq(column, value);
+    if (firmId) q = q.eq("business_partner_id", firmId);
+    const { data } = await q.limit(1).maybeSingle();
     return (data as { id: string } | null)?.id ?? null;
   };
 
@@ -96,6 +108,9 @@ export async function findOrCreateClientForParty(
       primary_email: email,
       primary_cell: cell,
       physical_address: physicalAddress,
+      // Stamped so the next referral from the same firm deduplicates against it
+      // rather than creating a second copy on every matter.
+      ...(firmId ? { business_partner_id: firmId } : {}),
     })
     .select("id")
     .single();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { findOrCreateClientForParty } from "@/lib/party-client";
 import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, isPartnerRole } from "@/types";
 import { ficaFields, CONSENT_TYPES, CAPTURE_METHODS, type CaptureMethod } from "@/lib/fica";
@@ -25,6 +26,12 @@ interface Body {
    * client row at all. Omit it and we fall back to the matter's own client.
    */
   client_id?: string;
+  /**
+   * The matter_party being captured for, when it has no client record yet.
+   * Supplying it lets this route CREATE that record from the party's own
+   * details instead of refusing and sending staff away to do it by hand.
+   */
+  party_id?: string;
   details?: Record<string, string | null>;
   directors?: {
     full_name?: string;
@@ -65,7 +72,7 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: matter } = await supabase
     .from("matters")
-    .select("id, client_id")
+    .select("id, client_id, business_partner_id")
     .eq("id", matterId)
     .maybeSingle();
   if (!matter) return NextResponse.json({ message: "Matter not found or access denied" }, { status: 403 });
@@ -99,6 +106,60 @@ export async function POST(request: Request) {
     }
   } else {
     clientId = (matter.client_id as string | null) ?? null;
+  }
+
+  // No client record yet? Make one from what the party already carries, rather
+  // than dead-ending. This used to return "create one with Contact on the party
+  // first", which sent staff away mid-capture to do by hand the one thing this
+  // route has everything it needs to do — the party row already holds the name,
+  // ID number, email and cell a client record is made of.
+  if (!clientId && typeof body.party_id === "string" && body.party_id) {
+    const { data: party } = await admin
+      .from("matter_parties")
+      .select("id, entity_type, full_name, business_name, id_number, registration_no, email, cell, physical_address, client_id")
+      .eq("matter_id", matterId)
+      .eq("id", body.party_id)
+      .maybeSingle();
+    if (!party) {
+      return NextResponse.json({ message: "That party is not on this matter." }, { status: 403 });
+    }
+
+    const pr = party as Record<string, string | null>;
+    if (pr.client_id) {
+      clientId = pr.client_id;
+    } else {
+      const et = (pr.entity_type ?? "natural_person") as "natural_person" | "business" | "trust";
+      const name = et === "natural_person" ? pr.full_name : pr.business_name;
+      // The seeded placeholder is a real name field. Creating a client called
+      // "Seller" would put it in every picker and match it forever after.
+      if (!name || name === "Seller" || name === "Buyer") {
+        return NextResponse.json(
+          { message: "Give this party a name before capturing their details." },
+          { status: 400 }
+        );
+      }
+      const made = await findOrCreateClientForParty(
+        admin,
+        {
+          entityType: et,
+          fullName: pr.full_name,
+          businessName: pr.business_name,
+          idNumber: pr.id_number,
+          registrationNo: pr.registration_no,
+          email: pr.email,
+          cell: pr.cell,
+          physicalAddress: pr.physical_address,
+        },
+        // Scoped to the matter's firm when it has one: this runs as the service
+        // role and the caller may be a partner, so an unscoped match could link
+        // to another firm's client and disclose it. Staff-only matters have no
+        // firm and need no scope.
+        { scopeToFirmId: (matter.business_partner_id as string | null) ?? null }
+      );
+      if (!made.ok) return NextResponse.json({ message: made.error }, { status: 400 });
+      clientId = made.clientId;
+      await admin.from("matter_parties").update({ client_id: clientId }).eq("id", pr.id);
+    }
   }
 
   if (!clientId) {

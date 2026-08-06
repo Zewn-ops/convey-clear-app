@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { findOrCreateClientForParty } from "@/lib/party-client";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { getPipeline } from "@/lib/pipelines";
@@ -169,6 +170,36 @@ export async function POST(request: Request) {
         contact_cell: et !== "natural_person" ? p.contact_cell?.trim() || null : null,
       };
     });
+    // Each referred party also becomes a real CLIENT record (Zewn, 2026-08-06),
+    // so it carries a FICA vault and is reusable on the firm's next referral.
+    //
+    // ⚠️ Scoped to the referring firm. This route runs as the service role and
+    // has no caller-scoped client, so an unscoped deduplicator could match
+    // another firm's client and render their details back onto this firm's
+    // party card. Firm-scoped matching still stops the same firm re-creating
+    // the same person on every referral, which is the case that actually
+    // happens.
+    for (const p of partyRows) {
+      const name = p.entity_type === "natural_person" ? p.full_name : p.business_name;
+      if (!name) continue;
+      const made = await findOrCreateClientForParty(
+        admin,
+        {
+          entityType: p.entity_type as "natural_person" | "business" | "trust",
+          fullName: p.full_name,
+          businessName: p.business_name,
+          idNumber: p.id_number,
+          registrationNo: p.registration_no,
+          email: p.email,
+          cell: p.cell,
+          physicalAddress: p.physical_address,
+        },
+        { scopeToFirmId: auth.partnerId }
+      );
+      if (made.ok) (p as Record<string, unknown>).client_id = made.clientId;
+      else console.error("client record for referred party failed:", made.error);
+    }
+
     const { error: partyErr } = await admin.from("matter_parties").insert(partyRows);
     if (partyErr) return NextResponse.json({ message: partyErr.message }, { status: 400 });
 

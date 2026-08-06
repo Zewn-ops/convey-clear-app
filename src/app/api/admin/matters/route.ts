@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { findOrCreateClientForParty } from "@/lib/party-client";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logMatterActivity, logTransferActivity } from "@/lib/activity";
@@ -189,6 +190,34 @@ export async function POST(request: Request) {
       };
     };
     const seed = [partyShell("seller", body.seller), partyShell("buyer", body.buyer)];
+
+    // Since 2026-08-06 a party with real details also gets a real CLIENT record,
+    // so it carries a FICA vault and is reusable on the next matter.
+    //
+    // ⚠️ Only when a real name was supplied. A shell still carries the role word
+    // as its name (chk_party_name rejects a nameless party), and turning that
+    // into a client record would create an actual client called "Seller" —
+    // strictly worse than the placeholder, because it would then be offered in
+    // every client picker and matched by the deduplicator forever after.
+    for (const p of seed) {
+      const placeholder = p.role === "seller" ? "Seller" : "Buyer";
+      const name = p.entity_type === "natural_person" ? p.full_name : p.business_name;
+      if (!name || name === placeholder) continue;
+
+      const made = await findOrCreateClientForParty(admin, {
+        entityType: p.entity_type as "natural_person" | "business" | "trust",
+        fullName: p.full_name,
+        businessName: p.business_name,
+        idNumber: p.id_number,
+        email: p.email,
+        cell: p.cell,
+      });
+      // Non-fatal by design: the party row is still correct without the link,
+      // and failing the whole matter creation over it would be a worse trade.
+      if (made.ok) (p as Record<string, unknown>).client_id = made.clientId;
+      else console.error("client record for", p.role, "failed:", made.error);
+    }
+
     // Non-fatal: a matter without its party shells is recoverable (add them on
     // the matter), but a 500 here would strand an already-created matter.
     const { error: partyErr } = await admin.from("matter_parties").insert(seed);

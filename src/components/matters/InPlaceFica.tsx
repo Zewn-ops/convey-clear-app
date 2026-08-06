@@ -130,14 +130,52 @@ function SubjectSection({
   if (!client) {
     const e = subject.partyEntity ?? "natural_person";
     const needsDirectors = e === "business" || e === "trust";
+
+    // The record is made from what the PARTY already holds, in place. This used
+    // to be a dead end — "create one with Contact on the party above, then come
+    // back" — which sent staff out of the capture they were in the middle of, to
+    // do by hand something the party row already had every field for.
+    const createRecord = async () => {
+      setSaving(true);
+      try {
+        const r = await fetch("/api/fica/capture", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matter_id: matterId, party_id: subject.partyId }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.message ?? "Could not create the client record");
+        toast.success("Client record created");
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not create the client record");
+      } finally {
+        setSaving(false);
+      }
+    };
+
     return (
       <div className="flex items-start gap-2 py-3 text-xs">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-        <p className="text-ink-2">
-          <b className="text-ink">{label}</b> has no client record yet, so their details
-          {needsDirectors ? ", directors" : ""} and consent can&apos;t be captured — and their FICA documents can&apos;t
-          be reused across matters. Create one with <b>Contact</b> on the party above, then come back.
-        </p>
+        <div className="text-ink-2">
+          <p>
+            <b className="text-ink">{label}</b> has no client record yet, so their details
+            {needsDirectors ? ", directors" : ""} and consent can&apos;t be captured — and their FICA
+            documents can&apos;t be reused across matters.
+          </p>
+          {subject.partyId ? (
+            <button
+              type="button"
+              onClick={createRecord}
+              disabled={saving}
+              className="mt-2 inline-flex items-center gap-1.5 rounded bg-action-fill px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            >
+              {saving ? "Creating…" : "Create client record"}
+            </button>
+          ) : (
+            <p className="mt-1">Add a client to this matter first.</p>
+          )}
+        </div>
       </div>
     );
   }
