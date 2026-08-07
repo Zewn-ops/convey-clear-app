@@ -36,9 +36,30 @@ function referenceTaken(message: string): boolean {
   return /uq_property_transfers_reference|duplicate key/i.test(message);
 }
 
+// 🔴 DISABLED 2026-08-07 — Meeting 2 (2026-08-06) moved transfer creation behind
+// ConveyClear so one vetted client database is maintained without firms reaching
+// each other's contacts (§84). Firms now lodge a request instead:
+// POST /api/partner/transfer-requests → /admin/transfer-requests → approved.
+//
+// ⚠️ THIS REVERSES THE 2026-07-16 DECISION that added this route, so it is
+// disabled rather than deleted: delete the guard below and it works again.
+// Confirm with Jukka before removing the code — he asked for direct create
+// three weeks ago and may not have intended to give it up.
+const PARTNER_DIRECT_CREATE_DISABLED = true;
+
 export async function POST(request: Request) {
   if (!rateLimit(`partner-transfer:${clientIp(request)}`, 30, 60_000)) {
     return NextResponse.json({ message: "Too many requests." }, { status: 429 });
+  }
+  if (PARTNER_DIRECT_CREATE_DISABLED) {
+    return NextResponse.json(
+      {
+        message:
+          "ConveyClear now opens property transfers. Send us the details and we will set it up.",
+        request_instead: "/partner/transfers/new",
+      },
+      { status: 403 }
+    );
   }
   const auth = await requirePartner();
   if ("error" in auth) {

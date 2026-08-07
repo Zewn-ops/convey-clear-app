@@ -20,6 +20,7 @@ import {
   BadgeCheck,
   Bell,
   Mail,
+  Inbox,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -28,6 +29,7 @@ const baseNav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
   { href: "/admin/property-transfers", label: "Property Transfers", icon: Building2, exact: false },
+  { href: "/admin/transfer-requests", label: "Transfer Requests", icon: Inbox, exact: false },
   { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
   { href: "/admin/firms", label: "Partner Firms", icon: Scale, exact: false },
   { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },

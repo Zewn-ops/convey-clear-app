@@ -1,35 +1,21 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { requirePartner } from "@/lib/partner";
-import PartnerTransferForm from "@/components/transfers/PartnerTransferForm";
-import { clientDisplayName } from "@/types";
+import TransferRequestForm from "@/components/transfers/TransferRequestForm";
 import { ArrowLeft } from "lucide-react";
 
-export const metadata = { title: "New Property Transfer — ConveyClear Partner" };
+export const metadata = { title: "Request a Property Transfer — ConveyClear Partner" };
 export const dynamic = "force-dynamic";
 
-export default async function NewPartnerTransferPage() {
+// Was a direct-create form until 2026-08-07. Meeting 2 (2026-08-06) moved
+// transfer creation behind ConveyClear so one vetted client database is kept
+// without firms reaching each other's contacts (§84) — the firm now asks and
+// ConveyClear opens it. The old PartnerTransferForm is still in the tree
+// alongside the disabled route, in case Jukka wants the 07-16 behaviour back.
+export default async function RequestTransferPage() {
   // Gate the page itself, not just the API — a non-partner should never see the form.
   const auth = await requirePartner();
   if ("error" in auth) redirect("/partner");
-
-  // The firm's own clients, for the seller/buyer pickers. RLS (can_access_client)
-  // already scopes this to the caller's firm; the form only ever offers these.
-  const supabase = await createClient();
-  const { data: clientRows } = await supabase
-    .from("clients")
-    .select("id, full_name, first_name, last_name, business_name")
-    .order("created_at", { ascending: false })
-    .limit(300);
-
-  const clients = ((clientRows as {
-    id: string;
-    full_name: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    business_name: string | null;
-  }[] | null) ?? []).map((c) => ({ id: c.id, label: clientDisplayName(c) }));
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -37,12 +23,15 @@ export default async function NewPartnerTransferPage() {
         <ArrowLeft className="h-4 w-4" /> Back to transfers
       </Link>
       <div>
-        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">New property transfer</h1>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
+          Request a property transfer
+        </h1>
         <p className="text-sm text-ink-3 mt-1">
-          Group the matters of one transaction together. Your firm owns it; ConveyClear can see it.
+          Send us the transaction and ConveyClear will open it. You will be notified as soon as it
+          is set up, and it will appear in your transfers.
         </p>
       </div>
-      <PartnerTransferForm clients={clients} />
+      <TransferRequestForm />
     </div>
   );
 }

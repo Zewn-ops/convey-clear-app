@@ -28,6 +28,7 @@ import {
   type TransferDocument,
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
+import PullVaultDoc from "@/components/transfers/PullVaultDoc";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -197,6 +198,52 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     url: d.storage_path ? tdocUrls[d.storage_path] : undefined,
     usedOn: usage[d.id] ?? 0,
   }));
+
+  // FICA-vault documents belonging to the parties ON this transfer, for the
+  // staff-only pull (054). Meeting 2 parked the automatic vault→transfer feed;
+  // this is the deliberate manual replacement, and it is offered here only —
+  // this page is staff-gated at the top, and the route re-checks the role.
+  //
+  // Scoped to THIS transfer's parties rather than every client in the system:
+  // the picker is for "attach the seller's certified ID", not for browsing
+  // vaults. Superseded documents are excluded so a stale ID cannot be attached.
+  const partyClientIds = Array.from(
+    new Set(
+      ((partyRows as RawTransferParty[] | null) ?? [])
+        .map((p) => p.client_id)
+        .filter((cid): cid is string => !!cid)
+    )
+  );
+  const alreadyPulled = new Set(
+    transferDocs.map((d) => (d as TransferDocument & { client_document_id?: string | null }).client_document_id).filter(Boolean)
+  );
+  const { data: vaultRows } = partyClientIds.length
+    ? await supabase
+        .from("client_documents")
+        .select("id, client_id, document_type, file_name, status, clients(full_name, business_name)")
+        .in("client_id", partyClientIds)
+        .eq("status", "current")
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const vaultOptions = (
+    (vaultRows as
+      | {
+          id: string;
+          client_id: string;
+          document_type: string | null;
+          file_name: string | null;
+          clients?: { full_name: string | null; business_name: string | null } | null;
+        }[]
+      | null) ?? []
+  )
+    .filter((v) => !alreadyPulled.has(v.id))
+    .map((v) => ({
+      id: v.id,
+      fileName: v.file_name,
+      documentType: v.document_type,
+      ownerName:
+        v.clients?.business_name?.trim() || v.clients?.full_name?.trim() || "Unnamed client",
+    }));
 
   // The transaction's own feed (035).
   const { data: feedData } = await supabase
@@ -374,6 +421,11 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         canManage
         canDelete={isAdminRole(session.profile?.role)}
       />
+
+      {/* Staff-only vault pull (054). Sits under the documents card because it
+          produces one — the vault is otherwise unlinked from transfers by the
+          Meeting 2 decision, and this is the only bridge across. */}
+      <PullVaultDoc transferId={id} options={vaultOptions} />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}
       <TransferFeed transferId={id} activities={feed} canPost />
