@@ -30,9 +30,14 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 
 ## Applied state
 
-**001–045 are applied to production, except 043. 046–057 are NOT applied to production** — they
-are the Section 1 redesign work, live on `feature/portal-redesign` only. **`053`–`057` have never
+**001–045 are applied to production, except 043. 046–058 are NOT applied to production** — they
+are the Section 1 redesign work, live on `feature/portal-redesign` only. **`053`–`058` have never
 been applied anywhere, including staging** (written 2026-08-07, Meeting 2 decisions).
+
+`058` gives the buyer and seller a read path to transfer documents. It lands **inert** (`visibility`
+defaults to `internal`), but the moment staff share something it is the first time a CLIENT can read
+a `transfer_documents` row at all. **Verify the negative case on staging before production: pull the
+seller's FICA onto a transfer, leave it internal, and confirm the BUYER cannot see it.**
 
 `056` creates `properties` (subsuming the never-built `locations`) and `057` makes
 `handle_new_user()` refuse a self-signup on a known contact card. **`057` changes signup
