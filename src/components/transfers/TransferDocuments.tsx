@@ -258,6 +258,17 @@ export default function TransferDocuments({
                       Not approved
                     </span>
                   )}
+                  {/* Shared state is shown to EVERYONE who can see the row, not
+                      just staff: a partner firm reading this list should know
+                      the buyer and seller can see the document too. */}
+                  {d.visibility === "parties" && (
+                    <span
+                      className="shrink-0 rounded bg-action-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-action"
+                      title="Visible to the buyer and seller on this transfer."
+                    >
+                      Shared with parties
+                    </span>
+                  )}
                 </p>
                 <p className="truncate text-xs text-ink-3">
                   {d.file_name || "—"} · {formatDate(d.created_at)}
@@ -291,6 +302,31 @@ export default function TransferDocuments({
                       className={`font-medium hover:underline disabled:opacity-50 ${d.verified ? "text-ink-3" : "text-green-700"}`}
                     >
                       {d.verified ? "Unverify" : "Verify"}
+                    </button>
+                    {/* Meeting 2 §40/§100. Default is internal, so sharing is
+                        always a deliberate act — the confirm exists because
+                        un-sharing does not un-see. */}
+                    <button
+                      type="button"
+                      disabled={busy === d.id}
+                      onClick={() => {
+                        if (
+                          d.visibility !== "parties" &&
+                          !window.confirm(
+                            `Share "${d.file_name || docLabel(d.document_type)}" with the buyer and seller on this transfer?\n\nThey will both be able to open it. Un-sharing later removes access, but not what they have already seen.`
+                          )
+                        ) {
+                          return;
+                        }
+                        patch(
+                          d.id,
+                          { visibility: d.visibility === "parties" ? "internal" : "parties" },
+                          d.visibility === "parties" ? "Hidden from the parties" : "Shared with the parties"
+                        );
+                      }}
+                      className={`font-medium hover:underline disabled:opacity-50 ${d.visibility === "parties" ? "text-ink-3" : "text-action"}`}
+                    >
+                      {d.visibility === "parties" ? "Unshare" : "Share"}
                     </button>
                     <ReplacePick busy={busy === d.id} onPick={(f) => upload(f, d.document_type, d.id)} />
                     <button

@@ -14,6 +14,7 @@ import {
   type MatterPhase,
   type MatterPriority,
   type MatterStatus,
+  type TransferDocument,
 } from "@/types";
 import PhaseProgress from "@/components/ui/PhaseProgress";
 import { getPipeline, phaseLabel, phaseOrder, phaseSteps, stageLabel } from "@/lib/pipelines";
@@ -38,7 +39,7 @@ export default async function MatterDetailPage({
   const { data: matterData } = await supabase
     .from("matters")
     .select(
-      "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_subtype, service_notes, created_at, clients(id, entity_type, full_name, business_name), services(code, name)"
+      "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, service_subtype, service_notes, transfer_id, created_at, clients(id, entity_type, full_name, business_name), services(code, name)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -51,6 +52,22 @@ export default async function MatterDetailPage({
   };
   const matter = matterData as MatterWithService | null;
   if (!matter) notFound();
+
+  // Transaction documents the client is allowed to see (058, Meeting 2 §40/§100).
+  // No visibility filter here on purpose: transfer_documents_party_read already
+  // decides — shared documents, plus anything that came out of this client's own
+  // vault. Re-stating the rule in the query would be a second, weaker copy of it.
+  const { data: sharedDocsData } = matter.transfer_id
+    ? await supabase
+        .from("transfer_documents")
+        .select("id, transfer_id, document_type, file_name, storage_bucket, storage_path, created_at, visibility, client_document_id, uploaded_by, mime_type, size_bytes")
+        .eq("transfer_id", matter.transfer_id)
+        .eq("status", "current")
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const sharedDocs = (sharedDocsData as TransferDocument[] | null) ?? [];
+  const sharedUrls =
+    sharedDocs.length > 0 ? await signedDocUrls(createAdminClient(), sharedDocs) : {};
 
   const { data: docsData } = await supabase
     .from("documents")
@@ -190,6 +207,46 @@ export default async function MatterDetailPage({
           <Card className="text-center py-8">
             <p className="text-ink-3 text-sm">No documents yet</p>
           </Card>
+        )}
+
+        {/* Documents about the TRANSACTION rather than this matter (058).
+            Rendered only when there is something to show: an empty "Transaction
+            documents" heading on every matter would read as something being
+            broken, when the truthful state is that nothing has been shared. */}
+        {sharedDocs.length > 0 && (
+          <div className="mt-8">
+            <h2 className="font-semibold text-ink mb-1">Transaction documents</h2>
+            <p className="text-xs text-ink-3 mb-3">
+              Shared with you by ConveyClear for this property transaction.
+            </p>
+            <Card padding="none" className="overflow-hidden">
+              <ul className="divide-y divide-line">
+                {sharedDocs.map((doc) => (
+                  <li key={doc.id} className="flex items-center gap-3 px-5 py-3">
+                    <FileText className="h-4 w-4 text-ink-3 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-ink truncate">
+                        {doc.file_name || doc.document_type}
+                      </p>
+                      <p className="text-xs text-ink-3">
+                        {doc.document_type} · {formatDate(doc.created_at)}
+                      </p>
+                    </div>
+                    {doc.storage_path && sharedUrls[doc.storage_path] ? (
+                      <a
+                        href={sharedUrls[doc.storage_path]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-action hover:underline shrink-0"
+                      >
+                        View
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
         )}
       </div>
     </div>

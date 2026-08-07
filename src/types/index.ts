@@ -276,6 +276,12 @@ export interface TransferDocument {
   // carries the reason shown to the uploader.
   disapproved_at?: string | null;
   disapproval_reason?: string | null;
+  // Sharing with the transfer's buyer and seller (058, Meeting 2 §40/§100).
+  // 'internal' (the default) = staff + the granted firm, i.e. today's behaviour.
+  visibility?: "internal" | "parties" | null;
+  // Set when the document was pulled from a client's FICA vault (054). A party
+  // can always see one that came from their OWN vault, shared or not.
+  client_document_id?: string | null;
   created_at: string;
 }
 

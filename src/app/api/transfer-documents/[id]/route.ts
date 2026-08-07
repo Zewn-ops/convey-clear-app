@@ -29,7 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (gate.error) return gate.error;
   const me = gate.me!;
 
-  let body: { verified?: boolean; notes?: string | null; status?: "current" | "archived"; file_name?: string };
+  let body: { verified?: boolean; notes?: string | null; status?: "current" | "archived"; file_name?: string; visibility?: "internal" | "parties" };
   try {
     body = await request.json();
   } catch {
@@ -73,6 +73,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
     patch.status = body.status;
+  }
+  // Share with / hide from the transfer's client parties (058). Staff-only, like
+  // every other write here — a firm must not be able to expose its client's
+  // counterparty documents, and a client must not be able to unhide anything.
+  if (body.visibility !== undefined) {
+    if (!["internal", "parties"].includes(body.visibility)) {
+      return NextResponse.json(
+        { message: "visibility must be 'internal' or 'parties'" },
+        { status: 400 }
+      );
+    }
+    patch.visibility = body.visibility;
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ message: "Nothing to update" }, { status: 400 });
