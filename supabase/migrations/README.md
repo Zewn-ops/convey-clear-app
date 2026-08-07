@@ -30,9 +30,13 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 
 ## Applied state
 
-**001–045 are applied to production, except 043. 046–055 are NOT applied to production** — they
-are the Section 1 redesign work, live on `feature/portal-redesign` only. **`053`, `054` and `055`
-have never been applied anywhere, including staging** (written 2026-08-07, Meeting 2 decisions).
+**001–045 are applied to production, except 043. 046–057 are NOT applied to production** — they
+are the Section 1 redesign work, live on `feature/portal-redesign` only. **`053`–`057` have never
+been applied anywhere, including staging** (written 2026-08-07, Meeting 2 decisions).
+
+`056` creates `properties` (subsuming the never-built `locations`) and `057` makes
+`handle_new_user()` refuse a self-signup on a known contact card. **`057` changes signup
+behaviour — verify on staging that a clean email still registers before it goes near production.**
 
 ⚠️ **`055` must be applied before the transfer-request flow works at all** — `/partner/transfers/new`
 posts to a table that does not exist yet, and direct partner transfer creation is already disabled
