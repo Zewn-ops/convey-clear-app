@@ -14,7 +14,11 @@ const csp = [
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://vercel.live",
-  "frame-src https://challenges.cloudflare.com",
+  // Vimeo added 2026-08-07 for the training-videos tab (Meeting 2, 2026-08-06:
+  // embed rather than host, so tutorial video does not eat the Supabase storage
+  // budget sized for scanned FICA). Scoped to the player origin only — vimeo.com
+  // itself is NOT allowed to frame, just player.vimeo.com which serves embeds.
+  "frame-src https://challenges.cloudflare.com https://player.vimeo.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",

@@ -11,6 +11,7 @@ import {
   UserCircle,
   LogOut,
   IdCard,
+  GraduationCap,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/dashboard/matters", label: "My Matters", icon: Briefcase, exact: false },
   { href: "/dashboard/entities", label: "My entities", icon: IdCard, exact: false },
   { href: "/dashboard/request", label: "Request a service", icon: PlusCircle, exact: false },
+  { href: "/dashboard/training", label: "Training", icon: GraduationCap, exact: false },
 ];
 
 export default function Sidebar({

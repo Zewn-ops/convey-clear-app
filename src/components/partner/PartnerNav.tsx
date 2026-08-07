@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   type LucideIcon,
+  GraduationCap,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { href: "/partner/clients", label: "Clients", icon: Users },
   { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },
   { href: "/partner/refer", label: "Refer a matter", icon: PlusCircle },
+  { href: "/partner/training", label: "Training", icon: GraduationCap },
 ];
 
 // Firm-admin-only; appended when isFirmAdmin (migration 037).
