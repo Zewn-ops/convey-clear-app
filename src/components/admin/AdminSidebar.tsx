@@ -23,6 +23,7 @@ import {
   Inbox,
   GraduationCap,
   Building,
+  UserPlus,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -47,6 +48,7 @@ const baseNav = [
 ];
 const adminNav = [
   { href: "/admin/email-signature", label: "Email Signatures", icon: Mail, exact: false },
+  { href: "/admin/signup-requests", label: "Signup Requests", icon: UserPlus, exact: false },
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
 ];
 

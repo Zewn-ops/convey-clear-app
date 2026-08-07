@@ -78,6 +78,27 @@ export default function SignupForm() {
     });
 
     if (error) {
+      // Meeting 2 §80 (migration 057): this email is already a ConveyClear
+      // contact, so the database refused the account rather than minting a
+      // second, unlinked identity for someone we already know. Record it so
+      // staff can verify the person and create the login themselves — the
+      // trigger cannot do that itself, because its RAISE rolls back anything
+      // it writes.
+      if (error.message.includes("cc_signup_needs_verification")) {
+        await fetch("/api/auth/signup-blocked", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: values.email, full_name: values.full_name }),
+        }).catch(() => {
+          // Best-effort. The account is already refused either way, and a
+          // failed notification must not turn into a second error on screen.
+        });
+        toast.success(
+          "We already have this email on file. ConveyClear will verify and set up your login — we'll be in touch."
+        );
+        router.push("/auth/login");
+        return;
+      }
       toast.error(friendlyAuthError(error.message));
       setLoading(false);
       return;
