@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { STAFF_ROLES, type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { transferProgressBlockedReason, type TransferPartyRow } from "@/lib/transfer-gate";
 
 export const runtime = "nodejs";
 
@@ -116,6 +117,24 @@ export async function PATCH(request: Request) {
   if (!STATUSES.includes(status)) return NextResponse.json({ message: "Unknown status." }, { status: 400 });
 
   const admin = createAdminClient();
+
+  // Stop-gate (Meeting 2, 2026-08-06): a transfer may be created and worked
+  // incomplete, but may not be marked registered without a linked seller, buyer
+  // and conveyancing attorney. Read through the admin client on purpose — the
+  // caller is already staff-gated above, and a party the caller cannot see must
+  // still count, or the gate would pass for the wrong reason.
+  if (status === "registered") {
+    const { data: parties, error: partiesError } = await admin
+      .from("transfer_parties")
+      .select("role, client_id, firm_id")
+      .eq("transfer_id", id);
+    if (partiesError) {
+      return NextResponse.json({ message: partiesError.message }, { status: 400 });
+    }
+    const blocked = transferProgressBlockedReason(status, (parties ?? []) as TransferPartyRow[]);
+    if (blocked) return NextResponse.json({ message: blocked }, { status: 409 });
+  }
+
   const { data: transfer, error } = await admin
     .from("property_transfers")
     .update({ reference, status, ...transferPayload(body) })

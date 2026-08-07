@@ -6,6 +6,7 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate, formatDateTime, municipalityLabel } from "@/lib/utils";
+import { matterProgressBlockedReason, requiresTransfer } from "@/lib/transfer-gate";
 import {
   isStaffRole,
   clientDisplayName,
@@ -98,12 +99,12 @@ function ActivityIcon({ type }: { type: string }) {
 async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, matterId: string) {
   const { data } = await supabase
     .from("matters")
-    .select("status, current_stage, municipality, service_subtype, services(code)")
+    .select("status, current_stage, municipality, service_subtype, transfer_id, services(code)")
     .eq("id", matterId)
     .maybeSingle();
   const code = (data as { services?: { code?: string } | null } | null)?.services?.code ?? null;
   const pl = getPipeline(code, data?.municipality, (data as { service_subtype?: string | null } | null)?.service_subtype);
-  return { row: data, pl };
+  return { row: data, pl, serviceCode: code, transferId: (data as { transfer_id?: string | null } | null)?.transfer_id ?? null };
 }
 
 // Bug fix (A&A demo #1): when a matter is reverted to *before* the decision stage
@@ -163,7 +164,17 @@ export default async function AdminMatterDetailPage({
     const userId = formData.get("author_id") as string;
     if (!newPhase?.trim()) return;
 
-    const { row, pl } = await matterCtx(supabase, matterId);
+    const { row, pl, serviceCode, transferId } = await matterCtx(supabase, matterId);
+
+    // Stop-gate (Meeting 2, 2026-08-06): COO and Rates Clearance matters cannot
+    // progress unlinked. BACKSTOP ONLY — the control below is disabled and says
+    // why, so this should be unreachable from the UI. It returns silently
+    // because there is no path here that a user can trigger and then wonder
+    // about; if that ever changes, this needs to surface a message instead.
+    if (matterProgressBlockedReason({ pipeline: pl, serviceCode, transferId, target: { phaseKey: newPhase } })) {
+      return;
+    }
+
     const label = phaseLabel(pl, newPhase);
     // Note 2026-06-22: first staff progression flips New → Open automatically.
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
@@ -194,7 +205,14 @@ export default async function AdminMatterDetailPage({
     const userId = formData.get("author_id") as string;
     if (!newStage?.trim()) return;
 
-    const { row, pl } = await matterCtx(supabase, matterId);
+    const { row, pl, serviceCode, transferId } = await matterCtx(supabase, matterId);
+
+    // Same stop-gate as advancePhase — every stage lives inside a real phase, so
+    // setting any stage on an unlinked COO/PRC matter is progression. Backstop.
+    if (matterProgressBlockedReason({ pipeline: pl, serviceCode, transferId, target: { stageKey: newStage } })) {
+      return;
+    }
+
     const label = stageLabel(pl, newStage);
     const prevStage = (row as { current_stage?: string | null } | null)?.current_stage ?? null;
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
@@ -467,6 +485,11 @@ export default async function AdminMatterDetailPage({
   const pipeline = getPipeline(svc?.code, matter.municipality, (matter as { service_subtype?: string | null }).service_subtype);
   const curPhaseDef = pipeline?.phases.find((p) => p.key === matter.current_phase) ?? null;
   const curPhaseStages = curPhaseDef?.stages ?? [];
+  // Stop-gate (Meeting 2, 2026-08-06). Computed here rather than only enforced
+  // in the action so the controls can be disabled WITH a reason — a control that
+  // submits and silently does nothing is the defect class this codebase keeps
+  // hitting. The transfer card directly above is where the link is made.
+  const transferGated = requiresTransfer(svc?.code) && !matter.transfer_id;
 
   // Decision stage (RCF/RCC outcome) controls, when the current stage branches.
   const decisionStage = pipeline ? findStage(pipeline, matter.current_stage)?.stage ?? null : null;
@@ -620,29 +643,40 @@ export default async function AdminMatterDetailPage({
             </span>
           </div>
           <PipelineProgress pipeline={pipeline} currentPhase={matter.current_phase} currentStage={matter.current_stage} audience="staff" />
+          {transferGated && (
+            <div className="rounded-lg border border-line bg-waiting-tint px-3 py-2.5 flex items-start gap-2">
+              <Lock className="h-4 w-4 shrink-0 mt-0.5 text-waiting" />
+              <p className="text-xs text-ink-2">
+                <span className="font-semibold text-ink">This matter cannot progress yet.</span>{" "}
+                {svc?.code === "COO" ? "Change of Ownership" : "Rates Clearance"} matters must be
+                linked to a property transfer before the phase or stage can move. Link one in the
+                Property transfer card above.
+              </p>
+            </div>
+          )}
           <div className="pt-3 border-t border-line grid gap-3 sm:grid-cols-2">
             <form action={advancePhase} className="flex items-end gap-2">
               <input type="hidden" name="matter_id" value={id} />
               <input type="hidden" name="author_id" value={authorId ?? ""} />
               <label className="flex-1 text-xs font-medium text-ink-3">
                 Phase
-                <select name="phase" defaultValue={matter.current_phase ?? ""} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                <select name="phase" defaultValue={matter.current_phase ?? ""} disabled={transferGated} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
                   {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
                 </select>
               </label>
-              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set</SubmitButton>
+              <SubmitButton disabled={transferGated} pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set</SubmitButton>
             </form>
             <form action={setStage} className="flex items-end gap-2">
               <input type="hidden" name="matter_id" value={id} />
               <input type="hidden" name="author_id" value={authorId ?? ""} />
               <label className="flex-1 text-xs font-medium text-ink-3">
                 Stage{curPhaseDef ? ` · ${curPhaseDef.internalName}` : ""}
-                <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
+                <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={transferGated || curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
                   <option value="">— Select stage —</option>
                   {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
                 </select>
               </label>
-              <SubmitButton pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Update</SubmitButton>
+              <SubmitButton disabled={transferGated} pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Update</SubmitButton>
             </form>
           </div>
 

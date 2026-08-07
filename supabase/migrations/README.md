@@ -30,7 +30,23 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 
 ## Applied state
 
-**001–045 are applied to production, except 043.**
+**001–045 are applied to production, except 043. 046–053 are NOT applied to production** — they
+are the Section 1 redesign work, live on `feature/portal-redesign` only. `053` additionally has
+never been applied anywhere, including staging (written 2026-08-07).
+
+⚠️ **The numbering in `~/brain/clients/convey-clear/REDESIGN_SECTION1_PLAN.md` has DRIFTED from
+what actually shipped** — its planned `050` (`locations`) was never built, so everything after it
+landed one number lower than the plan says:
+
+| Plan says | Actually shipped as |
+|---|---|
+| 050 `locations` | **never built** — Section 3 still needs it |
+| 051 `transfer_parties` | `050_transfer_parties.sql` |
+| 052 `transfer_access_grants` | `051_transfer_access_grants.sql` |
+| 053 `can_access_transfer()` enforce | `052_transfer_access_enforce.sql` |
+| 054 councils hierarchy · 055 compliance columns | not built |
+
+Trust the filenames in this directory, not the plan's table. Next free number = **054**.
 
 `043_upload_approval_enforce.sql` is the enforce half of the staff-upload approval gate. Its
 precondition is `SELECT count(*) FROM documents WHERE approved_at IS NULL` = 0 — every pending
