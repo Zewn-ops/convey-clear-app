@@ -30,9 +30,14 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 
 ## Applied state
 
-**001–045 are applied to production, except 043. 046–053 are NOT applied to production** — they
-are the Section 1 redesign work, live on `feature/portal-redesign` only. `053` additionally has
-never been applied anywhere, including staging (written 2026-08-07).
+**001–045 are applied to production, except 043. 046–055 are NOT applied to production** — they
+are the Section 1 redesign work, live on `feature/portal-redesign` only. **`053`, `054` and `055`
+have never been applied anywhere, including staging** (written 2026-08-07, Meeting 2 decisions).
+
+⚠️ **`055` must be applied before the transfer-request flow works at all** — `/partner/transfers/new`
+posts to a table that does not exist yet, and direct partner transfer creation is already disabled
+in the route. Until 055 lands, a firm has no way to open a transfer. Apply it in the same window as
+disabling the old path, not after.
 
 ⚠️ **The numbering in `~/brain/clients/convey-clear/REDESIGN_SECTION1_PLAN.md` has DRIFTED from
 what actually shipped** — its planned `050` (`locations`) was never built, so everything after it
