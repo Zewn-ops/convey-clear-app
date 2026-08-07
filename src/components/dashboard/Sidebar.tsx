@@ -12,6 +12,7 @@ import {
   LogOut,
   IdCard,
   GraduationCap,
+  Building,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/matters", label: "My Matters", icon: Briefcase, exact: false },
   { href: "/dashboard/entities", label: "My entities", icon: IdCard, exact: false },
+  { href: "/dashboard/properties", label: "My properties", icon: Building, exact: false },
   { href: "/dashboard/request", label: "Request a service", icon: PlusCircle, exact: false },
   { href: "/dashboard/training", label: "Training", icon: GraduationCap, exact: false },
 ];

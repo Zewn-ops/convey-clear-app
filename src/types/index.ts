@@ -403,10 +403,32 @@ export interface PropertyTransfer {
   estate_agent_partner_id: string | null;
   seller_client_id: string | null;
   buyer_client_id: string | null;
+  // The property this transaction is about (056). Nullable: a transfer can be
+  // opened before anyone has built the property profile.
+  property_id: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// A property as an entity (056, Meeting 2 §44/§106). Subsumes the `locations`
+// table planned in REDESIGN_SECTION1_PLAN.md — see that migration's header.
+export interface Property {
+  id: string;
+  client_id: string | null;
+  label: string;
+  address: string | null;
+  erf_number: string | null;
+  municipality: string | null;
+  province: string | null;
+  suburb: string | null;
+  rates_account_no: string | null;
+  title_deed_no: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
 }
 
 // Join first + surname into a single name (write side — full_name is kept in

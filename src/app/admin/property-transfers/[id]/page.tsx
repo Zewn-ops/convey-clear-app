@@ -29,6 +29,7 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import PullVaultDoc from "@/components/transfers/PullVaultDoc";
+import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -245,6 +246,32 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         v.clients?.business_name?.trim() || v.clients?.full_name?.trim() || "Unnamed client",
     }));
 
+  // The property this transfer is about (056). Fetched separately from the
+  // transfer row so the picker can be offered even when nothing is linked.
+  const { data: linkedPropertyRow } = transfer.property_id
+    ? await supabase
+        .from("properties")
+        .select("id, label, erf_number, rates_account_no, address")
+        .eq("id", transfer.property_id)
+        .maybeSingle()
+    : { data: null };
+  const linkedProperty = (linkedPropertyRow as LinkedProperty | null) ?? null;
+
+  const { data: propertyOptionRows } = linkedProperty
+    ? { data: [] }
+    : await supabase
+        .from("properties")
+        .select("id, label, erf_number, suburb")
+        .order("created_at", { ascending: false })
+        .limit(200);
+  const propertyOptions: PropertyOption[] = (
+    (propertyOptionRows as { id: string; label: string; erf_number: string | null; suburb: string | null }[] | null) ?? []
+  ).map((p) => ({
+    id: p.id,
+    label: p.label,
+    detail: [p.erf_number ? `Erf ${p.erf_number}` : null, p.suburb].filter(Boolean).join(" · ") || null,
+  }));
+
   // The transaction's own feed (035).
   const { data: feedData } = await supabase
     .from("transfer_activities")
@@ -412,6 +439,10 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             Native <details>: this is a server component, and a disclosure needs no
             JavaScript to be a disclosure. */}
       </Card>
+
+      {/* What this transfer is about (056). Always rendered, linked or not —
+          a card that only appears when populated cannot say it is empty. */}
+      <TransferPropertyCard transferId={id} linked={linkedProperty} options={propertyOptions} />
 
       {/* Documents about the property itself — reused by every matter above
           instead of being fetched once per matter (migration 034). */}
