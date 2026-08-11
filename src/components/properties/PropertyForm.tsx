@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Save } from "lucide-react";
+import SearchSelect from "@/components/ui/SearchSelect";
 
 export interface PropertyInitial {
   id?: string;
@@ -170,15 +171,17 @@ export default function PropertyForm({
             Rates account number
             <input className={input} value={f.rates_account_no} onChange={set("rates_account_no")} />
           </label>
-          <label className={label}>
-            Owning entity
-            <select className={input} value={f.client_id} onChange={set("client_id")}>
-              <option value="">— Not set —</option>
-              {entities.map((e) => (
-                <option key={e.id} value={e.id}>{e.label}</option>
-              ))}
-            </select>
-          </label>
+          {/* Searchable: this is the full client list, which grows with every
+              transaction. Municipality and province above stay plain selects —
+              short, fixed, and known by heart. */}
+          <SearchSelect
+            label="Owning entity"
+            value={f.client_id}
+            onChange={(v) => setF((prev) => ({ ...prev, client_id: v }))}
+            options={entities.map((e) => ({ value: e.id, label: e.label }))}
+            placeholder="Search clients…"
+            emptyLabel="— Not set —"
+          />
         </div>
       </div>
 

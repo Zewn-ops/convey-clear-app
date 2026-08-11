@@ -28,6 +28,7 @@ import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
 import MatterPocsCard from "@/components/matters/MatterPocsCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
+import PhaseProgress from "@/components/ui/PhaseProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import CouncilPackButton from "@/components/matters/CouncilPackButton";
 import Celebrate from "@/components/matters/Celebrate";
@@ -485,6 +486,14 @@ export default async function AdminMatterDetailPage({
   const pipeline = getPipeline(svc?.code, matter.municipality, (matter as { service_subtype?: string | null }).service_subtype);
   const curPhaseDef = pipeline?.phases.find((p) => p.key === matter.current_phase) ?? null;
   const curPhaseStages = curPhaseDef?.stages ?? [];
+
+  // Phase N of M, computed exactly as the client matter page does it. Same
+  // helpers, same off-by-one, same "no pipeline / unknown phase" guard — two
+  // implementations of one progress figure will drift and then disagree about
+  // the same matter in front of the same person.
+  const pipelineSteps = pipeline ? phaseSteps(pipeline) : [];
+  const pipelineIdx = pipeline ? phaseOrder(pipeline, matter.current_phase) : -1;
+  const hasPipelineProgress = pipeline !== null && pipelineIdx >= 0;
   // Stop-gate (Meeting 2, 2026-08-06). Computed here rather than only enforced
   // in the action so the controls can be disabled WITH a reason — a control that
   // submits and silently does nothing is the defect class this codebase keeps
@@ -642,6 +651,18 @@ export default async function AdminMatterDetailPage({
               {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
             </span>
           </div>
+          {/* The bar the overview and the client portal both show. The stepper
+              below says WHERE the matter is; the bar says HOW FAR, which is the
+              thing you want at a glance on a process measured in months. */}
+          {hasPipelineProgress && (
+            <PhaseProgress
+              phase={pipelineIdx + 1}
+              total={pipelineSteps.length}
+              // Staff see the internal phase name, not the client-facing one.
+              label={phaseLabel(pipeline, matter.current_phase)}
+              done={pipelineIdx === pipelineSteps.length - 1}
+            />
+          )}
           <PipelineProgress pipeline={pipeline} currentPhase={matter.current_phase} currentStage={matter.current_stage} audience="staff" />
           {transferGated && (
             <div className="rounded-lg border border-line bg-waiting-tint px-3 py-2.5 flex items-start gap-2">

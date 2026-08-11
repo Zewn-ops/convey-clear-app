@@ -59,11 +59,18 @@ export default function TransferRequestReview({
       <div className="space-y-2">
         <label className="block text-xs font-medium text-ink-3">
           Transfer reference
+          {/*
+            The placeholder is the FIRM'S file reference for the whole
+            transaction. It used to show the matter naming convention
+            (COT_COO_CLIENT_ERF), which is a different thing and taught the
+            wrong format at the exact moment staff invent a reference on a
+            firm's behalf.
+          */}
           <input
             className={input}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            placeholder="COT_COO_JP HOLDINGS_ERF 123 VALHALLA"
+            placeholder="SH-2026-0417"
             autoFocus
           />
         </label>

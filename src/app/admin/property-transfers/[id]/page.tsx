@@ -6,7 +6,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import UnlinkMatterButton from "@/components/transfers/UnlinkMatterButton";
-import TransferParties, { type PartyRow as TPartyRow, type PartyOption } from "@/components/transfers/TransferParties";
+import TransferParties, { type PartyRow as TPartyRow, type PartyOption, type FirmContact } from "@/components/transfers/TransferParties";
 import {
   TRANSFER_PARTY_SELECT,
   mapTransferParties,
@@ -147,11 +147,17 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     { linkClients: true }
   );
 
-  const [{ data: entityOpts }, { data: firmOpts }] = await Promise.all([
+  const [{ data: entityOpts }, { data: firmOpts }, { data: firmPeople }] = await Promise.all([
     supabase.from("clients").select("id, full_name, business_name, entity_type")
       .order("created_at", { ascending: false }).limit(300),
     supabase.from("firms").select("id, name, partner_type").eq("active", true)
       .order("name", { ascending: true }).limit(200),
+    // The firms' own people, for "who at the firm is handling this" (059).
+    // Attorney firms have portal users; estate agencies do not, which is why
+    // the picker falls back to a typed name rather than assuming a list.
+    supabase.from("users").select("id, full_name, email, business_partner_id")
+      .not("business_partner_id", "is", null).eq("active", true)
+      .order("full_name", { ascending: true }).limit(500),
   ]);
   const entityOptions: PartyOption[] = ((entityOpts as { id: string; full_name: string | null; business_name: string | null; entity_type: string }[] | null) ?? []).map((c) => ({
     id: c.id,
@@ -160,6 +166,11 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   }));
   const firmOptions: PartyOption[] = ((firmOpts as { id: string; name: string; partner_type: string | null }[] | null) ?? []).map((f) => ({
     id: f.id, name: f.name, kind: (f.partner_type ?? "firm").replace("_", " "),
+  }));
+  const firmContacts: FirmContact[] = ((firmPeople as { id: string; full_name: string | null; email: string; business_partner_id: string }[] | null) ?? []).map((u) => ({
+    id: u.id,
+    firmId: u.business_partner_id,
+    name: u.full_name?.trim() || u.email,
   }));
 
   // The transaction's own seller/buyer, offered first when creating a matter in
@@ -314,6 +325,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           parties={partyList}
           entities={entityOptions}
           firms={firmOptions}
+          firmContacts={firmContacts}
           canEdit
           clientHrefBase="/admin/clients"
           showIdNumbers

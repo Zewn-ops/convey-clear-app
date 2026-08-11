@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import StatusPill from "@/components/ui/StatusPill";
 import EmptyState from "@/components/ui/EmptyState";
+import SearchSelect from "@/components/ui/SearchSelect";
 import { cn } from "@/lib/utils";
 
 /**
@@ -66,9 +67,14 @@ export type PartyRow = {
   clientId: string | null;
   detail: string | null;
   contact?: PartyContact;
+  /** The named individual at the firm handling this, when one is recorded (059). */
+  handledBy?: string | null;
 };
 
 export type PartyOption = { id: string; name: string; kind: string };
+
+/** A person who works at a firm — for "who there is handling this" (059). */
+export type FirmContact = { id: string; firmId: string; name: string };
 
 /** The four roles a transaction is expected to fill, shown as slots. */
 const EXPECTED_ROLES = [
@@ -244,6 +250,7 @@ export default function TransferParties({
   parties,
   entities,
   firms,
+  firmContacts = [],
   canEdit,
   clientHrefBase,
   showIdNumbers = false,
@@ -252,6 +259,8 @@ export default function TransferParties({
   parties: PartyRow[];
   entities: PartyOption[];
   firms: PartyOption[];
+  /** The firms' own people. Empty is fine — the contact field falls back to free text. */
+  firmContacts?: FirmContact[];
   canEdit: boolean;
   /**
    * Where a linked client's record lives, e.g. "/admin/clients". Omitted on the
@@ -275,8 +284,27 @@ export default function TransferParties({
   const [email, setEmail] = useState("");
   const [cell, setCell] = useState("");
   const [idNo, setIdNo] = useState("");
+  // 059 — who at the firm. One of these, never both: a portal user when the
+  // firm has them, a typed name when it does not.
+  const [contactUserId, setContactUserId] = useState("");
+  const [contactName, setContactName] = useState("");
 
   const taken = new Set(parties.map((p) => p.role));
+
+  // Estate agents come from agencies, attorneys from law firms. Both used to be
+  // drawn from one unfiltered list, which is how "Sterling & Hayes Attorneys"
+  // ended up sitting in the estate-agent slot on staging. Anything that is
+  // neither is still offered, since partner_type is loose data and hiding a
+  // firm someone needs is worse than showing one they do not.
+  const firmsForRole =
+    role === "estate_agent"
+      ? firms.filter((f) => f.kind !== "attorney" && f.kind !== "law firm" && f.kind !== "conveyancer")
+      : firms.filter((f) => f.kind !== "estate agent");
+
+  // Cascading: only the chosen firm's people, and only once a firm is chosen.
+  const contactsForFirm = mode === "firm" && linkId
+    ? firmContacts.filter((c) => c.firmId === linkId)
+    : [];
 
   async function add() {
     const body: Record<string, unknown> = { transferId, role };
@@ -286,6 +314,11 @@ export default function TransferParties({
     } else if (mode === "firm") {
       if (!linkId) return toast.error("Pick a firm.");
       body.firmId = linkId;
+      // Optional on purpose: you often know the firm before you know who there
+      // has picked it up, and refusing the party until you do would push staff
+      // back to recording it in a note.
+      if (contactUserId) body.contactUserId = contactUserId;
+      else if (contactName.trim()) body.contactName = contactName.trim();
     } else {
       if (!name.trim()) return toast.error("A name is required.");
       body.entityType = entityType;
@@ -354,7 +387,7 @@ export default function TransferParties({
     }
   }
 
-  const options = mode === "firm" ? firms : entities;
+  const options = mode === "firm" ? firmsForRole : entities;
 
   return (
     <div className="space-y-4">
@@ -418,23 +451,66 @@ export default function TransferParties({
           </div>
 
           {mode !== "inline" ? (
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-ink-2">
-                {mode === "firm" ? "Firm" : "Client"}
-              </span>
-              <select
+            /* Searchable, not a raw dropdown: this lists EVERY client, and
+               ConveyClear holds the seller and buyer of every transaction it
+               has ever run. The role and identify-by pickers above stay plain
+               selects — they are three fixed options and searching them would
+               be theatre. `kind` rides along as the hint so a trust and the
+               person who runs it stay distinguishable. */
+            <div className="space-y-3">
+              <SearchSelect
+                label={mode === "firm" ? (role === "estate_agent" ? "Agency" : "Firm") : "Client"}
                 value={linkId}
-                onChange={(e) => setLinkId(e.target.value)}
-                className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
-              >
-                <option value="">Select…</option>
-                {options.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name} — {o.kind}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(v) => {
+                  setLinkId(v);
+                  // The firm changed, so whoever was named at the old one is no
+                  // longer meaningful. Clearing beats silently keeping a person
+                  // attached to a firm they do not work at.
+                  setContactUserId("");
+                  setContactName("");
+                }}
+                options={options.map((o) => ({ value: o.id, label: o.name, hint: o.kind }))}
+                placeholder={mode === "firm" ? "Search firms…" : "Search clients…"}
+                emptyLabel="Select…"
+              />
+
+              {/* Who at the firm (059). Cascades: disabled until a firm is
+                  chosen, and scoped to that firm's people. Attorney firms have
+                  portal users so they get a picker; estate agencies have none,
+                  so they get a name box. Same field, two shapes, because the
+                  underlying data genuinely differs. */}
+              {mode === "firm" && (
+                contactsForFirm.length > 0 ? (
+                  <SearchSelect
+                    label={role === "estate_agent" ? "Agent" : "Who at the firm"}
+                    value={contactUserId}
+                    onChange={setContactUserId}
+                    options={contactsForFirm.map((c) => ({ value: c.id, label: c.name }))}
+                    placeholder="Search their people…"
+                    emptyLabel="— Not known yet —"
+                    disabled={!linkId}
+                  />
+                ) : (
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-ink-2">
+                      {role === "estate_agent" ? "Agent" : "Who at the firm"}
+                    </span>
+                    <input
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      disabled={!linkId}
+                      placeholder={linkId ? "Name of the person handling this" : "Pick a firm first"}
+                      className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action disabled:bg-raised disabled:text-ink-3"
+                    />
+                    <span className="mt-1 block text-[11.5px] text-ink-3">
+                      {linkId
+                        ? "Optional. Nobody at this firm has a portal login yet, so type their name."
+                        : "Optional."}
+                    </span>
+                  </label>
+                )
+              )}
+            </div>
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row">
               <label className="text-sm sm:w-48">
@@ -535,12 +611,22 @@ export default function TransferParties({
         {EXPECTED_ROLES.map((r) => {
           const p = parties.find((x) => x.role === r.value);
           const Icon = r.icon;
+          // Filled slots go green, empty ones keep the neutral outline. The
+          // point of the slots is to make the GAP legible, and one colour for
+          // both states throws that away — you have to read all four cards to
+          // see what is missing. Emerald matches the `client` accent in
+          // ui/Card, so this is the palette already in use, not a new colour.
+          //
+          // ⚠️ Colour is the second signal, never the only one: the cards keep
+          // saying "Client record" / "Firm" / "Not linked" in words.
           return (
             <div
               key={r.value}
               className={cn(
                 "rounded-lg px-3 py-2.5 shadow-sm dark:ring-1",
-                p ? "bg-surface dark:ring-line" : "bg-raised/60 dark:ring-line/60"
+                p
+                  ? "bg-emerald-500/[0.05] ring-1 ring-emerald-500/25 dark:bg-surface dark:ring-emerald-400/40"
+                  : "bg-raised/60 dark:ring-line/60"
               )}
             >
               <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">
@@ -552,7 +638,13 @@ export default function TransferParties({
                     {p.who}
                   </p>
                   <p className="text-[11px] text-ink-3">
-                    {p.via === "entity" ? "Client record" : p.via === "firm" ? "Firm" : "Captured"}
+                    {p.handledBy
+                      ? p.handledBy
+                      : p.via === "entity"
+                        ? "Client record"
+                        : p.via === "firm"
+                          ? "Firm"
+                          : "Captured"}
                   </p>
                 </>
               ) : (
@@ -596,6 +688,7 @@ export default function TransferParties({
                       <p className="truncate text-[14.5px] font-semibold text-ink">{p.who}</p>
                       <p className="truncate text-[12.5px] text-ink-3">
                         {roleLabel(p.role)}
+                        {p.handledBy && ` · ${p.handledBy}`}
                         {p.via === "inline" && " · captured, not a client record"}
                       </p>
                     </div>

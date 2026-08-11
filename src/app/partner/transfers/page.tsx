@@ -44,7 +44,7 @@ export default async function PartnerTransfersPage() {
           href="/partner/transfers/new"
           className="inline-flex shrink-0 items-center gap-1.5 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
-          <Plus className="h-4 w-4" /> New transfer
+          <Plus className="h-4 w-4" /> Request a transfer
         </Link>
       </div>
 
@@ -54,7 +54,7 @@ export default async function PartnerTransfersPage() {
           icon={<Building2 className="h-6 w-6" />}
           action={
             <Link href="/partner/transfers/new" className="text-[12.5px] font-bold text-action hover:underline">
-              Create the first one
+              Request one
             </Link>
           }
         >

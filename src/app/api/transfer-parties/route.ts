@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { findOrCreateClientForParty } from "@/lib/party-client";
+import { syncTransferFromParty } from "@/lib/transfer-party-sync";
+import { STAFF_ROLES, type UserRole } from "@/types";
 
 export const runtime = "nodejs";
+
+/**
+ * Is the signed-in caller staff?
+ *
+ * Only used to decide whether a party change may write back to the transfer's
+ * denormalised columns. `business_partner_id` is the partner RLS scope, so a
+ * partner-triggered write there could hand a firm access — or take another
+ * firm's away. Partners may still add parties; their change simply does not
+ * touch the columns. See lib/transfer-party-sync.ts.
+ */
+async function callerIsStaff(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {
+  const { data } = await supabase.from("users").select("role").eq("auth_user_id", authId).maybeSingle();
+  const role = (data?.role ?? null) as UserRole | null;
+  return Boolean(role && STAFF_ROLES.includes(role));
+}
 
 /**
  * Parties on a property transfer.
@@ -66,6 +84,19 @@ export async function POST(req: Request) {
     row.client_id = clientId;
   } else if (firmId) {
     row.firm_id = firmId;
+    // 059 — the individual at the firm. One way or the other, never both: the
+    // DB enforces that too (transfer_parties_contact_one_way), but refusing
+    // here gives a sentence instead of a constraint name.
+    const contactUserId = typeof b.contactUserId === "string" && b.contactUserId ? b.contactUserId : null;
+    const contactName = typeof b.contactName === "string" ? b.contactName.trim() : "";
+    if (contactUserId && contactName) {
+      return NextResponse.json(
+        { error: "Name the contact by picking their login or by typing a name, not both." },
+        { status: 400 }
+      );
+    }
+    if (contactUserId) row.contact_user_id = contactUserId;
+    else if (contactName) row.contact_name = contactName;
   } else {
     // Capture. Since 2026-08-06 this no longer writes an inline party: a
     // captured party BECOMES a real client record, so it carries a FICA vault
@@ -114,6 +145,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You cannot edit this transfer." }, { status: 403 });
     }
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // Keep the transfer's own columns in step, so the Edit form and the detail
+  // card show the party that was just added. Staff only — see callerIsStaff.
+  if (await callerIsStaff(supabase, user.id)) {
+    await syncTransferFromParty(
+      createAdminClient(),
+      transferId,
+      { role, client_id: row.client_id as string | null, firm_id: row.firm_id as string | null },
+      "added"
+    );
   }
 
   return NextResponse.json({ ok: true, id: data.id });
@@ -217,7 +259,27 @@ export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
+  // Read before deleting: once it is gone there is no way to tell which of the
+  // transfer's columns, if any, was pointing at it. RLS applies to this select,
+  // so a party the caller cannot reach is simply not found.
+  const { data: doomed } = await supabase
+    .from("transfer_parties")
+    .select("transfer_id, role, client_id, firm_id")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("transfer_parties").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (doomed && (await callerIsStaff(supabase, user.id))) {
+    const p = doomed as { transfer_id: string; role: string; client_id: string | null; firm_id: string | null };
+    await syncTransferFromParty(
+      createAdminClient(),
+      p.transfer_id,
+      { role: p.role, client_id: p.client_id, firm_id: p.firm_id },
+      "removed"
+    );
+  }
+
   return NextResponse.json({ ok: true });
 }

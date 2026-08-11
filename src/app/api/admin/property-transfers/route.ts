@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { STAFF_ROLES, type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { transferProgressBlockedReason, type TransferPartyRow } from "@/lib/transfer-gate";
+import { syncPartiesFromTransfer } from "@/lib/transfer-party-sync";
 
 export const runtime = "nodejs";
 
@@ -94,6 +95,11 @@ export async function POST(request: Request) {
       : error.message;
     return NextResponse.json({ message }, { status: 400 });
   }
+
+  // Mirror the four party columns into transfer_parties, so the parties card
+  // and the registration gate see what this form just saved.
+  await syncPartiesFromTransfer(admin, transfer.id as string, transferPayload(body));
+
   return NextResponse.json({ ok: true, transfer });
 }
 
@@ -117,6 +123,19 @@ export async function PATCH(request: Request) {
   if (!STATUSES.includes(status)) return NextResponse.json({ message: "Unknown status." }, { status: 400 });
 
   const admin = createAdminClient();
+
+  // Mirror the four party columns into transfer_parties FIRST, before the gate
+  // reads them.
+  //
+  // Order matters and is the whole fix: setting the seller, buyer and attorney
+  // and choosing Registered happen in ONE save on this form. Gating first would
+  // read the parties as they were before the save and refuse a transfer the
+  // user has just completed — which is exactly the bug reported 2026-08-11.
+  //
+  // If the gate below then blocks, the parties stay written and only the status
+  // is refused. That is the right half to keep: the user did ask for those
+  // parties, and the next attempt succeeds instead of failing identically.
+  await syncPartiesFromTransfer(admin, id, transferPayload(body));
 
   // Stop-gate (Meeting 2, 2026-08-06): a transfer may be created and worked
   // incomplete, but may not be marked registered without a linked seller, buyer

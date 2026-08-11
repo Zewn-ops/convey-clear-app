@@ -11,8 +11,10 @@ import type { PartyRow, PartyContact } from "@/components/transfers/TransferPart
 export const TRANSFER_PARTY_SELECT =
   "id, role, client_id, firm_id, full_name, business_name, entity_type, " +
   "email, cell, physical_address, id_number, registration_no, " +
+  "contact_user_id, contact_name, " +
   "clients(full_name, business_name, entity_type, primary_email, primary_cell, physical_address, id_number, registration_no), " +
-  "firms(name, primary_email, primary_cell, physical_address)";
+  "firms(name, primary_email, primary_cell, physical_address), " +
+  "contact_user:users!transfer_parties_contact_user_id_fkey(full_name, email)";
 
 export type RawTransferParty = {
   id: string;
@@ -43,6 +45,10 @@ export type RawTransferParty = {
     primary_cell: string | null;
     physical_address: string | null;
   } | null;
+  // 059 — the individual at the firm, either as a portal user or a typed name.
+  contact_user_id: string | null;
+  contact_name: string | null;
+  contact_user: { full_name: string | null; email: string } | null;
 };
 
 /**
@@ -104,5 +110,12 @@ export function mapTransferParties(
       r.full_name?.trim() ||
       "Unnamed party",
     contact: contactFor(r),
+    // The named individual at the firm, if one has been recorded (059). Reads
+    // through to the user record where there is one, so a rename follows.
+    handledBy:
+      r.contact_user?.full_name?.trim() ||
+      r.contact_user?.email ||
+      r.contact_name?.trim() ||
+      null,
   }));
 }
