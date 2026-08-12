@@ -7,7 +7,7 @@ import { buildMatterTitle } from "@/lib/matter-naming";
 import { getPipeline } from "@/lib/pipelines";
 import { composeFullName } from "@/types";
 import { firePortalIntake } from "@/lib/n8n";
-import { notifyStaff } from "@/lib/notify";
+import { notifyStaff, notifyStaffNewClient } from "@/lib/notify";
 import { logMatterActivity } from "@/lib/activity";
 import { randomUUID } from "crypto";
 
@@ -84,6 +84,15 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+
+  // Named in the "new client — needs verifying" alert (§44) so staff can see at a
+  // glance which firm typed the record they are being asked to check.
+  const { data: firm } = await admin
+    .from("firms")
+    .select("name")
+    .eq("id", auth.partnerId)
+    .maybeSingle();
+  const firmName = (firm as { name: string } | null)?.name ?? null;
 
   // Resolve service_id + code (code feeds matter-naming + the pipeline lookup).
   let serviceId: string | null = body.service_id ?? null;
@@ -179,6 +188,7 @@ export async function POST(request: Request) {
     // party card. Firm-scoped matching still stops the same firm re-creating
     // the same person on every referral, which is the case that actually
     // happens.
+    const newClients: { id: string; name: string }[] = [];
     for (const p of partyRows) {
       const name = p.entity_type === "natural_person" ? p.full_name : p.business_name;
       if (!name) continue;
@@ -196,8 +206,12 @@ export async function POST(request: Request) {
         },
         { scopeToFirmId: auth.partnerId }
       );
-      if (made.ok) (p as Record<string, unknown>).client_id = made.clientId;
-      else console.error("client record for referred party failed:", made.error);
+      if (made.ok) {
+        (p as Record<string, unknown>).client_id = made.clientId;
+        // §44 — only a record that did NOT already exist needs verifying. A
+        // dedupe hit is a client staff have already seen.
+        if (made.created) newClients.push({ id: made.clientId, name });
+      } else console.error("client record for referred party failed:", made.error);
     }
 
     const { error: partyErr } = await admin.from("matter_parties").insert(partyRows);
@@ -218,6 +232,9 @@ export async function POST(request: Request) {
 
     await firePortalIntake(matter.id, title);
     await notifyStaff({ type: "referral", title: "New matter referred", link: `/admin/matters/${matter.id}`, matter_id: matter.id });
+    for (const c of newClients) {
+      await notifyStaffNewClient({ clientId: c.id, name: c.name, createdByRole: "business_partner", firmName });
+    }
 
     return NextResponse.json({ ok: true, matter_id: matter.id, onboarding_token: token });
   }
@@ -283,6 +300,9 @@ export async function POST(request: Request) {
 
   await firePortalIntake(matter.id, title);
   await notifyStaff({ type: "referral", title: "New matter referred", link: `/admin/matters/${matter.id}`, matter_id: matter.id });
+  // Unconditional here: this branch inserts rather than find-or-creates, so the
+  // record is new by construction.
+  await notifyStaffNewClient({ clientId: client.id, name, createdByRole: "business_partner", firmName });
 
   return NextResponse.json({ ok: true, matter_id: matter.id, client_id: client.id, onboarding_token: token });
 }

@@ -34,14 +34,25 @@ export default function TransferDocuments({
   transferId,
   docs,
   canManage,
+  canUpload,
   canDelete = false,
 }: {
   transferId: string;
   docs: Doc[];
-  /** Staff. Partners of the owning firm read these but do not author them. */
+  /**
+   * Staff. Approving, sharing, disapproving and archiving — everything that
+   * decides what a document MEANS or who sees it.
+   */
   canManage: boolean;
+  /**
+   * May add a document. Split from `canManage` on 2026-08-11 (§112): the
+   * attorney firm uploads the deed search, then ConveyClear decides who sees it.
+   * Defaults to `canManage` so every existing caller behaves exactly as before.
+   */
+  canUpload?: boolean;
   canDelete?: boolean;
 }) {
+  const mayUpload = canUpload ?? canManage;
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [type, setType] = useState(TRANSFER_DOC_TYPES[0]);
@@ -359,7 +370,7 @@ export default function TransferDocuments({
         <p className="mb-4 text-sm text-ink-3">No transfer documents yet.</p>
       )}
 
-      {canManage && (
+      {mayUpload && (
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -410,6 +421,16 @@ export default function TransferDocuments({
             <UploadCloud className="h-4 w-4" /> {busy === "__new" ? "Uploading…" : "Upload"}
           </button>
         </div>
+      )}
+
+      {/* §112 — the firm uploads, ConveyClear decides who sees it. Said here
+          because the alternative is an attorney assuming the buyer already has
+          the deed search and waiting on a share that nobody knows to make. */}
+      {mayUpload && !canManage && (
+        <p className="mt-2 text-xs text-ink-3">
+          ConveyClear reviews what you upload and releases it to the buyer and seller. Documents are
+          not visible to them until then.
+        </p>
       )}
 
       {archived.length > 0 && canManage && (

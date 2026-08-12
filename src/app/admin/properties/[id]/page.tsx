@@ -6,6 +6,7 @@ import { isStaffRole, clientDisplayName, TRANSFER_STATUS_LABELS, type TransferSt
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { municipalityLabel, formatDate } from "@/lib/utils";
+import PropertySoldToggle from "@/components/properties/PropertySoldToggle";
 import { ArrowLeft, Pencil, Building2 } from "lucide-react";
 
 export const metadata = { title: "Property — ConveyClear Admin" };
@@ -25,6 +26,8 @@ interface PropertyRow {
   title_deed_no: string | null;
   notes: string | null;
   client_id: string | null;
+  active: boolean;
+  deactivated_at: string | null;
   clients?: { id: string; full_name: string | null; first_name: string | null; last_name: string | null; business_name: string | null } | null;
 }
 
@@ -81,24 +84,35 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
-            {property.label}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
+              {property.label}
+            </h1>
+            {!property.active && <Badge label="Sold" variant="gray" />}
+          </div>
           {property.clients && (
             <p className="text-sm text-ink-3 mt-1">
-              Owned by{" "}
+              {/* Wording follows the state: after a sale this record is the
+                  seller's history, and calling them the owner would be wrong. */}
+              {property.active ? "Owned by" : "Previously owned by"}{" "}
               <Link href={`/admin/clients/${property.clients.id}`} className="text-action hover:underline">
                 {clientDisplayName(property.clients)}
               </Link>
+              {!property.active && property.deactivated_at && (
+                <> · sold {new Date(property.deactivated_at).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" })}</>
+              )}
             </p>
           )}
         </div>
-        <Link
-          href={`/admin/properties/${id}/edit`}
-          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-2 border border-line rounded-lg hover:bg-raised shrink-0"
-        >
-          <Pencil className="h-4 w-4" /> Edit
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <PropertySoldToggle propertyId={property.id} label={property.label} active={property.active} />
+          <Link
+            href={`/admin/properties/${id}/edit`}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-2 border border-line rounded-lg hover:bg-raised shrink-0"
+          >
+            <Pencil className="h-4 w-4" /> Edit
+          </Link>
+        </div>
       </div>
 
       <Card className="space-y-3">

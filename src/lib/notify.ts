@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emailEnabled, sendEmail, unsubscribeUrl } from "@/lib/email";
 import { phaseChangeEmail } from "@/lib/email-templates";
-import { STAFF_ROLES } from "@/types";
+import { STAFF_ROLES, type UserRole } from "@/types";
 
 // In-portal notifications (Theme I). Producers call these from API routes /
 // server actions to fan a notification out to the right recipients. Rows are
@@ -116,6 +116,36 @@ export async function notifyStaff(p: NotifyPayload, opts?: { enquiryPref?: boole
   } catch (e) {
     console.error("[notify] notifyStaff failed:", e);
   }
+}
+
+/**
+ * A client record was created by someone outside ConveyClear (meeting 2026-08-11,
+ * next-step §44, arising from Details §70: attorneys add clients that do not
+ * exist yet).
+ *
+ * §102 sets the posture that attorney-provided data is treated as correct unless
+ * advised otherwise, and that staff contact the client directly where details are
+ * missing. This alert is the trigger for that check — its whole job is to put a
+ * human in front of a record somebody outside the firm typed.
+ *
+ * ⚠️ Deliberately silent when STAFF create a client. Staff creating the record IS
+ * the verification, so notifying the team to check their own work would fire on
+ * the majority of creations and train everyone to dismiss the type. Callers pass
+ * the creator's role rather than the check living at each call site.
+ */
+export async function notifyStaffNewClient(p: {
+  clientId: string;
+  name: string;
+  createdByRole: UserRole | null;
+  firmName?: string | null;
+}): Promise<void> {
+  if (p.createdByRole && STAFF_ROLES.includes(p.createdByRole)) return;
+  await notifyStaff({
+    type: "client_new",
+    title: "New client added — needs verifying",
+    body: `${p.name} was added${p.firmName ? ` by ${p.firmName}` : ""}. Check the details before this record is used on a matter.`,
+    link: `/admin/clients/${p.clientId}`,
+  });
 }
 
 // Everyone watching a matter: subscribers + the matter's client user(s) + the

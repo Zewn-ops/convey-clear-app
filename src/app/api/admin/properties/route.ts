@@ -26,6 +26,8 @@ type PropertyFields = {
   title_deed_no?: string;
   client_id?: string;
   notes?: string;
+  /** 060 — PATCH only. Absent means "leave the sold state alone". */
+  active?: boolean;
 };
 
 async function requireStaff() {
@@ -113,10 +115,26 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ message: "A property name is required." }, { status: 400 });
   }
 
+  // 060 / §92 — the manual half of active. Registering a transfer deactivates
+  // the property on its own; this covers a sale done off-portal, and undoing one
+  // registered in error. Only applied when the caller actually sent the field, so
+  // an edit-form save that predates this deploy cannot silently reactivate a
+  // sold property.
+  //
+  // `deactivated_at` is set here rather than left to the caller: the CHECK
+  // constraint refuses active=false without it in one direction and active=true
+  // with it in the other, and a client that has to know that will eventually get
+  // it wrong.
+  const activePatch: { active?: boolean; deactivated_at?: string | null } = {};
+  if (typeof body.active === "boolean") {
+    activePatch.active = body.active;
+    activePatch.deactivated_at = body.active ? null : new Date().toISOString();
+  }
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("properties")
-    .update({ label, ...payload(body) })
+    .update({ label, ...payload(body), ...activePatch })
     .eq("id", id);
 
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });

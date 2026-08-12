@@ -6,6 +6,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, isPartnerRole } from "@/types";
 import { ficaFields, CONSENT_TYPES, CAPTURE_METHODS, type CaptureMethod } from "@/lib/fica";
 import { logMatterActivity } from "@/lib/activity";
+import { notifyStaffNewClient } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -139,6 +140,17 @@ export async function POST(request: Request) {
       if (!made.ok) return NextResponse.json({ message: made.error }, { status: 400 });
       clientId = made.clientId;
       await admin.from("matter_parties").update({ client_id: clientId }).eq("id", pr.id);
+      // §44 — a partner capturing FICA against a party who was not yet a client
+      // record creates one. notifyStaffNewClient no-ops for staff callers.
+      if (made.created) {
+        let firmName: string | null = null;
+        const firmId = (matter.business_partner_id as string | null) ?? null;
+        if (firmId) {
+          const { data: firm } = await admin.from("firms").select("name").eq("id", firmId).maybeSingle();
+          firmName = (firm as { name: string } | null)?.name ?? null;
+        }
+        await notifyStaffNewClient({ clientId, name, createdByRole: role, firmName });
+      }
     }
   } else if (body.client_id) {
     if (matter.client_id === body.client_id) {

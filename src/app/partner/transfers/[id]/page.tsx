@@ -29,6 +29,7 @@ import TransferFeed, { type TransferActivity } from "@/components/transfers/Tran
 import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
+import { DOC_UPLOADING_FIRM_TYPES } from "@/lib/transfer-upload-access";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,23 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
 
   const transfer = transferData as TransferDetail | null;
   if (!transfer) notFound();
+
+  // §112 — only attorney firms author transfer documents; an estate agency on the
+  // same transfer reads them. Mirrors DOC_UPLOADING_FIRM_TYPES in
+  // lib/transfer-upload-access.ts, which is what actually enforces it. Hiding a
+  // control is presentation; the route is the permission.
+  const { data: myProfile } = await supabase
+    .from("users")
+    .select("business_partner_id")
+    .eq("auth_user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+    .maybeSingle();
+  const myFirmId = (myProfile as { business_partner_id: string | null } | null)?.business_partner_id ?? null;
+  const { data: myFirm } = myFirmId
+    ? await supabase.from("firms").select("partner_type").eq("id", myFirmId).maybeSingle()
+    : { data: null };
+  const firmMayUpload = DOC_UPLOADING_FIRM_TYPES.includes(
+    ((myFirm as { partner_type?: string } | null)?.partner_type ?? "") as (typeof DOC_UPLOADING_FIRM_TYPES)[number]
+  );
 
   // Parties (050). RLS on transfer_parties routes through can_access_transfer,
   // so these rows exist only for transfers this firm already works.
@@ -303,8 +321,15 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         </div>
       </Card>
 
-      {/* Read-only: the firm sees the property's documents, staff maintain them. */}
-      <TransferDocuments transferId={id} docs={transferDocsWithUrls} canManage={false} />
+      {/* The firm uploads (attorney firms only, §112) but does not manage: staff
+          approve, share and archive. The route enforces both halves — this only
+          decides whether to draw the control. */}
+      <TransferDocuments
+        transferId={id}
+        docs={transferDocsWithUrls}
+        canManage={false}
+        canUpload={firmMayUpload}
+      />
 
       {/* …but the firm DOES post to the feed — it is the shared channel. */}
       <TransferFeed transferId={id} activities={feed} canPost />

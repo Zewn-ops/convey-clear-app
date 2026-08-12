@@ -167,5 +167,25 @@ export async function PATCH(request: Request) {
       : error.message;
     return NextResponse.json({ message }, { status: 400 });
   }
+
+  // 060 / §92 — registering the transfer is the moment the sale completes, so
+  // the property stops being one the seller still owns. It is NOT deleted: it
+  // stays on their account, inactive, carrying its history.
+  //
+  // Runs after the update rather than beside it, so a refused registration
+  // (gate above, or a duplicate reference) cannot deactivate a property for a
+  // sale that did not go through. Best-effort on purpose — a failure here must
+  // not turn a completed registration into an error the user has to retry, and
+  // staff can toggle it by hand.
+  const propertyId = (transfer as { property_id?: string | null } | null)?.property_id ?? null;
+  if (status === "registered" && propertyId) {
+    const { error: propErr } = await admin
+      .from("properties")
+      .update({ active: false, deactivated_at: new Date().toISOString() })
+      .eq("id", propertyId)
+      .eq("active", true); // no-op on re-save of an already-registered transfer
+    if (propErr) console.error("[property-transfers] deactivating property failed:", propErr);
+  }
+
   return NextResponse.json({ ok: true, transfer });
 }

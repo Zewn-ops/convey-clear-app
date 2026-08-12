@@ -21,6 +21,7 @@ interface Row {
   suburb: string | null;
   municipality: string | null;
   rates_account_no: string | null;
+  active: boolean;
   clients?: { full_name: string | null; business_name: string | null } | null;
   property_transfers?: { id: string }[] | null;
 }
@@ -32,7 +33,10 @@ export default async function PropertiesPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("properties")
-    .select("id, label, erf_number, address, suburb, municipality, rates_account_no, clients(full_name, business_name), property_transfers(id)")
+    .select("id, label, erf_number, address, suburb, municipality, rates_account_no, active, clients(full_name, business_name), property_transfers(id)")
+    // Sold properties sink below live ones (060 / §92) — they are kept for the
+    // seller's history, not because staff need to scroll past them.
+    .order("active", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -73,12 +77,15 @@ export default async function PropertiesPage() {
             const transferCount = p.property_transfers?.length ?? 0;
             return (
               <Link key={p.id} href={`/admin/properties/${p.id}`}>
-                <Card className="h-full hover:border-line-strong transition-colors space-y-2">
+                <Card className={`h-full hover:border-line-strong transition-colors space-y-2${p.active ? "" : " opacity-75"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-base font-semibold text-ink">{p.label}</p>
-                    {transferCount > 0 && (
-                      <Badge label={`${transferCount} transfer${transferCount === 1 ? "" : "s"}`} variant="info" />
-                    )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      {!p.active && <Badge label="Sold" variant="gray" />}
+                      {transferCount > 0 && (
+                        <Badge label={`${transferCount} transfer${transferCount === 1 ? "" : "s"}`} variant="info" />
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-ink-3">
                     {[p.address, p.suburb, municipalityLabel(p.municipality)].filter(Boolean).join(" · ") || "No address captured"}

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { findOrCreateClientForParty } from "@/lib/party-client";
 import { syncTransferFromParty } from "@/lib/transfer-party-sync";
+import { notifyStaffNewClient } from "@/lib/notify";
 import { STAFF_ROLES, type UserRole } from "@/types";
 
 export const runtime = "nodejs";
@@ -17,10 +18,22 @@ export const runtime = "nodejs";
  * firm's away. Partners may still add parties; their change simply does not
  * touch the columns. See lib/transfer-party-sync.ts.
  */
-async function callerIsStaff(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {
-  const { data } = await supabase.from("users").select("role").eq("auth_user_id", authId).maybeSingle();
+async function callerProfile(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {
+  const { data } = await supabase
+    .from("users")
+    .select("role, business_partner_id")
+    .eq("auth_user_id", authId)
+    .maybeSingle();
   const role = (data?.role ?? null) as UserRole | null;
-  return Boolean(role && STAFF_ROLES.includes(role));
+  return {
+    role,
+    firmId: (data?.business_partner_id ?? null) as string | null,
+    isStaff: Boolean(role && STAFF_ROLES.includes(role)),
+  };
+}
+
+async function callerIsStaff(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {
+  return (await callerProfile(supabase, authId)).isStaff;
 }
 
 /**
@@ -72,6 +85,7 @@ export async function POST(req: Request) {
   const firmId = typeof b.firmId === "string" && b.firmId ? b.firmId : null;
 
   const row: Record<string, unknown> = { transfer_id: transferId, role };
+  let createdClient: { id: string; name: string } | null = null;
 
   if (clientId && firmId) {
     return NextResponse.json(
@@ -124,6 +138,13 @@ export async function POST(req: Request) {
     });
     if (!made.ok) return NextResponse.json({ error: made.error }, { status: 400 });
     row.client_id = made.clientId;
+    // §108 — an attorney assigning a party who is not in the system creates them
+    // as a new client. §44 then wants a human to verify that record. Held until
+    // after the party row inserts: if RLS refuses the party, the client is not
+    // one anybody needs to check yet.
+    if (made.created) {
+      createdClient = { id: made.clientId, name: entityType === "natural_person" ? fullName : businessName };
+    }
   }
 
   const { data, error } = await supabase
@@ -148,14 +169,33 @@ export async function POST(req: Request) {
   }
 
   // Keep the transfer's own columns in step, so the Edit form and the detail
-  // card show the party that was just added. Staff only — see callerIsStaff.
-  if (await callerIsStaff(supabase, user.id)) {
+  // card show the party that was just added. Staff only — see callerProfile.
+  const me = await callerProfile(supabase, user.id);
+  if (me.isStaff) {
     await syncTransferFromParty(
       createAdminClient(),
       transferId,
       { role, client_id: row.client_id as string | null, firm_id: row.firm_id as string | null },
       "added"
     );
+  }
+
+  if (createdClient) {
+    let firmName: string | null = null;
+    if (me.firmId) {
+      const { data: firm } = await createAdminClient()
+        .from("firms")
+        .select("name")
+        .eq("id", me.firmId)
+        .maybeSingle();
+      firmName = (firm as { name: string } | null)?.name ?? null;
+    }
+    await notifyStaffNewClient({
+      clientId: createdClient.id,
+      name: createdClient.name,
+      createdByRole: me.role,
+      firmName,
+    });
   }
 
   return NextResponse.json({ ok: true, id: data.id });

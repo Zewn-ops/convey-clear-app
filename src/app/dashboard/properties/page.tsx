@@ -25,7 +25,14 @@ interface Row {
   suburb: string | null;
   municipality: string | null;
   rates_account_no: string | null;
+  active: boolean;
+  deactivated_at: string | null;
 }
+
+const soldOn = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" })
+    : null;
 
 export default async function ClientPropertiesPage() {
   const session = await getSessionProfile();
@@ -34,10 +41,16 @@ export default async function ClientPropertiesPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("properties")
-    .select("id, label, erf_number, address, suburb, municipality, rates_account_no")
+    .select("id, label, erf_number, address, suburb, municipality, rates_account_no, active, deactivated_at")
     .order("created_at", { ascending: false });
 
   const rows = (data as Row[] | null) ?? [];
+  // 060 / §92 — a sold property stays on the seller's account rather than being
+  // deleted, so the two states are shown apart instead of interleaved. Sold ones
+  // go below: they are history, and history should not push the live one down
+  // the page after a few years of moving house.
+  const current = rows.filter((p) => p.active);
+  const sold = rows.filter((p) => !p.active);
 
   return (
     <div className="space-y-6">
@@ -61,22 +74,58 @@ export default async function ClientPropertiesPage() {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {rows.map((p) => (
-            <Card key={p.id} className="space-y-2">
-              <p className="text-base font-semibold text-ink">{p.label}</p>
-              <p className="text-xs text-ink-3">
-                {[p.address, p.suburb, municipalityLabel(p.municipality)].filter(Boolean).join(" · ") ||
-                  "No address on file"}
-              </p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3 pt-1">
-                {p.erf_number && <span>Erf {p.erf_number}</span>}
-                {p.rates_account_no && <span>Rates account {p.rates_account_no}</span>}
+        <div className="space-y-8">
+          {current.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {current.map((p) => (
+                <PropertyCard key={p.id} p={p} />
+              ))}
+            </div>
+          )}
+
+          {sold.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold text-ink">Previously owned</h2>
+                <p className="text-xs text-ink-3 mt-0.5">
+                  Sold, and kept here so you keep the council history and documents.
+                </p>
               </div>
-            </Card>
-          ))}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {sold.map((p) => (
+                  <PropertyCard key={p.id} p={p} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function PropertyCard({ p }: { p: Row }) {
+  const sold = soldOn(p.deactivated_at);
+  return (
+    <Card className={`space-y-2${p.active ? "" : " opacity-75"}`}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-base font-semibold text-ink">{p.label}</p>
+        {!p.active && (
+          // Worded, not colour-only — the same rule the party slots follow.
+          <span className="shrink-0 rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-ink-3">
+            Sold
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-ink-3">
+        {[p.address, p.suburb, municipalityLabel(p.municipality)].filter(Boolean).join(" · ") ||
+          "No address on file"}
+      </p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3 pt-1">
+        {p.erf_number && <span>Erf {p.erf_number}</span>}
+        {p.rates_account_no && <span>Rates account {p.rates_account_no}</span>}
+        {sold && <span>Sold {sold}</span>}
+      </div>
+    </Card>
   );
 }

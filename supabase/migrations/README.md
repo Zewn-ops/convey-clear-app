@@ -30,14 +30,27 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 
 ## Applied state
 
-**001–045 are applied to production, except 043. 046–058 are NOT applied to production** — they
+**001–045 are applied to production, except 043. 046–060 are NOT applied to production** — they
 are the Section 1 redesign work, live on `feature/portal-redesign` only.
 
-**`046`–`058` are ALL applied to STAGING.** `053`–`058` landed 2026-08-11 via
-`./scripts/staging-bootstrap.sh 053` — six ok, shape verified against PostgREST afterwards
-(`transfer_requests`, `signup_requests`, `transfer_access_grants.expires_at`,
-`transfer_documents.client_document_id`, `transfer_documents.visibility`,
-`properties.client_id/label/…`, `property_transfers.property_id` all resolve).
+**`046`–`059` are applied to STAGING. `060` is NOT — it is the only unapplied migration anywhere.**
+`053`–`058` landed 2026-08-11 via `./scripts/staging-bootstrap.sh 053` — six ok, shape verified
+against PostgREST afterwards (`transfer_requests`, `signup_requests`,
+`transfer_access_grants.expires_at`, `transfer_documents.client_document_id`,
+`transfer_documents.visibility`, `properties.client_id/label/…`, `property_transfers.property_id`
+all resolve).
+
+🔴 **`060` must be applied to staging BEFORE the next deploy of `feature/portal-redesign`.** The
+branch reads `properties.active` on four surfaces (the client and admin property lists, the property
+detail page, and the transfer PATCH that deactivates on registration). Deploying the code without
+the migration gives a `42703` on every one of them — this is the ordering hazard `055` had, in the
+opposite direction. Apply with `./scripts/staging-bootstrap.sh 060`, then confirm:
+
+```
+curl -s -o /dev/null -w "%{http_code}" \
+  "$URL/rest/v1/properties?select=active,deactivated_at&limit=0" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY"     # → 200, not 400
+```
 
 ⚠️ **Applied is not exercised.** None of `053`–`058` has been driven through the UI yet. The
 checks below are still owed:
