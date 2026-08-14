@@ -13,6 +13,7 @@ import {
   IdCard,
   GraduationCap,
   Building,
+  Home,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -23,6 +24,9 @@ import type { Membership } from "@/lib/entity";
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/matters", label: "My Matters", icon: Briefcase, exact: false },
+  // 2026-08-11 §96 — the transaction sits above the matters, so it reads above
+  // them in the nav too.
+  { href: "/dashboard/transfers", label: "My transfers", icon: Home, exact: false },
   { href: "/dashboard/entities", label: "My entities", icon: IdCard, exact: false },
   { href: "/dashboard/properties", label: "My properties", icon: Building, exact: false },
   { href: "/dashboard/request", label: "Request a service", icon: PlusCircle, exact: false },
