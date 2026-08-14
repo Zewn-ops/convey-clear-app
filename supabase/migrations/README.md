@@ -33,24 +33,29 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 **001–045 are applied to production, except 043. 046–060 are NOT applied to production** — they
 are the Section 1 redesign work, live on `feature/portal-redesign` only.
 
-**`046`–`059` are applied to STAGING. `060` is NOT — it is the only unapplied migration anywhere.**
+**`046`–`061` are applied to STAGING.**
 `053`–`058` landed 2026-08-11 via `./scripts/staging-bootstrap.sh 053` — six ok, shape verified
 against PostgREST afterwards (`transfer_requests`, `signup_requests`,
 `transfer_access_grants.expires_at`, `transfer_documents.client_document_id`,
 `transfer_documents.visibility`, `properties.client_id/label/…`, `property_transfers.property_id`
 all resolve).
 
-🔴 **`060` must be applied to staging BEFORE the next deploy of `feature/portal-redesign`.** The
-branch reads `properties.active` on four surfaces (the client and admin property lists, the property
-detail page, and the transfer PATCH that deactivates on registration). Deploying the code without
-the migration gives a `42703` on every one of them — this is the ordering hazard `055` had, in the
-opposite direction. Apply with `./scripts/staging-bootstrap.sh 060`, then confirm:
+🔴 **`060` and `061` must reach production BEFORE the code that reads them.** `060` adds
+`properties.active`, which the branch reads on four surfaces (the client and admin property lists,
+the property detail page, and the transfer PATCH that deactivates on registration) — deploying the
+code first gives a `42703` on every one. `061` is the safer direction (a constraint the app already
+satisfies), but keep the pair together. Confirm after applying:
 
 ```
 curl -s -o /dev/null -w "%{http_code}" \
   "$URL/rest/v1/properties?select=active,deactivated_at&limit=0" \
   -H "apikey: $KEY" -H "Authorization: Bearer $KEY"     # → 200, not 400
 ```
+
+**`061` is `NOT VALID` on purpose.** All five `transfer_requests` rows predate mandatory references
+and every one has a NULL — four approved, one declined, none pending. `NOT VALID` checks every new
+INSERT and UPDATE while leaving that history alone; backfilling would mean inventing a file
+reference no firm ever supplied. `VALIDATE CONSTRAINT` is available if they are ever backfilled.
 
 ⚠️ **Applied is not exercised.** None of `053`–`058` has been driven through the UI yet. The
 checks below are still owed:

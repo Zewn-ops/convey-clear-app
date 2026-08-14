@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { Archive, RotateCcw } from "lucide-react";
 
 /**
- * Mark a property sold, or put it back (060 / meeting 2026-08-11 §92).
+ * Mark a property inactive, or active again (060 / meeting 2026-08-11 §92).
  *
  * Registering a transfer already does this on its own. This is the manual half:
  * a sale done off-portal, or undoing a transfer registered in error.
@@ -16,7 +16,7 @@ import { Archive, RotateCcw } from "lucide-react";
  * all of its history survive either way, which is the entire point of the
  * decision. An inline two-step is enough to stop a misclick.
  */
-export default function PropertySoldToggle({
+export default function PropertyActiveToggle({
   propertyId,
   label,
   active,
@@ -44,7 +44,7 @@ export default function PropertySoldToggle({
         toast.error(j.message ?? "Could not update the property.");
         return;
       }
-      toast.success(next ? "Property is active again." : "Property marked sold.");
+      toast.success(next ? "Property marked active." : "Property marked inactive.");
       setArming(false);
       router.refresh();
     } catch {
@@ -63,7 +63,7 @@ export default function PropertySoldToggle({
         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-2 border border-line rounded-lg hover:bg-raised disabled:opacity-50 shrink-0"
       >
         <RotateCcw className="h-4 w-4" />
-        {busy ? "Working…" : "Mark active again"}
+        {busy ? "Working…" : "Mark active"}
       </button>
     );
   }
@@ -75,21 +75,21 @@ export default function PropertySoldToggle({
         onClick={() => setArming(true)}
         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-2 border border-line rounded-lg hover:bg-raised shrink-0"
       >
-        <Archive className="h-4 w-4" /> Mark sold
+        <Archive className="h-4 w-4" /> Mark inactive
       </button>
     );
   }
 
   return (
     <div className="flex items-center gap-2 shrink-0">
-      <span className="text-xs text-ink-3">Keeps its history. Sold?</span>
+      <span className="text-xs text-ink-3">Stays on the client's dashboard. Mark inactive?</span>
       <button
         type="button"
         onClick={() => apply(false)}
         disabled={busy}
         className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50"
       >
-        {busy ? "Working…" : "Yes, mark sold"}
+        {busy ? "Working…" : "Yes, mark inactive"}
       </button>
       <button
         type="button"

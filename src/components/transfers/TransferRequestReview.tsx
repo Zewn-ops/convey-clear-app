@@ -8,10 +8,11 @@ import { Check, X } from "lucide-react";
 /**
  * Approve or decline one transfer request (055).
  *
- * Approving asks for the reference rather than accepting the firm's suggestion
- * silently — references follow ConveyClear's naming convention
- * ({MUNI}_{SERVICE}_{CLIENT}_{PROPERTY}), and the firm's own file reference is
- * a hint, not the answer.
+ * The reference is prefilled with the FIRM'S, which since 2026-08-11 (§78) is
+ * mandatory on the request and is the transfer's real reference. Staff can still
+ * edit it — a clash with an existing transfer, an obvious typo — but the default
+ * is to accept it, so the field is shown rather than hidden and the normal
+ * action is to press the button.
  *
  * Declining REQUIRES a reason, enforced on the server too. A request that just
  * disappears teaches firms to phone instead, which is what this flow replaces.
@@ -61,10 +62,9 @@ export default function TransferRequestReview({
           Transfer reference
           {/*
             The placeholder is the FIRM'S file reference for the whole
-            transaction. It used to show the matter naming convention
+            transaction — never the matter naming convention
             (COT_COO_CLIENT_ERF), which is a different thing and taught the
-            wrong format at the exact moment staff invent a reference on a
-            firm's behalf.
+            wrong format here.
           */}
           <input
             className={input}
@@ -73,6 +73,11 @@ export default function TransferRequestReview({
             placeholder="SH-2026-0417"
             autoFocus
           />
+          <span className="mt-1 block text-[11px] font-normal text-ink-3">
+            {suggestedReference
+              ? "The firm's own reference. Change it only to resolve a clash."
+              : "This request predates mandatory references — give the transfer one."}
+          </span>
         </label>
         <div className="flex gap-2">
           <button

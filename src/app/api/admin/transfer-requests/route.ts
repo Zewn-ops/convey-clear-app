@@ -92,8 +92,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, status: "declined" });
   }
 
-  // Approve. The reference is staff's call — the firm only ever "suggested" one,
-  // and references follow ConveyClear's naming, not the firm's.
+  // Approve. The FIRM's reference is the transfer's reference (2026-08-11 §78,
+  // confirmed by Zewn 2026-08-14: "their unique code and it is what we use to
+  // title the property transfer"). Staff may still override — a clash, a typo —
+  // but the firm's code is the default, not a suggestion to be improved on.
+  //
+  // Reversal of the earlier reading: this route used to treat the reference as
+  // staff's to invent, following ConveyClear's {MUNI}_{SERVICE}_… convention.
+  // That convention belongs to MATTER titles; a transfer carries the firm's file
+  // reference. Details §74/§98 described staff assigning one, but those narrate
+  // the demo as it worked on the day — §78 is the decision.
   const reference = (body.reference ?? req.suggested_reference ?? "").trim();
   if (!reference) {
     return NextResponse.json({ message: "A transfer reference is required." }, { status: 400 });

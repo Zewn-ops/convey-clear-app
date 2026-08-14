@@ -6,7 +6,7 @@ import { isStaffRole, clientDisplayName, TRANSFER_STATUS_LABELS, type TransferSt
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { municipalityLabel, formatDate } from "@/lib/utils";
-import PropertySoldToggle from "@/components/properties/PropertySoldToggle";
+import PropertyActiveToggle from "@/components/properties/PropertyActiveToggle";
 import { ArrowLeft, Pencil, Building2 } from "lucide-react";
 
 export const metadata = { title: "Property — ConveyClear Admin" };
@@ -88,7 +88,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
               {property.label}
             </h1>
-            {!property.active && <Badge label="Sold" variant="gray" />}
+            <Badge label={property.active ? "Active" : "Inactive"} variant={property.active ? "success" : "danger"} />
           </div>
           {property.clients && (
             <p className="text-sm text-ink-3 mt-1">
@@ -105,7 +105,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <PropertySoldToggle propertyId={property.id} label={property.label} active={property.active} />
+          <PropertyActiveToggle propertyId={property.id} label={property.label} active={property.active} />
           <Link
             href={`/admin/properties/${id}/edit`}
             className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-ink-2 border border-line rounded-lg hover:bg-raised shrink-0"

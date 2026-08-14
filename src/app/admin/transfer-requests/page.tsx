@@ -99,6 +99,13 @@ export default async function TransferRequestsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-base font-semibold text-ink">{r.property_description}</p>
+                  {/* The firm's reference IS the transfer's (2026-08-11 §78), so
+                      it belongs on the card — staff should be able to spot a
+                      duplicate or a malformed code without opening the approve
+                      field to find out what it says. */}
+                  {r.suggested_reference && (
+                    <p className="text-xs font-medium text-ink-2 mt-0.5">Ref {r.suggested_reference}</p>
+                  )}
                   <p className="text-xs text-ink-3 mt-0.5">
                     {r.firms?.name ?? "Unknown firm"} · {municipalityLabel(r.municipality)} ·{" "}
                     {formatDateTime(r.created_at)}

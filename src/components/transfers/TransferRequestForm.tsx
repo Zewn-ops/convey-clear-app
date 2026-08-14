@@ -13,9 +13,16 @@ import { Send } from "lucide-react";
  * names against its own database so one client does not end up as three. That
  * is the whole reason creation moved behind ConveyClear (Meeting 2, §84).
  *
- * Only the property description is required. A firm phoning in a new mandate
- * often has the erf number and little else, and a form that demands the buyer's
- * cell number before it will submit is a form they will not use.
+ * The property description and the firm's own transfer reference are required
+ * (2026-08-11 §78) — the reference becomes the transfer's. Nothing else is: a
+ * firm phoning in a new mandate often has the erf number and little else, and a
+ * form that demands the buyer's cell number before it will submit is a form they
+ * will not use.
+ *
+ * ⚠️ Keep the parties optional. Two pending requests showing "Seller / Buyer:
+ * Not supplied" was recorded on 2026-08-11 as CORRECT — firms supply what they
+ * know. The mandatory pair was a deliberate, bounded addition to that intake;
+ * it should not creep further.
  */
 const MUNICIPALITIES = [
   { value: "", label: "— Not sure —" },
@@ -48,6 +55,10 @@ export default function TransferRequestForm() {
     e.preventDefault();
     if (!form.property_description.trim()) {
       toast.error("Describe the property — an erf number or address.");
+      return;
+    }
+    if (!form.suggested_reference.trim()) {
+      toast.error("Your transfer reference is required.");
       return;
     }
     setBusy(true);
@@ -100,13 +111,20 @@ export default function TransferRequestForm() {
             </select>
           </label>
           <label className={label}>
-            Your reference
+            Your transfer reference <span className="text-required">*</span>
             <input
               className={input}
               value={form.suggested_reference}
               onChange={set("suggested_reference")}
-              placeholder="Optional — your own file reference"
+              placeholder="e.g. SH-2026-0417"
+              required
             />
+            {/* Mandatory since 2026-08-11 (§78). Said plainly because it is the
+                firm's own code being adopted as ours — they should know it is
+                the name this transfer will carry, not a note for our reference. */}
+            <span className="mt-1 block text-[11px] font-normal text-ink-3">
+              Your own file reference. This becomes the reference for the transfer.
+            </span>
           </label>
         </div>
       </div>

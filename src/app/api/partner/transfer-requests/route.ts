@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePartner } from "@/lib/partner";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { notifyStaff } from "@/lib/notify";
 
@@ -49,7 +50,52 @@ export async function POST(request: Request) {
     );
   }
 
+  // 061 — the firm's reference is mandatory (2026-08-11 §78) and becomes the
+  // reference of the transfer created on approval. Checked here as well as by
+  // the constraint so the firm gets a sentence, not a 23514.
+  const suggestedReference = str("suggested_reference");
+  if (!suggestedReference) {
+    return NextResponse.json(
+      { message: "Your transfer reference is required — it becomes the reference for this transfer." },
+      { status: 400 }
+    );
+  }
+
   const supabase = await createClient();
+
+  // Catch a clash NOW rather than at approve time.
+  //
+  // The reference lands on property_transfers, which is globally unique. Without
+  // this the firm submits happily and the collision surfaces days later in front
+  // of a staff member who cannot fix it — the reference belongs to the firm, so
+  // only they can say what it should be instead.
+  //
+  // ⚠️ Read with the ADMIN client on purpose. A transfer owned by ANOTHER firm
+  // still occupies the reference, and the caller cannot see it through RLS — a
+  // caller-scoped check would pass here and then fail on approval, which is the
+  // exact failure this is meant to prevent. It discloses nothing: the answer is
+  // "that reference is taken", never whose it is.
+  //
+  // 🔴 OPEN QUESTION, deliberately not settled in the schema: whether a firm's
+  // code must be unique GLOBALLY or only within that firm. Two firms can both
+  // run a file "2026/001". The existing convention embeds a firm prefix
+  // (SH-2026-0417) which makes global uniqueness work in practice, but nothing
+  // enforces the prefix. Raise with Jukka before this bites.
+  const adminRead = createAdminClient();
+  const { data: clash } = await adminRead
+    .from("property_transfers")
+    .select("id")
+    .ilike("reference", suggestedReference)
+    .limit(1)
+    .maybeSingle();
+  if (clash) {
+    return NextResponse.json(
+      {
+        message: `Reference "${suggestedReference}" is already in use. Check whether this transfer has already been opened, or send a different reference.`,
+      },
+      { status: 409 }
+    );
+  }
   const { data, error } = await supabase
     .from("transfer_requests")
     .insert({
@@ -57,7 +103,7 @@ export async function POST(request: Request) {
       requested_by: auth.userId,
       property_description: propertyDescription,
       municipality: str("municipality"),
-      suggested_reference: str("suggested_reference"),
+      suggested_reference: suggestedReference,
       seller_name: str("seller_name"),
       seller_email: str("seller_email"),
       seller_cell: str("seller_cell"),
