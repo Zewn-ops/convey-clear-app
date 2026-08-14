@@ -53,18 +53,40 @@ function clean(v?: string | null): string | null {
   return s.length ? s : null;
 }
 
+const EDITABLE = [
+  "address",
+  "erf_number",
+  "municipality",
+  "province",
+  "suburb",
+  "rates_account_no",
+  "title_deed_no",
+  "client_id",
+  "notes",
+] as const;
+
+/**
+ * Only the fields the caller actually SENT.
+ *
+ * 🔴 This used to return all nine unconditionally, so `clean(undefined)` turned
+ * every field the caller omitted into NULL. Harmless while the edit form was the
+ * only caller — it posts the whole record every time — but it made the route a
+ * trap: any partial PATCH silently wiped the rest of the property.
+ *
+ * Found on staging 2026-08-14 when the new active/inactive toggle (which sends
+ * only id, label and active) blanked ERF PROPfeature Test's address, erf, rates
+ * account, deed number, suburb, municipality and province in one click.
+ *
+ * Clearing a field still works: the edit form sends "" and `clean` maps that to
+ * null. The distinction is between "sent empty" and "not sent at all", which is
+ * exactly what the old version could not express.
+ */
 function payload(body: PropertyFields) {
-  return {
-    address: clean(body.address),
-    erf_number: clean(body.erf_number),
-    municipality: clean(body.municipality),
-    province: clean(body.province),
-    suburb: clean(body.suburb),
-    rates_account_no: clean(body.rates_account_no),
-    title_deed_no: clean(body.title_deed_no),
-    client_id: clean(body.client_id),
-    notes: clean(body.notes),
-  };
+  const out: Record<string, string | null> = {};
+  for (const k of EDITABLE) {
+    if (Object.prototype.hasOwnProperty.call(body, k)) out[k] = clean(body[k]);
+  }
+  return out;
 }
 
 export async function POST(request: Request) {
