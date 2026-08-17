@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +25,8 @@ import {
   GraduationCap,
   Building,
   UserPlus,
+  Wrench,
+  ChevronDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -39,25 +42,32 @@ const baseNav = [
   { href: "/admin/firms", label: "Partner Firms", icon: Scale, exact: false },
   { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
   { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
-  // Shared by staff and admins, but NOT the same screen: admins get the review
-  // queue with Approve/Disapprove, staff get their own uploads read-only.
-  // Approving your own team's uploads remains admin-only (migration 042); the
-  // page enforces that, not this nav list.
+];
+// Lower-frequency utility screens, tucked under the collapsible "Admin Tools"
+// group so the top-level list doesn't outgrow the viewport (was pushing the
+// theme toggle below the fold). Shared by staff and admins, but NOT the same
+// screen for Document Approvals: admins get the review queue with
+// Approve/Disapprove, staff get their own uploads read-only. Approving your
+// own team's uploads remains admin-only (migration 042); the page enforces
+// that, not this nav list.
+const toolsNav = [
   { href: "/admin/approvals", label: "Document Approvals", icon: BadgeCheck, exact: false },
   { href: "/admin/notifications", label: "Notifications", icon: Bell, exact: false },
 ];
-const adminNav = [
+const adminOnlyToolsNav = [
   { href: "/admin/email-signature", label: "Email Signatures", icon: Mail, exact: false },
   { href: "/admin/signup-requests", label: "Signup Requests", icon: UserPlus, exact: false },
   { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
 ];
 
 export default function AdminSidebar({ role }: { role?: UserRole | null }) {
-  const navItems = isAdminRole(role) ? [...baseNav, ...adminNav] : baseNav;
+  const toolsItems = isAdminRole(role) ? [...toolsNav, ...adminOnlyToolsNav] : toolsNav;
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const dots = useNotifyDots();
+  const toolsActive = toolsItems.some((item) => pathname.startsWith(item.href));
+  const [toolsOpen, setToolsOpen] = useState(toolsActive);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -75,8 +85,8 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
-        {navItems.map((item) => {
+      <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1">
+        {baseNav.map((item) => {
           const active = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
@@ -100,6 +110,46 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
             </Link>
           );
         })}
+
+        <button
+          type="button"
+          onClick={() => setToolsOpen((v) => !v)}
+          aria-expanded={toolsOpen}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            toolsActive
+              ? "bg-white/15 text-white"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <Wrench className="h-4 w-4 shrink-0" />
+          Admin Tools
+          <ChevronDown
+            className={cn("ml-auto h-4 w-4 shrink-0 transition-transform", toolsOpen && "rotate-180")}
+          />
+        </button>
+        {toolsOpen && (
+          <div className="ml-3 space-y-1 border-l border-white/10 pl-3">
+            {toolsItems.map((item) => {
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-white/15 text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       <div className="px-4 pb-4 border-t border-white/10 pt-4">
