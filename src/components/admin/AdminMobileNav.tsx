@@ -5,39 +5,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { isAdminRole, type UserRole } from "@/types";
-import {
-  LayoutDashboard,
-  Users,
-  Briefcase,
-  Building2,
-  MessageSquare,
-  UserCog,
-  Landmark,
-  Scale,
-  LogOut,
-  Menu,
-  X,
-  Mail,
-} from "lucide-react";
+import type { UserRole } from "@/types";
+import { BASE_NAV, toolsNavForRole } from "@/components/admin/admin-nav";
+import { LogOut, Menu, X } from "lucide-react";
 import toast from "react-hot-toast";
 
-const baseNav = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
-  { href: "/admin/property-transfers", label: "Property Transfers", icon: Building2, exact: false },
-  { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
-  { href: "/admin/firms", label: "Partner Firms", icon: Scale, exact: false },
-  { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
-  { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
-];
-const adminNav = [
-  { href: "/admin/email-signature", label: "Email Signatures", icon: Mail, exact: false },
-  { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
-];
-
 export default function AdminMobileNav({ role }: { role?: UserRole | null }) {
-  const navItems = isAdminRole(role) ? [...baseNav, ...adminNav] : baseNav;
+  // Same items as the desktop sidebar, flattened — the tools group renders
+  // inline here rather than as a collapsible (one long scrollable list reads
+  // better in a mobile drawer than nested disclosure).
+  const navItems = [...BASE_NAV, ...toolsNavForRole(role)];
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();

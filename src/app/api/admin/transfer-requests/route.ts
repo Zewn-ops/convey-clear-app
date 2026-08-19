@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
-import { STAFF_ROLES, type UserRole } from "@/types";
+import { type UserRole } from "@/types";
 import { notifyUsers } from "@/lib/notify";
+import { requireStaff } from "@/lib/staff";
 
 export const runtime = "nodejs";
 
@@ -19,22 +19,6 @@ export const runtime = "nodejs";
  * Declining requires a reason. A request that silently disappears teaches firms
  * to phone instead, which is the behaviour this whole flow exists to replace.
  */
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated", status: 401 as const };
-  const { data: me } = await supabase
-    .from("users")
-    .select("id, role")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!me || !STAFF_ROLES.includes(me.role as UserRole)) {
-    return { error: "Insufficient privilege", status: 403 as const };
-  }
-  return { callerId: me.id as string };
-}
 
 export async function POST(request: Request) {
   if (!rateLimit(`transfer-request-review:${clientIp(request)}`, 40, 60_000)) {

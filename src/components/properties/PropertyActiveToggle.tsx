@@ -82,7 +82,7 @@ export default function PropertyActiveToggle({
 
   return (
     <div className="flex items-center gap-2 shrink-0">
-      <span className="text-xs text-ink-3">Stays on the client's dashboard. Mark inactive?</span>
+      <span className="text-xs text-ink-3">Stays on the client&apos;s dashboard. Mark inactive?</span>
       <button
         type="button"
         onClick={() => apply(false)}

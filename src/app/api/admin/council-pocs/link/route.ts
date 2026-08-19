@@ -1,23 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAFF_ROLES, type UserRole } from "@/types";
+import { type UserRole } from "@/types";
+import { requireStaff } from "@/lib/staff";
 
 export const runtime = "nodejs";
 
 // B5 / Theme G — link or unlink an existing Council POC to a matter.
 //   POST   { matter_id, council_poc_id }  → link  (idempotent; UNIQUE pair)
 //   DELETE ?matter_id=&council_poc_id=    → unlink
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated", status: 401 as const };
-  const { data: me } = await supabase.from("users").select("id, role").eq("auth_user_id", user.id).maybeSingle();
-  const role = (me?.role ?? null) as UserRole | null;
-  if (!role || !STAFF_ROLES.includes(role)) return { error: "Insufficient privilege", status: 403 as const };
-  return { callerId: me!.id as string };
-}
 
 export async function POST(request: Request) {
   const auth = await requireStaff();

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAFF_ROLES, type UserRole } from "@/types";
+import { type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { sendEmail } from "@/lib/email";
 import { credentialsEmail } from "@/lib/email-templates";
+import { requireStaff } from "@/lib/staff";
 
 export const runtime = "nodejs";
 
@@ -19,16 +19,6 @@ function genTempPassword(): string {
   const pick = (n: number) =>
     Array.from(crypto.getRandomValues(new Uint32Array(n)), (x) => A[x % A.length]).join("");
   return `CC-${pick(4)}-${pick(4)}-${pick(2)}`;
-}
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated", status: 401 as const };
-  const { data: me } = await supabase.from("users").select("id, role").eq("auth_user_id", user.id).maybeSingle();
-  const role = (me?.role ?? null) as UserRole | null;
-  if (!role || !STAFF_ROLES.includes(role)) return { error: "Insufficient privilege", status: 403 as const };
-  return { callerId: me!.id as string };
 }
 
 export async function POST(request: Request) {

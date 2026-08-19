@@ -6,62 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useNotifyDots } from "@/lib/use-notify-dots";
-import { isAdminRole, type UserRole } from "@/types";
-import {
-  LayoutDashboard,
-  Users,
-  Briefcase,
-  Building2,
-  MessageSquare,
-  UserCog,
-  Landmark,
-  Scale,
-  LogOut,
-  ShieldCheck,
-  BadgeCheck,
-  Bell,
-  Mail,
-  Inbox,
-  GraduationCap,
-  Building,
-  UserPlus,
-  Wrench,
-  ChevronDown,
-} from "lucide-react";
+import type { UserRole } from "@/types";
+import { BASE_NAV, toolsNavForRole } from "@/components/admin/admin-nav";
+import { LogOut, ShieldCheck, Wrench, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
-const baseNav = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/matters", label: "Matters", icon: Briefcase, exact: false },
-  { href: "/admin/property-transfers", label: "Property Transfers", icon: Building2, exact: false },
-  { href: "/admin/properties", label: "Properties", icon: Building, exact: false },
-  { href: "/admin/transfer-requests", label: "Transfer Requests", icon: Inbox, exact: false },
-  { href: "/admin/training", label: "Training", icon: GraduationCap, exact: false },
-  { href: "/admin/clients", label: "Clients", icon: Users, exact: false },
-  { href: "/admin/firms", label: "Partner Firms", icon: Scale, exact: false },
-  { href: "/admin/council-pocs", label: "Council POCs", icon: Landmark, exact: false },
-  { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare, exact: false },
-];
-// Lower-frequency utility screens, tucked under the collapsible "Admin Tools"
-// group so the top-level list doesn't outgrow the viewport (was pushing the
-// theme toggle below the fold). Shared by staff and admins, but NOT the same
-// screen for Document Approvals: admins get the review queue with
-// Approve/Disapprove, staff get their own uploads read-only. Approving your
-// own team's uploads remains admin-only (migration 042); the page enforces
-// that, not this nav list.
-const toolsNav = [
-  { href: "/admin/approvals", label: "Document Approvals", icon: BadgeCheck, exact: false },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell, exact: false },
-];
-const adminOnlyToolsNav = [
-  { href: "/admin/email-signature", label: "Email Signatures", icon: Mail, exact: false },
-  { href: "/admin/signup-requests", label: "Signup Requests", icon: UserPlus, exact: false },
-  { href: "/admin/users", label: "Users & Access", icon: UserCog, exact: false },
-];
-
 export default function AdminSidebar({ role }: { role?: UserRole | null }) {
-  const toolsItems = isAdminRole(role) ? [...toolsNav, ...adminOnlyToolsNav] : toolsNav;
+  const toolsItems = toolsNavForRole(role);
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -86,7 +38,7 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
       </div>
 
       <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1">
-        {baseNav.map((item) => {
+        {BASE_NAV.map((item) => {
           const active = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);

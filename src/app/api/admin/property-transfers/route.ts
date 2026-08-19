@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STAFF_ROLES, type UserRole } from "@/types";
+import { type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { transferProgressBlockedReason, type TransferPartyRow } from "@/lib/transfer-gate";
 import { syncPartiesFromTransfer } from "@/lib/transfer-party-sync";
+import { requireStaff } from "@/lib/staff";
 
 export const runtime = "nodejs";
 
@@ -28,16 +28,6 @@ type TransferFields = {
 };
 
 const STATUSES = ["open", "registered", "cancelled", "on_hold"];
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated", status: 401 as const };
-  const { data: me } = await supabase.from("users").select("id, role").eq("auth_user_id", user.id).maybeSingle();
-  const role = (me?.role ?? null) as UserRole | null;
-  if (!role || !STAFF_ROLES.includes(role)) return { error: "Insufficient privilege", status: 403 as const };
-  return { callerId: me!.id as string };
-}
 
 function clean(v?: string | null): string | null {
   const s = (v ?? "").trim();

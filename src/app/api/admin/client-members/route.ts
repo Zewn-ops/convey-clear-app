@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ADMIN_ROLES, type UserRole } from "@/types";
+import { type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { requireAdmin } from "@/lib/staff";
 
 export const runtime = "nodejs";
 
@@ -18,25 +18,6 @@ export const runtime = "nodejs";
  * is closer to provisioning a login than to editing a field, so it sits behind
  * the same guard as user creation.
  */
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated", status: 401 as const };
-
-  const { data: me } = await supabase
-    .from("users")
-    .select("id, role")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  const role = (me?.role ?? null) as UserRole | null;
-  if (!role || !ADMIN_ROLES.includes(role)) {
-    return { error: "Admins only.", status: 403 as const };
-  }
-  return { ok: true as const };
-}
 
 const ROLES = ["owner", "member"] as const;
 type MemberRole = (typeof ROLES)[number];
