@@ -307,7 +307,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               {linked.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-ink-3">
-                    No matters linked yet. Refer a matter, then attach it here to build up the transaction.
+                    No matters linked yet. Matters ConveyClear opens for this transaction can be attached here.
                   </td>
                 </tr>
               )}

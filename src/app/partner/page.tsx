@@ -84,10 +84,10 @@ export default async function PartnerOverview() {
             <MessageSquare className="h-4 w-4" /> New enquiry
           </Link>
           <Link
-            href="/partner/refer"
+            href="/partner/transfers/new"
             className="inline-flex items-center gap-2 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
-            <PlusCircle className="h-4 w-4" /> Refer a matter
+            <PlusCircle className="h-4 w-4" /> Request a property transfer
           </Link>
         </div>
       </div>
@@ -115,13 +115,13 @@ export default async function PartnerOverview() {
             title="No active matters"
             icon={<Briefcase className="h-6 w-6" />}
             action={
-              <Link href="/partner/refer" className="text-[12.5px] font-bold text-action hover:underline">
-                Refer your first client
+              <Link href="/partner/transfers/new" className="text-[12.5px] font-bold text-action hover:underline">
+                Request your first property transfer
               </Link>
             }
           >
-            Once you refer a client, their matter appears here with its phase, how long it has been
-            running, and whatever is holding it up.
+            Once you request a property transfer, its matters appear here with their phase, how long
+            they have been running, and whatever is holding them up.
           </EmptyState>
         ) : (
           <ul className="space-y-4">

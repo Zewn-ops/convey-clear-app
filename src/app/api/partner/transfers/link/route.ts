@@ -7,9 +7,10 @@ import { logMatterActivity, logTransferActivity } from "@/lib/activity";
 export const runtime = "nodejs";
 
 // A partner attaches / detaches one of its OWN matters to one of its OWN
-// transfers (Meeting 2 — a partner-created transfer is a dead end without this;
-// they refer matters via /partner/refer, and this is how those matters join the
-// transaction).
+// transfers (Meeting 2 — a partner's transfer is a dead end without this; this
+// is how the firm's matters join the transaction. Refer-a-matter was removed
+// 2026-08-24, so new matters are opened by ConveyClear, but firm-owned matters
+// still exist and still attach here).
 //   POST { matter_id, transfer_id }        → link
 //   POST { matter_id, transfer_id: null }  → unlink
 //

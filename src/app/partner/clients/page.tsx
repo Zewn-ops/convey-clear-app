@@ -43,7 +43,7 @@ export default async function PartnerClients() {
           ))}
           {clients.length === 0 && (
             <TEmpty colSpan={4}>
-              No clients yet. They appear here once you refer a matter.
+              No clients yet. They appear here once a property transfer links them to your firm.
             </TEmpty>
           )}
         </TBody>

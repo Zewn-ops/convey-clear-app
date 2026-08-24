@@ -59,10 +59,10 @@ export default async function PartnerMatters({
           <p className="mt-2.5 text-[15px] font-medium text-ink-3">{total} matter{total === 1 ? "" : "s"}</p>
         </div>
         <Link
-          href="/partner/refer"
+          href="/partner/transfers/new"
           className="inline-flex items-center gap-2 self-start rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
         >
-          <PlusCircle className="h-4 w-4" /> Refer a matter
+          <PlusCircle className="h-4 w-4" /> Request a property transfer
         </Link>
       </div>
 
@@ -78,7 +78,7 @@ export default async function PartnerMatters({
             </Link>
           }
         >
-          Nothing here with the current selection. Widen the filters, or refer a new matter.
+          Nothing here with the current selection. Widen the filters, or request a property transfer.
         </EmptyState>
       ) : (
         <ul className="space-y-4">

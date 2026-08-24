@@ -11,7 +11,6 @@ import {
   Briefcase,
   Building2,
   Users,
-  PlusCircle,
   MessageSquare,
   LogOut,
   Scale,
@@ -33,7 +32,6 @@ const navItems: NavItem[] = [
   { href: "/partner/transfers", label: "Property Transfers", icon: Building2 },
   { href: "/partner/clients", label: "Clients", icon: Users },
   { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },
-  { href: "/partner/refer", label: "Refer a matter", icon: PlusCircle },
   { href: "/partner/training", label: "Training", icon: GraduationCap },
 ];
 
