@@ -195,7 +195,12 @@ export default async function AdminClientDetailPage({
       />
 
       <Card>
-        <EntityMembers clientId={id} members={members} candidates={candidates} />
+        <EntityMembers
+          clientId={id}
+          members={members}
+          candidates={candidates}
+          canManage={isAdminRole(session.profile?.role)}
+        />
       </Card>
 
       <div>

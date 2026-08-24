@@ -30,10 +30,13 @@ export default function EntityMembers({
   clientId,
   members,
   candidates,
+  canManage = false,
 }: {
   clientId: string;
   members: MemberRow[];
   candidates: CandidateUser[];
+  /** The whole client-members API is admin-only; staff get a read-only view. */
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -88,7 +91,7 @@ export default function EntityMembers({
             Members see every matter, document and FICA record belonging to this entity.
           </p>
         </div>
-        {!adding && available.length > 0 && (
+        {canManage && !adding && available.length > 0 && (
           <button
             onClick={() => setAdding(true)}
             className="inline-flex shrink-0 items-center gap-2 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90"
@@ -166,7 +169,7 @@ export default function EntityMembers({
                 <StatusPill tone={m.role === "owner" ? "action" : "neutral"}>{m.role}</StatusPill>
                 {m.isDefault ? (
                   <StatusPill tone="ok">Default</StatusPill>
-                ) : (
+                ) : canManage ? (
                   <button
                     title="Make this the entity they land on at login"
                     disabled={busy === m.id}
@@ -186,21 +189,23 @@ export default function EntityMembers({
                   >
                     <Star className="h-4 w-4" />
                   </button>
+                ) : null}
+                {canManage && (
+                  <button
+                    title="Remove from this entity"
+                    disabled={busy === m.id}
+                    onClick={async () => {
+                      const ok = await call(
+                        { url: `/api/admin/client-members?id=${m.id}`, method: "DELETE" },
+                        m.id
+                      );
+                      if (ok) toast.success("Removed.");
+                    }}
+                    className="rounded p-1.5 text-ink-3 transition-colors hover:bg-danger-tint hover:text-danger disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 )}
-                <button
-                  title="Remove from this entity"
-                  disabled={busy === m.id}
-                  onClick={async () => {
-                    const ok = await call(
-                      { url: `/api/admin/client-members?id=${m.id}`, method: "DELETE" },
-                      m.id
-                    );
-                    if (ok) toast.success("Removed.");
-                  }}
-                  className="rounded p-1.5 text-ink-3 transition-colors hover:bg-danger-tint hover:text-danger disabled:opacity-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
             </li>
           ))}
