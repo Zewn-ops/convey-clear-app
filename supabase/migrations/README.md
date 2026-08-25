@@ -30,10 +30,26 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 
 ## Applied state
 
-**001–045 are applied to production, except 043. 046–060 are NOT applied to production** — they
-are the Section 1 redesign work, live on `feature/portal-redesign` only.
+**✅ 001–062 are ALL applied to production as of 2026-08-25** — including `043`, which had been
+skipped since July. Applied by hand via the VPS pooler in one run, every file COMMIT, no errors.
 
-**`046`–`061` are applied to STAGING.**
+Verified afterwards two ways: psql confirmed `firms`, `client_members`, `transfer_parties`,
+`transfer_access_grants`, `transfer_requests`, `signup_requests` and `client_transfers` all exist
+(and `business_partners` correctly gone, per `047`), plus the columns `properties.active`,
+`properties.deactivated_at`, `transfer_documents.visibility` and
+`transfer_requests.suggested_reference`; PostgREST then answered **401, not 404**, on all seven,
+confirming the schema cache picked the DDL up.
+
+⚠️ **`043` needed a preflight that is not in the migration.** Production had 5 documents with
+`approved_at IS NULL` — staff uploads legitimately awaiting approval, since `042` auto-approves only
+client and partner-firm uploads. Running `043` on them would not have deleted anything, but the
+client and partner on that matter would have silently lost sight of all five. They were backfilled
+first with `042`'s own rule (`approved_at = COALESCE(created_at, now())`) so post-`043` visibility
+matches what it was before. **Any future database restored from a pre-`043` dump needs the same
+backfill** — see `~/projects/convey-clear/preflight-043-2026-08-25.sql`.
+
+**`046`–`062` are applied to STAGING.** (`062` confirmed 2026-08-25 by probing the staging
+PostgREST: `client_transfers` answers 401/RLS, not 404. This line previously read `046`–`061`.)
 `053`–`058` landed 2026-08-11 via `./scripts/staging-bootstrap.sh 053` — six ok, shape verified
 against PostgREST afterwards (`transfer_requests`, `signup_requests`,
 `transfer_access_grants.expires_at`, `transfer_documents.client_document_id`,
