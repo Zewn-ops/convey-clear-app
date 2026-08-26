@@ -24,10 +24,12 @@ import { ChevronRight, Plus, Trash2, ListChecks } from "lucide-react";
  * prevents anyone doing anything.
  */
 
+// Keys are `services.code`, NOT the meeting's abbreviations. 063 used EBP/PRC
+// and those two lines could never link to a matter — see 066.
 export const SERVICE_LABELS: Record<string, string> = {
-  EBP: "Existing Building Plans",
+  BP: "Existing Building Plans",
   CERT: "Certificates",
-  PRC: "Property Rates Clearance",
+  RCF: "Property Rates Clearance",
   MAD: "Municipal Account Dispute",
   COO: "Change of Ownership",
   REFUND: "Refund",
@@ -35,15 +37,15 @@ export const SERVICE_LABELS: Record<string, string> = {
 };
 
 /** The default line items, in municipal order — mirrors instantiate_transfer_services (063). */
-export const DEFAULT_SERVICE_CODES = ["EBP", "CERT", "PRC", "MAD", "COO", "REFUND", "OTHER"] as const;
+export const DEFAULT_SERVICE_CODES = ["BP", "CERT", "RCF", "MAD", "COO", "REFUND", "OTHER"] as const;
 
 /** §114 — these must be complete before Change of Ownership proceeds. */
-const COO_PREREQUISITES = ["EBP", "CERT", "PRC", "MAD"] as const;
+const COO_PREREQUISITES = ["BP", "CERT", "RCF", "MAD"] as const;
 
 /** The sub-services named in the meeting. Suggestions, not a closed list. */
 const SUGGESTED: Record<string, string[]> = {
   // §118
-  EBP: ["Occupational certificate", "Sectional scheme plans", "Site development plan", "Floor plans"],
+  BP: ["Occupational certificate", "Sectional scheme plans", "Site development plan", "Floor plans"],
   // §120
   CERT: ["Electrical", "Building standards", "Environmental", "Gas"],
 };
