@@ -33,6 +33,13 @@ the Supabase CLI's, so the CLI's migration table does not know about any of thes
 **✅ 001–062 are ALL applied to production as of 2026-08-25** — including `043`, which had been
 skipped since July. Applied by hand via the VPS pooler in one run, every file COMMIT, no errors.
 
+⏳ **`063` is applied to STAGING only** (2026-08-26). It is the data model for the property-transfer
+umbrella from the 08-24 meeting. It is additive — a new table, a new service row, a function — and
+changes no existing behaviour, but it has no UI yet, so there is nothing to gain by rushing it to
+production. Functionally tested on staging: `instantiate_transfer_services()` returns 7 then 0 on a
+re-run, and the depth guard, identity check, status vocabulary and cross-transfer parent guard all
+reject as intended.
+
 Verified afterwards two ways: psql confirmed `firms`, `client_members`, `transfer_parties`,
 `transfer_access_grants`, `transfer_requests`, `signup_requests` and `client_transfers` all exist
 (and `business_partners` correctly gone, per `047`), plus the columns `properties.active`,
