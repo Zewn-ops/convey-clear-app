@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
+import PhaseProgress from "@/components/ui/PhaseProgress";
+import type { ServiceProgress } from "@/lib/transfer-service-progress";
 import { ChevronRight, Plus, Trash2, ListChecks } from "lucide-react";
 
 /**
@@ -76,6 +78,9 @@ export interface ServiceRow {
   notes: string | null;
   matter_id: string | null;
   position: number;
+  /** Derived server-side by lib/transfer-service-progress.ts. */
+  progress?: ServiceProgress;
+  matterTitle?: string | null;
 }
 
 export default function TransferServices({
@@ -253,13 +258,25 @@ export default function TransferServices({
                 )}
               </button>
 
-              {r.matter_id && (
+              {r.matter_id ? (
                 <Link
                   href={`${matterHrefBase}/${r.matter_id}`}
                   className="shrink-0 text-xs font-medium text-action hover:underline"
                 >
                   Open matter
                 </Link>
+              ) : (
+                canManage &&
+                r.status === "needed" &&
+                code !== "OTHER" && (
+                  // Explicit, not automatic — see the note above the component.
+                  <Link
+                    href={`/admin/matters/new?transfer=${transferId}&service=${code}`}
+                    className="shrink-0 text-xs font-medium text-action hover:underline"
+                  >
+                    Open as matter
+                  </Link>
+                )
               )}
 
               {canManage ? (
@@ -296,6 +313,32 @@ export default function TransferServices({
 
             {r.third_party && (
               <p className="mt-1 pl-6 text-xs text-ink-3">Rendered by {r.third_party}</p>
+            )}
+
+            {/* §110 — progress per service, for staff, attorneys and clients
+                alike. It is the linked MATTER's progress; a service line has no
+                percentage of its own. */}
+            {r.progress && r.progress.state !== "none" && (
+              <div className="mt-2 pl-6">
+                {r.progress.total > 0 ? (
+                  <PhaseProgress
+                    phase={r.progress.phase}
+                    total={r.progress.total}
+                    label={r.progress.label}
+                    done={r.progress.state === "complete"}
+                  />
+                ) : (
+                  <p
+                    className={`text-xs ${
+                      r.progress.state === "complete" || r.progress.state === "declared"
+                        ? "text-ok"
+                        : "text-ink-3"
+                    }`}
+                  >
+                    {r.progress.label}
+                  </p>
+                )}
+              </div>
             )}
 
             {isOpen && (

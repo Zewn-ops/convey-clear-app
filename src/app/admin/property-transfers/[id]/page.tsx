@@ -32,6 +32,11 @@ import PullVaultDoc from "@/components/transfers/PullVaultDoc";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import {
+  serviceProgress,
+  LINKED_MATTER_SELECT,
+  type LinkedMatterShape,
+} from "@/lib/transfer-service-progress";
 import RequestHandover, { type HandoverRequest } from "@/components/transfers/RequestHandover";
 import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -137,7 +142,8 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     // and bounded, so the component splits it rather than paying two queries.
     supabase
       .from("transfer_services")
-      .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
+      .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + LINKED_MATTER_SELECT)
       .eq("transfer_id", id)
       .order("position", { ascending: true }),
     // The request this transfer was created from, if any. Approving sets
@@ -318,6 +324,16 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     .limit(50);
   const feed = (feedData as unknown as TransferActivity[] | null) ?? [];
 
+  // Progress is the linked matter's, derived here so the pipeline definitions
+  // stay out of the client bundle.
+  const serviceRows: ServiceRow[] = (
+    (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
+  ).map((r) => ({
+    ...r,
+    progress: serviceProgress(r.status, r.matters ?? null),
+    matterTitle: r.matters?.title ?? null,
+  }));
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
@@ -405,7 +421,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         </div>
         <TransferServices
           transferId={id}
-          rows={(serviceItems as ServiceRow[] | null) ?? []}
+          rows={serviceRows}
           canManage
         />
       </Card>

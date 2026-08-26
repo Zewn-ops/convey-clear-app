@@ -16,6 +16,11 @@ import {
 } from "@/types";
 import { ArrowLeft, FileText, Briefcase } from "lucide-react";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import {
+  serviceProgress,
+  LINKED_MATTER_SELECT,
+  type LinkedMatterShape,
+} from "@/lib/transfer-service-progress";
 
 export const metadata = { title: "Transfer — ConveyClear" };
 export const dynamic = "force-dynamic";
@@ -105,7 +110,8 @@ export default async function ClientTransferDetail({ params }: { params: Promise
   // transaction needs.
   const { data: serviceItems } = await supabase
     .from("transfer_services")
-    .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
+    .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + LINKED_MATTER_SELECT)
     .eq("transfer_id", id)
     .order("position", { ascending: true });
 
@@ -119,6 +125,16 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     .order("created_at", { ascending: false });
   const docs = (docRows as DocRow[] | null) ?? [];
   const urls = await signedDocUrls(supabase, docs);
+
+  // Progress is the linked matter's, derived here so the pipeline definitions
+  // stay out of the client bundle.
+  const serviceRows: ServiceRow[] = (
+    (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
+  ).map((r) => ({
+    ...r,
+    progress: serviceProgress(r.status, r.matters ?? null),
+    matterTitle: r.matters?.title ?? null,
+  }));
 
   return (
     <div className="space-y-6">
@@ -173,7 +189,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
           </div>
           <TransferServices
             transferId={id}
-            rows={(serviceItems as ServiceRow[] | null) ?? []}
+            rows={serviceRows}
             matterHrefBase="/dashboard/matters"
           />
         </Card>

@@ -138,6 +138,7 @@ export default function CreateMatterForm({
   clients,
   transfer,
   transferOptions = [],
+  initialServiceCode,
 }: {
   services: { id: string; code: string; name: string }[];
   clients: { id: string; full_name: string | null; business_name: string | null }[];
@@ -155,6 +156,12 @@ export default function CreateMatterForm({
    * transfer, reached from the other direction.
    */
   transferOptions?: CreateInTransfer[];
+  /**
+   * Preselect the service, for arriving from a transfer's checklist line —
+   * "open this service as a matter" already knows which service it means, and
+   * making the user pick it again invites picking the wrong one.
+   */
+  initialServiceCode?: string;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"existing" | "new">(clients.length ? "existing" : "new");
@@ -165,7 +172,13 @@ export default function CreateMatterForm({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [cell, setCell] = useState("");
-  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
+  const [serviceId, setServiceId] = useState(
+    (initialServiceCode
+      ? services.find((x) => x.code.toUpperCase() === initialServiceCode.toUpperCase())?.id
+      : undefined) ??
+      services[0]?.id ??
+      ""
+  );
   const [municipality, setMunicipality] = useState(transfer?.municipality || "COT");
   const [property, setProperty] = useState(transfer?.property_description || "");
   const [priority, setPriority] = useState<MatterPriority>("standard");

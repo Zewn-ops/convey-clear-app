@@ -152,6 +152,24 @@ export async function POST(request: Request) {
   }).select("id").single();
   if (mErr) return NextResponse.json({ message: mErr.message }, { status: 400 });
 
+  // Attach the new matter to its line on the transfer's service checklist (063),
+  // so the umbrella shows progress without anyone having to link the two by hand.
+  //
+  // Matching is by SERVICE CODE, and only onto a line that has no matter yet —
+  // a transfer can legitimately carry two matters of the same service (a rates
+  // clearance re-run after a failed one), and the first is the one the checklist
+  // is tracking. Best-effort on purpose: a checklist that has not been created,
+  // or a service with no line item, must not fail the matter creation.
+  if (transferId && serviceCode) {
+    await admin
+      .from("transfer_services")
+      .update({ matter_id: matter.id })
+      .eq("transfer_id", transferId)
+      .eq("service_code", serviceCode.toUpperCase())
+      .is("parent_id", null)
+      .is("matter_id", null);
+  }
+
   // A COO matter is a two-sided transaction: it always has a seller (current
   // owner) and a buyer (new owner), each with their own identity documents and
   // their own document slots keyed on (matter, party, type).

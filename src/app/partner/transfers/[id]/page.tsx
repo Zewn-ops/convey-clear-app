@@ -26,6 +26,11 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import {
+  serviceProgress,
+  LINKED_MATTER_SELECT,
+  type LinkedMatterShape,
+} from "@/lib/transfer-service-progress";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -106,7 +111,8 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   // The umbrella checklist (063). Same RLS route as the parties above.
   const { data: serviceItems } = await supabase
     .from("transfer_services")
-    .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
+    .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + LINKED_MATTER_SELECT)
     .eq("transfer_id", id)
     .order("position", { ascending: true });
 
@@ -180,6 +186,16 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     .order("created_at", { ascending: false })
     .limit(50);
   const feed = (feedData as unknown as TransferActivity[] | null) ?? [];
+
+  // Progress is the linked matter's, derived here so the pipeline definitions
+  // stay out of the client bundle.
+  const serviceRows: ServiceRow[] = (
+    (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
+  ).map((r) => ({
+    ...r,
+    progress: serviceProgress(r.status, r.matters ?? null),
+    matterTitle: r.matters?.title ?? null,
+  }));
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -264,7 +280,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         </div>
         <TransferServices
           transferId={id}
-          rows={(serviceItems as ServiceRow[] | null) ?? []}
+          rows={serviceRows}
           matterHrefBase="/partner/matters"
         />
       </Card>

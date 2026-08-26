@@ -8,7 +8,19 @@ import { ArrowLeft } from "lucide-react";
 
 export const metadata = { title: "New Matter — ConveyClear Admin" };
 
-export default async function NewMatterPage() {
+export default async function NewMatterPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  // Arriving from a transfer's service checklist: "open this as a matter" knows
+  // both the transaction and which of the six services it means.
+  const sp = (k: string) => {
+    const v = searchParams?.[k];
+    return Array.isArray(v) ? v[0] : v;
+  };
+  const fromTransfer = sp("transfer");
+  const fromService = sp("service");
   const session = await getSessionProfile();
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
@@ -74,6 +86,8 @@ export default async function NewMatterPage() {
         services={(services as { id: string; code: string; name: string }[] | null) ?? []}
         clients={(clients as { id: string; full_name: string | null; business_name: string | null }[] | null) ?? []}
         transferOptions={transfers}
+        initialServiceCode={fromService}
+        transfer={fromTransfer ? transfers.find((t) => t.id === fromTransfer) : undefined}
       />
     </div>
   );
