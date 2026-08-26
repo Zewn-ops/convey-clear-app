@@ -15,6 +15,7 @@ import {
   type MatterStatus,
 } from "@/types";
 import { ArrowLeft, FileText, Briefcase } from "lucide-react";
+import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 
 export const metadata = { title: "Transfer — ConveyClear" };
 export const dynamic = "force-dynamic";
@@ -97,6 +98,17 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     .order("created_at", { ascending: false });
   const matters = (matterRows as MatterRow[] | null) ?? [];
 
+  // The umbrella checklist (063), read-only. Reaches the client through
+  // client_can_view_transfer() — the party-based function 062 added so that
+  // letting a client see their transaction does not widen anything else. It
+  // carries no other side's identity and no documents, only what work this
+  // transaction needs.
+  const { data: serviceItems } = await supabase
+    .from("transfer_services")
+    .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
+    .eq("transfer_id", id)
+    .order("position", { ascending: true });
+
   // Shared documents only. 058's party policy returns rows with
   // visibility='parties'; an 'internal' one is never returned, which is what
   // keeps the buyer blind to the seller's FICA.
@@ -149,6 +161,23 @@ export default async function ClientTransferDetail({ params }: { params: Promise
           </div>
         </dl>
       </Card>
+
+      {/* The umbrella (063), read-only. Meeting §110 wants the transfer to be the
+          primary view for clients too, and §112 is explicit that both the
+          attorney and the client should be able to track each component. This is
+          the honest answer to "what still has to happen on my house". */}
+      {(serviceItems?.length ?? 0) > 0 && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="px-5 py-4 border-b border-line">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">What this transfer needs</p>
+          </div>
+          <TransferServices
+            transferId={id}
+            rows={(serviceItems as ServiceRow[] | null) ?? []}
+            matterHrefBase="/dashboard/matters"
+          />
+        </Card>
+      )}
 
       <Card className="space-y-3">
         <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Your matters in this transfer</p>

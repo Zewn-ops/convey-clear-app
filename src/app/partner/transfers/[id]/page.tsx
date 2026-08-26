@@ -25,6 +25,7 @@ import {
   type TransferDocument,
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
+import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -101,6 +102,13 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     .select(TRANSFER_PARTY_SELECT)
     .eq("transfer_id", id)
     .order("role", { ascending: true });
+
+  // The umbrella checklist (063). Same RLS route as the parties above.
+  const { data: serviceItems } = await supabase
+    .from("transfer_services")
+    .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
+    .eq("transfer_id", id)
+    .order("position", { ascending: true });
 
   // Partners have no /admin/clients route, so a party never links out here —
   // the contact card in place IS the answer rather than a step toward one.
@@ -242,6 +250,22 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
             { label: "Opened", value: formatDate(transfer.created_at) },
             { label: "Last updated", value: formatDate(transfer.updated_at) },
           ]}
+        />
+      </Card>
+
+      {/* The umbrella (063), READ-ONLY here. Meeting §110 makes the transfer the
+          primary view for attorneys, so the firm sees the plan for the
+          transaction — but §122 has the markers set by ConveyClear, because they
+          decide what work we do. A firm marking its own clearance "already done"
+          would be telling us what to skip. Hence canManage is not passed. */}
+      <Card padding="none" className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-line">
+          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+        </div>
+        <TransferServices
+          transferId={id}
+          rows={(serviceItems as ServiceRow[] | null) ?? []}
+          matterHrefBase="/partner/matters"
         />
       </Card>
 

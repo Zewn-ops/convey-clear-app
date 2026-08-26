@@ -31,6 +31,7 @@ import TransferDocuments from "@/components/transfers/TransferDocuments";
 import PullVaultDoc from "@/components/transfers/PullVaultDoc";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
+import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
@@ -106,7 +107,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
 
   // Matters under this transfer + the pool of matters free to attach + what the
   // "create a matter in here" form needs (services, clients).
-  const [{ data: linkedData }, { data: freeData }, { data: servicesData }, { data: clientsData }] = await Promise.all([
+  const [
+    { data: linkedData },
+    { data: freeData },
+    { data: servicesData },
+    { data: clientsData },
+    { data: serviceItems },
+  ] = await Promise.all([
     supabase
       .from("matters")
       .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, services(code, name)")
@@ -124,6 +131,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       .select("id, full_name, business_name")
       .order("created_at", { ascending: false })
       .limit(200),
+    // The umbrella checklist (063). Both levels in one read — the tree is small
+    // and bounded, so the component splits it rather than paying two queries.
+    supabase
+      .from("transfer_services")
+      .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
+      .eq("transfer_id", id)
+      .order("position", { ascending: true }),
   ]);
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
@@ -361,6 +375,24 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             { label: "Last updated", value: formatDate(transfer.updated_at) },
             { label: "Notes", value: transfer.notes, wide: true },
           ]}
+        />
+      </Card>
+
+      {/* The umbrella (063). Sits ABOVE the matters table on purpose: this is
+          the plan for the transaction — which of the six services this property
+          needs — and the table below is the work that has actually been opened
+          against it. Plan first, then progress. */}
+      <Card accent="service" padding="none">
+        <div className="px-5 py-4 border-b border-line">
+          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+          <p className="mt-1 text-xs text-ink-3">
+            Meeting 2026-08-24: a transfer is an umbrella over six services, each its own matter.
+          </p>
+        </div>
+        <TransferServices
+          transferId={id}
+          rows={(serviceItems as ServiceRow[] | null) ?? []}
+          canManage
         />
       </Card>
 
