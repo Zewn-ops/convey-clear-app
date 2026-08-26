@@ -32,6 +32,7 @@ import PullVaultDoc from "@/components/transfers/PullVaultDoc";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import RequestHandover, { type HandoverRequest } from "@/components/transfers/RequestHandover";
 import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
@@ -113,6 +114,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     { data: servicesData },
     { data: clientsData },
     { data: serviceItems },
+    { data: originRequest },
   ] = await Promise.all([
     supabase
       .from("matters")
@@ -138,6 +140,16 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position")
       .eq("transfer_id", id)
       .order("position", { ascending: true }),
+    // The request this transfer was created from, if any. Approving sets
+    // transfer_id, so the attorney's typed seller/buyer details survive — they
+    // were simply never shown anywhere after approval (065).
+    supabase
+      .from("transfer_requests")
+      .select(
+        "id, suggested_reference, property_description, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, created_at, details_dismissed_at, firms(name)"
+      )
+      .eq("transfer_id", id)
+      .maybeSingle(),
   ]);
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
@@ -377,6 +389,11 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           ]}
         />
       </Card>
+
+      {/* The attorney's original request (065) — "a new container just below
+          parties that gives us that info ... and we have the option to dismiss it
+          once we have used those details to capture the parties". */}
+      {originRequest && <RequestHandover request={originRequest as unknown as HandoverRequest} />}
 
       {/* The umbrella (063). Sits ABOVE the matters table on purpose: this is
           the plan for the transaction — which of the six services this property
