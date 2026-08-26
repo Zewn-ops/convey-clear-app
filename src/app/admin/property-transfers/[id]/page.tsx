@@ -28,7 +28,6 @@ import {
   type TransferDocument,
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
-import PullVaultDoc from "@/components/transfers/PullVaultDoc";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
@@ -287,6 +286,11 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       documentType: v.document_type,
       ownerName:
         v.clients?.business_name?.trim() || v.clients?.full_name?.trim() || "Unnamed client",
+      // Group by the role they play in THIS transaction, not just their name:
+      // "Thabo Molefe · seller" is the thing staff are looking for when they are
+      // deciding whether a document belongs on the transfer.
+      ownerRole:
+        partyList.find((pt) => pt.clientId === v.client_id)?.role ?? null,
     }));
 
   // The property this transfer is about (056). Fetched separately from the
@@ -525,12 +529,8 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         docs={transferDocsWithUrls}
         canManage
         canDelete={isAdminRole(session.profile?.role)}
+        vaultOptions={vaultOptions}
       />
-
-      {/* Staff-only vault pull (054). Sits under the documents card because it
-          produces one — the vault is otherwise unlinked from transfers by the
-          Meeting 2 decision, and this is the only bridge across. */}
-      <PullVaultDoc transferId={id} options={vaultOptions} />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}
       <TransferFeed transferId={id} activities={feed} canPost />

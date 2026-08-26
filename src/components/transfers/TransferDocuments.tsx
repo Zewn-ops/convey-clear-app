@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
-import { UploadCloud, FileText, FilePlus2, CheckCircle2, RotateCcw, Trash2, Files, Pencil, Check, X } from "lucide-react";
+import { UploadCloud, FileText, FilePlus2, CheckCircle2, RotateCcw, Trash2, Files, Pencil, Check, X, FolderInput } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { docLabel } from "@/lib/prc-docs";
 import { formatDate } from "@/lib/utils";
@@ -25,10 +25,33 @@ const NAMED_DOC_TYPES = [
   "proof_of_payment_figures",
   "coc_electrical",
 ];
-/** `other` is the open-ended catch-all — uploadable, but never part of the count. */
-const TRANSFER_DOC_TYPES = [...NAMED_DOC_TYPES, "other"];
+/**
+ * What the bar at the bottom may upload.
+ *
+ * Zewn, 2026-08-26: "since we have the big buttons for the 5 main docs, the bar
+ * underneath should just be for additional/supporting documents."
+ *
+ * The five named documents deliberately do NOT appear here any more. Each has
+ * its own tile above, and offering the same five again in a dropdown made the
+ * tiles look optional while inviting the commonest mistake there is — uploading
+ * the clearance figures as "other" and wondering why the counter still says 4 of
+ * 5. One route in per document.
+ *
+ * `seller_document` / `buyer_document` are for uploading a party's paperwork
+ * straight onto the transfer when it is not coming from their FICA vault.
+ * `other` is kept as the catch-all AND because rows already carry it.
+ */
+const SUPPORTING_DOC_TYPES = ["seller_document", "buyer_document", "other"];
 
 type Doc = TransferDocument & { url?: string; usedOn?: number };
+
+export interface VaultDocOption {
+  id: string;
+  fileName: string | null;
+  documentType: string | null;
+  ownerName: string;
+  ownerRole?: string | null;
+}
 
 export default function TransferDocuments({
   transferId,
@@ -36,9 +59,19 @@ export default function TransferDocuments({
   canManage,
   canUpload,
   canDelete = false,
+  vaultOptions = [],
 }: {
   transferId: string;
   docs: Doc[];
+  /**
+   * The parties' FICA vault documents, staff-only. Rendered INSIDE this card
+   * rather than as a separate one below it — Zewn, 2026-08-26: "make sure there
+   * is an easy way for us to link the fica vault docs from buyer/seller when on
+   * the prop trf page. needs to be seamless". A picker sitting in its own card
+   * under the documents is a different job you have to go and find; grouped
+   * under the documents it belongs to, it is one click where you already are.
+   */
+  vaultOptions?: VaultDocOption[];
   /**
    * Staff. Approving, sharing, disapproving and archiving — everything that
    * decides what a document MEANS or who sees it.
@@ -55,7 +88,30 @@ export default function TransferDocuments({
   const mayUpload = canUpload ?? canManage;
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
-  const [type, setType] = useState(TRANSFER_DOC_TYPES[0]);
+  const [type, setType] = useState(SUPPORTING_DOC_TYPES[0]);
+  const [vaultBusy, setVaultBusy] = useState<string | null>(null);
+
+  async function pullFromVault(clientDocumentId: string) {
+    setVaultBusy(clientDocumentId);
+    try {
+      const r = await fetch("/api/transfer-documents/from-vault", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transfer_id: transferId, client_document_id: clientDocumentId }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        toast.error(j.message ?? "Could not add that document.");
+        return;
+      }
+      toast.success(j.deduped ? "Already on this transfer." : "Added from the vault.");
+      router.refresh();
+    } catch {
+      toast.error("Could not add that document.");
+    } finally {
+      setVaultBusy(null);
+    }
+  }
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -370,6 +426,49 @@ export default function TransferDocuments({
         <p className="mb-4 text-sm text-ink-3">No transfer documents yet.</p>
       )}
 
+      {/* Pull from a party's FICA vault. Staff only — Meeting 2 (2026-08-06)
+          parked the automatic vault→transfer feed because it would put one
+          party's identity documents in front of the other side. This is the
+          deliberate manual replacement: one document, one decision. */}
+      {canManage && vaultOptions.length > 0 && (
+        <div className="mb-4 rounded-lg border border-line p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+            From a party&rsquo;s FICA vault
+          </p>
+          <p className="mt-1 text-xs text-ink-3">
+            Adds a copy to this transfer. It becomes visible to whoever the transfer is shared with, so
+            add only what this transaction needs.
+          </p>
+          <div className="mt-3 space-y-3">
+            {Object.entries(
+              vaultOptions.reduce<Record<string, VaultDocOption[]>>((acc, o) => {
+                const key = o.ownerRole ? `${o.ownerName} · ${o.ownerRole}` : o.ownerName;
+                (acc[key] ??= []).push(o);
+                return acc;
+              }, {})
+            ).map(([owner, items]) => (
+              <div key={owner}>
+                <p className="text-xs font-medium text-ink-2">{owner}</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {items.map((o) => (
+                    <button
+                      key={o.id}
+                      disabled={vaultBusy === o.id}
+                      onClick={() => pullFromVault(o.id)}
+                      title={o.fileName ?? undefined}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs text-ink-2 transition-colors hover:border-action hover:text-action disabled:opacity-50"
+                    >
+                      <FolderInput className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{docLabel(o.documentType ?? "other")}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {mayUpload && (
         <div
           onDragOver={(e) => {
@@ -394,7 +493,7 @@ export default function TransferDocuments({
               onChange={(e) => setType(e.target.value)}
               className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
             >
-              {TRANSFER_DOC_TYPES.map((t) => (
+              {SUPPORTING_DOC_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {docLabel(t)}
                 </option>
