@@ -114,6 +114,21 @@ export default async function AdminPage() {
           </Link>
         </div>
 
+        {/* Matters have not gone away — they are one service inside a transfer, and
+            plenty of them (standalone clearances, disputes) never sit under one at
+            all. Zewn, 2026-08-26: put this under the heading rather than at the
+            foot, where it read as a footnote to the page instead of an
+            alternative way into the same work. */}
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-3">
+          <span>Working a single service?</span>
+          <Link href="/admin/matters?queue=ours" className="text-action hover:underline">
+            Matters needing us
+          </Link>
+          <Link href="/admin/matters?queue=council" className="text-action hover:underline">
+            With the council
+          </Link>
+        </div>
+
         {stale.length > 0 ? (
           <ul className="space-y-4">
             {stale.map((t) => (
@@ -139,19 +154,6 @@ export default async function AdminPage() {
         )}
       </div>
 
-      {/* Matters have not gone away — they are one service inside a transfer, and
-          plenty of them (standalone clearances, disputes) never sit under one at
-          all. This keeps that queue one click from the front page rather than
-          leaving staff to find it in the nav. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-3">
-        <span>Working a single service?</span>
-        <Link href="/admin/matters?queue=ours" className="text-action hover:underline">
-          Matters needing us
-        </Link>
-        <Link href="/admin/matters?queue=council" className="text-action hover:underline">
-          With the council
-        </Link>
-      </div>
     </div>
   );
 }

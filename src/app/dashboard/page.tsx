@@ -5,14 +5,26 @@ import { createClient } from "@/lib/supabase/server";
 import { getEntityContext } from "@/lib/entity";
 import { entityKind } from "@/lib/entity-display";
 import { getSessionProfile } from "@/lib/auth";
-import { formatDate } from "@/lib/utils";
+import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   clientDisplayName,
+  TRANSFER_STATUS_LABELS,
   type Matter,
   type MatterDocument,
+  type TransferStatus,
 } from "@/types";
 import MatterCard, { type MatterCardRow } from "@/components/matters/MatterCard";
-import { Briefcase, Clock, CheckCircle, FolderOpen, FileText, PlusCircle } from "lucide-react";
+import Badge from "@/components/ui/Badge";
+
+/** The 062 view: a client's own transfer, column-limited by design. */
+interface ClientTransferRow {
+  id: string;
+  reference: string;
+  property_description: string | null;
+  municipality: string | null;
+  status: string;
+}
+import { Briefcase, Clock, CheckCircle, FolderOpen, FileText, PlusCircle, Home } from "lucide-react";
 
 export const metadata = { title: "Dashboard — ConveyClear" };
 
@@ -43,6 +55,16 @@ export default async function DashboardPage() {
   const { data: mattersData } = await mattersQuery;
   const matters = (mattersData as Matter[] | null) ?? [];
 
+  // The client's property transfers. Reaches them through client_can_view_transfer()
+  // (062), the party-based function, so this is their own transaction and carries
+  // no other party's detail.
+  const { data: transferData } = await supabase
+    .from("client_transfers")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(5);
+  const transfers = (transferData as ClientTransferRow[] | null) ?? [];
+
   const { data: documentsData } = await supabase
     .from("documents")
     .select("id, matter_id, document_type, file_name, created_at")
@@ -60,13 +82,18 @@ export default async function DashboardPage() {
   // belong to Brookfield Props, and Thabo may be one of several people acting
   // for it. A personal entity is still the person, so the greeting stays there.
   const onBusinessEntity = Boolean(active && active.entityType !== "natural_person");
-  const heading = onBusinessEntity ? `${active!.name} — Matters` : `Welcome back, ${firstName}`;
+  const heading = onBusinessEntity ? `${active!.name}` : `Welcome back, ${firstName}`;
   const subheading = onBusinessEntity
-    ? `${entityKind(active!)} entity · here's a summary of its matters.`
-    : "Here's a summary of your matters.";
+    ? `${entityKind(active!)} entity · here's where its property transfers stand.`
+    : "Here's where your property transfers stand.";
 
+  // Zewn, 2026-08-26: clients "dont see matters but only see property transfers".
+  // A matter is one service inside a transaction; the transaction is the thing a
+  // seller or buyer recognises as "my house". Matters still power the Active and
+  // Completed counts, because those are the honest measure of progress — they are
+  // just no longer the thing being counted first or linked to.
   const stats = [
-    { label: "Matters", value: matters.length, icon: Briefcase, tone: "text-action bg-action-fill/10" },
+    { label: "Transfers", value: transfers.length, icon: Home, tone: "text-action bg-action-fill/10" },
     { label: "Active", value: activeCount, icon: Clock, tone: "text-amber-600 bg-amber-100" },
     { label: "Completed", value: completedCount, icon: CheckCircle, tone: "text-green-600 bg-green-100" },
     { label: "Documents", value: documents.length, icon: FolderOpen, tone: "text-action bg-action-fill/10" },
@@ -105,25 +132,42 @@ export default async function DashboardPage() {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-ink">Recent Matters</h2>
-          <Link href="/dashboard/matters" className="text-sm text-action hover:underline">
+          <h2 className="font-semibold text-ink">Your property transfers</h2>
+          <Link href="/dashboard/transfers" className="text-sm text-action hover:underline">
             View all
           </Link>
         </div>
-        {matters.length > 0 ? (
-          <ol className="space-y-4">
-            {matters.map((m) => (
-              <MatterCard
-                key={m.id}
-                matter={m as MatterCardRow}
-                href={`/dashboard/matters/${m.id}`}
-              />
+        {transfers.length > 0 ? (
+          <ul className="space-y-3">
+            {transfers.map((t) => (
+              <li key={t.id}>
+                <Link href={`/dashboard/transfers/${t.id}`} className="block">
+                  <Card className="transition-shadow duration-200 ease-out hover:shadow-lg">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[17px] font-semibold tracking-[-0.01em] text-ink">{t.reference}</p>
+                        <p className="mt-0.5 text-[13px] text-ink-3">
+                          {t.property_description || "No property description"}
+                          {t.municipality ? ` · ${municipalityLabel(t.municipality)}` : ""}
+                        </p>
+                      </div>
+                      <Badge
+                        label={TRANSFER_STATUS_LABELS[t.status as TransferStatus] ?? t.status}
+                        variant={t.status === "registered" ? "success" : "info"}
+                      />
+                    </div>
+                  </Card>
+                </Link>
+              </li>
             ))}
-          </ol>
+          </ul>
         ) : (
           <Card className="text-center py-10">
-            <Briefcase className="h-10 w-10 text-ink-3 mx-auto mb-3" />
-            <p className="text-ink-3 text-sm">No matters yet</p>
+            <Home className="h-10 w-10 text-ink-3 mx-auto mb-3" />
+            <p className="text-ink-3 text-sm">No property transfers yet</p>
+            <p className="text-ink-3 text-xs mt-1">
+              One appears here once ConveyClear links you to a transaction as the buyer or the seller.
+            </p>
             {isClient && (
               <Link
                 href="/dashboard/request"

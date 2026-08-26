@@ -23,7 +23,10 @@ import type { Membership } from "@/lib/entity";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/matters", label: "My Matters", icon: Briefcase, exact: false },
+  // Hidden 2026-08-26 (Zewn): "the same principal should apply that they dont see
+  // matters but only see property transfers". Route kept — RLS still scopes it,
+  // so old links keep working and restoring the tab is one line.
+  // { href: "/dashboard/matters", label: "My Matters", icon: Briefcase, exact: false },
   // 2026-08-11 §96 — the transaction sits above the matters, so it reads above
   // them in the nav too.
   { href: "/dashboard/transfers", label: "My transfers", icon: Home, exact: false },

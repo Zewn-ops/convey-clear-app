@@ -28,7 +28,15 @@ type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean 
 
 const navItems: NavItem[] = [
   { href: "/partner", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/partner/matters", label: "Matters", icon: Briefcase },
+  // Matters hidden 2026-08-26 (Zewn): "they shouldnt see any of the matters. We
+  // will rather have the progress bars and related stuff show in the services
+  // umbrella we created for the property transfers. Hide the matters tab from
+  // partners for now. Will bring it back later if needed."
+  //
+  // The ROUTE is deliberately left in place. RLS still scopes it, so a stale
+  // bookmark keeps working rather than 404-ing, and bringing the tab back is a
+  // one-line revert instead of a rebuild.
+  // { href: "/partner/matters", label: "Matters", icon: Briefcase },
   { href: "/partner/transfers", label: "Property Transfers", icon: Building2 },
   { href: "/partner/clients", label: "Clients", icon: Users },
   { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },

@@ -32,6 +32,9 @@ export const SERVICE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+/** The default line items, in municipal order — mirrors instantiate_transfer_services (063). */
+export const DEFAULT_SERVICE_CODES = ["EBP", "CERT", "PRC", "MAD", "COO", "REFUND", "OTHER"] as const;
+
 /** §114 — these must be complete before Change of Ownership proceeds. */
 const COO_PREREQUISITES = ["EBP", "CERT", "PRC", "MAD"] as const;
 
@@ -44,15 +47,23 @@ const SUGGESTED: Record<string, string[]> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
+  // 064. "Not specified" is the starting state: before the firm or the client
+  // has told us, the portal must not assert that a service is needed.
+  not_specified: "Not specified",
   needed: "Needs to be done",
   already_done: "Already done",
   not_applicable: "Not applicable",
 };
 
+// Zewn, 2026-08-26: needs-to-be-done blue, already-done green, not-applicable
+// amber. The tones are named by MEANING rather than colour, so "action" is the
+// blue one and "waiting" the amber — see components/ui/StatusPill.tsx, where the
+// fills are contrast-measured against white text.
 const STATUS_TONE: Record<string, StatusTone> = {
-  needed: "required",
+  not_specified: "neutral",
+  needed: "action",
   already_done: "ok",
-  not_applicable: "neutral",
+  not_applicable: "waiting",
 };
 
 export interface ServiceRow {
@@ -143,8 +154,32 @@ export default function TransferServices({
     }
   }
 
-  // Nothing instantiated yet. Offer it rather than auto-creating on render —
-  // a GET that writes is a trap, and not every transfer wants the full list.
+  // Nothing instantiated yet.
+  //
+  // For STAFF: offer to create it, rather than auto-creating on render — a GET
+  // that writes is a trap, and not every transfer wants the full list.
+  //
+  // For everyone else (Zewn, 2026-08-26): show the seven services as
+  // "Not specified" instead. A firm cannot create the list, so telling them one
+  // does not exist is a dead end — it explains an absence they have no way to
+  // resolve. Showing the standard shape answers the question they actually have,
+  // which is "what does this transaction involve", and claims nothing about any
+  // of them until ConveyClear sets a marker.
+  if (!top.length && !canManage) {
+    return (
+      <ul className="divide-y divide-line">
+        {DEFAULT_SERVICE_CODES.map((code) => (
+          <li key={code} className="flex items-center gap-3 px-5 py-3.5">
+            <span className="flex-1 truncate text-[15px] font-medium text-ink">
+              {SERVICE_LABELS[code]}
+            </span>
+            <StatusPill tone="neutral">{STATUS_LABEL.not_specified}</StatusPill>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   if (!top.length) {
     return (
       <div className="px-5 py-10 text-center">

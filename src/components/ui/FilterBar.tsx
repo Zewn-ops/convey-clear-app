@@ -125,8 +125,13 @@ export default function FilterBar({
         <button
           type="button"
           onClick={clearAll}
+          // Zewn, 2026-08-26: "make the clear button in blue text so its
+          // noticeable". It was grey — the same weight as the inactive facet
+          // labels around it, so the one control that undoes a dead-end filter
+          // read as decoration. It only renders when something IS filtered, so
+          // giving it the action colour costs nothing in the resting state.
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-3 transition-colors hover:text-ink",
+            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-action transition-colors hover:underline",
             vertical && "self-start"
           )}
         >

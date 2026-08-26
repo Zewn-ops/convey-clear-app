@@ -5,7 +5,7 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
-import { isStaffRole, clientDisplayName, type Client } from "@/types";
+import { isAdminRole, isStaffRole, clientDisplayName, type Client } from "@/types";
 import ClientRow from "@/components/clients/ClientRow";
 import NewClientButton from "@/components/clients/NewClientButton";
 import FilterBar from "@/components/ui/FilterBar";
@@ -90,7 +90,11 @@ export default async function AdminClientsPage({
               it would report "25 registered clients" forever once there were more. */}
           <p className="text-sm text-ink-3 mt-1">{total} registered client{total === 1 ? "" : "s"}</p>
         </div>
-        <NewClientButton />
+        {/* Admin-only, 2026-08-26 (Zewn: staff could still see this). Same rule
+            as the entity-members controls: creating a client is an admin action,
+            so staff should not be shown a button that was only going to be
+            refused. Hiding it is the UI half — the API gate is the real one. */}
+        {isAdminRole(session.profile?.role) && <NewClientButton />}
       </div>
 
       {/* Filters render on the right, in the space the table was not

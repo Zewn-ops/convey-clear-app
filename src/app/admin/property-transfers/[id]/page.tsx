@@ -385,9 +385,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       <Card accent="service" padding="none">
         <div className="px-5 py-4 border-b border-line">
           <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
-          <p className="mt-1 text-xs text-ink-3">
-            Meeting 2026-08-24: a transfer is an umbrella over six services, each its own matter.
-          </p>
         </div>
         <TransferServices
           transferId={id}
