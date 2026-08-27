@@ -37,6 +37,11 @@ export interface HandoverRequest {
   created_at: string;
   details_dismissed_at: string | null;
   firms?: { name: string | null } | null;
+  // The member who lodged the request (§92). The seller and buyer below are
+  // people we have to chase; this is the person who can answer a question about
+  // them, and until now the card described what the firm typed without saying
+  // who at the firm typed it.
+  requester?: { full_name: string | null; email: string | null; phone: string | null } | null;
 }
 
 function Party({
@@ -150,6 +155,21 @@ export default function RequestHandover({ request }: { request: HandoverRequest 
           <Check className="h-3.5 w-3.5" /> Mark as used
         </button>
       </div>
+
+      {/* Above the seller and buyer, not beside them: they are parties to the
+          transaction and this is the person acting for the firm. It also answers
+          §56's "attorney information section" — reached from the request rather
+          than typed again. */}
+      {request.requester && (
+        <div className="border-b border-line bg-raised px-5 py-4">
+          <Party
+            label="Attorney handling this"
+            name={request.requester.full_name}
+            email={request.requester.email}
+            cell={request.requester.phone}
+          />
+        </div>
+      )}
 
       <div className="grid gap-5 px-5 py-4 sm:grid-cols-2">
         <Party

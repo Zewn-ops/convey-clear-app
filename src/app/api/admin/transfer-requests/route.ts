@@ -4,6 +4,7 @@ import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { type UserRole } from "@/types";
 import { notifyUsers } from "@/lib/notify";
 import { requireStaff } from "@/lib/staff";
+import { logTransferActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -127,6 +128,49 @@ export async function POST(request: Request) {
       { message: `Transfer created but access could not be granted: ${grantError.message}` },
       { status: 500 }
     );
+  }
+
+  // §92 — the firm that asked IS the conveyancing attorney on this transfer, and
+  // the member who asked is the person handling it. Both facts are already in
+  // the request; until now neither reached the parties card, so every approved
+  // transfer opened with "Not linked" against a role we could already name, and
+  // staff retyped what the request had told us.
+  //
+  // WHY HERE AND NOT ON THE PARTIES CARD
+  //   `business_partner_id` is written above, but `026`'s column and `050`'s
+  //   party rows are two different records of the same fact (see
+  //   transfer-party-sync). The column alone leaves the card empty. Approval is
+  //   the moment both are knowable, so both get written.
+  //
+  // `contact_user_id` (059) names the individual WITHOUT narrowing access — the
+  // grant above is firm-wide and stays that way. Naming the requester is a
+  // statement about who is working the file, not about who may open it.
+  //
+  // Best-effort: a transfer that exists with a granted firm is the outcome that
+  // was approved. Failing the request here would leave staff re-approving an
+  // already-created transfer, which is worse than a party they can add by hand.
+  const { error: partyError } = await admin.from("transfer_parties").insert({
+    transfer_id: transfer.id,
+    role: "conveyancing_attorney",
+    firm_id: req.firm_id,
+    contact_user_id: req.requested_by,
+  });
+  if (partyError) {
+    console.error(
+      `[transfer-requests] transfer ${transfer.id} approved but the conveyancing-attorney party was not created: ${partyError.message}`
+    );
+  } else {
+    // 'system', not a party-specific type: 035's CHECK on transfer_activities
+    // admits post / system / matter_linked / matter_unlinked / document_upload /
+    // status_change, and this is a system-generated event. Inventing a type here
+    // would need a migration to widen a vocabulary that already says this.
+    await logTransferActivity(admin, {
+      transferId: transfer.id,
+      activityType: "system",
+      body: "Conveyancing attorney set to the requesting firm, from their transfer request.",
+      authorId: auth.callerId,
+      authorLabel: "ConveyClear",
+    });
   }
 
   const { error: updateError } = await admin

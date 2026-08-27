@@ -150,8 +150,11 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     // were simply never shown anywhere after approval (065).
     supabase
       .from("transfer_requests")
+      // The requester relation is named explicitly: transfer_requests has TWO
+      // FKs to users (requested_by and reviewed_by), so an unqualified
+      // users(...) is ambiguous and PostgREST refuses it.
       .select(
-        "id, suggested_reference, property_description, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, created_at, details_dismissed_at, firms(name)"
+        "id, suggested_reference, property_description, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, created_at, details_dismissed_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email, phone)"
       )
       .eq("transfer_id", id)
       .maybeSingle(),

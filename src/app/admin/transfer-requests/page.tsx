@@ -31,6 +31,17 @@ interface RequestRow {
   transfer_id: string | null;
   created_at: string;
   firms?: { name: string } | null;
+  // WHO at the firm asked (§92). Stored since 055 and never shown — so staff
+  // could see "Sterling & Hayes" but not which of their conveyancers to reply
+  // to, which is the one thing you want before approving or declining.
+  requester?: { full_name: string | null; email: string | null } | null;
+}
+
+/** The requester as a person: their name, falling back to the address. */
+function requesterLabel(r: RequestRow): string | null {
+  const u = r.requester;
+  if (!u) return null;
+  return u.full_name?.trim() || u.email || null;
 }
 
 function Party({ label, name, email, cell }: { label: string; name: string | null; email: string | null; cell: string | null }) {
@@ -60,8 +71,11 @@ export default async function TransferRequestsPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("transfer_requests")
+    // The requester relation is named explicitly: transfer_requests has TWO FKs
+    // to users (requested_by and reviewed_by), so an unqualified users(...) is
+    // ambiguous and PostgREST refuses it.
     .select(
-      "id, status, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, decline_reason, transfer_id, created_at, firms(name)"
+      "id, status, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, decline_reason, transfer_id, created_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email)"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -110,6 +124,21 @@ export default async function TransferRequestsPage() {
                     {r.firms?.name ?? "Unknown firm"} · {municipalityLabel(r.municipality)} ·{" "}
                     {formatDateTime(r.created_at)}
                   </p>
+                  {/* The person, on its own line and mailto-linked. Approving is
+                      a reply to somebody: a decline reason that reaches "the
+                      firm" reaches nobody in particular. */}
+                  {requesterLabel(r) && (
+                    <p className="text-xs text-ink-3 mt-0.5">
+                      Requested by{" "}
+                      {r.requester?.email ? (
+                        <a href={`mailto:${r.requester.email}`} className="text-action hover:underline">
+                          {requesterLabel(r)}
+                        </a>
+                      ) : (
+                        <span className="text-ink-2">{requesterLabel(r)}</span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <Badge label="Pending" variant="warning" />
               </div>
@@ -143,8 +172,14 @@ export default async function TransferRequestsPage() {
                 <div className="min-w-0">
                   <p className="text-sm text-ink truncate">{r.property_description}</p>
                   <p className="text-xs text-ink-3">
-                    {r.firms?.name ?? "Unknown firm"} · {formatDateTime(r.created_at)}
-                    {r.decline_reason ? ` · ${r.decline_reason}` : ""}
+                    {[
+                      r.firms?.name ?? "Unknown firm",
+                      requesterLabel(r),
+                      formatDateTime(r.created_at),
+                      r.decline_reason,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
