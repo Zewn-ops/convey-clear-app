@@ -31,8 +31,10 @@ import TransferDocuments from "@/components/transfers/TransferDocuments";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import {
   serviceProgress,
+  transferProgress,
   LINKED_MATTER_SELECT,
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
@@ -340,6 +342,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     progress: serviceProgress(r.status, r.matters ?? null, "staff", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
+  const transferRollup = transferProgress(serviceRows);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -424,7 +427,14 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           against it. Plan first, then progress. */}
       <Card accent="service" padding="none">
         <div className="px-5 py-4 border-b border-line">
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+            {transferRollup.total > 0 && (
+              <div className="w-full sm:w-56">
+                <TransferProgressBar progress={transferRollup} />
+              </div>
+            )}
+          </div>
         </div>
         <TransferServices
           transferId={id}

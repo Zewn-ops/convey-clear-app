@@ -26,8 +26,10 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import {
   serviceProgress,
+  transferProgress,
   LINKED_MATTER_SELECT,
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
@@ -202,6 +204,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     progress: serviceProgress(r.status, r.matters ?? null, "client", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
+  const transferRollup = transferProgress(serviceRows);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -282,7 +285,16 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           would be telling us what to skip. Hence canManage is not passed. */}
       <Card padding="none" className="overflow-hidden">
         <div className="px-5 py-4 border-b border-line">
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+            {/* The roll-up sits with the checklist it is derived from, so the
+                number and the lines that produce it are read together. */}
+            {transferRollup.total > 0 && (
+              <div className="w-full sm:w-56">
+                <TransferProgressBar progress={transferRollup} />
+              </div>
+            )}
+          </div>
         </div>
         <TransferServices
           transferId={id}

@@ -5,6 +5,12 @@ import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import MetaChip from "@/components/ui/MetaChip";
+import TransferProgressBar from "@/components/transfers/TransferProgressBar";
+import {
+  TRANSFER_PROGRESS_SELECT,
+  transferProgressById,
+  type TransferProgress,
+} from "@/lib/transfer-service-progress";
 import { Plus } from "lucide-react";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
@@ -119,18 +125,21 @@ export default async function AdminTransfersPage({
     periodFacet() as Facet,
   ];
 
-  // Matter counts per transfer. One query for the whole page rather than an
-  // embedded aggregate per row.
+  // Matter counts and settled-progress per transfer. Two queries for the whole
+  // page rather than embedded aggregates per row.
   const counts = new Map<string, number>();
+  let progressById = new Map<string, TransferProgress>();
   if (transfers.length) {
-    const { data: linked } = await supabase
-      .from("matters")
-      .select("transfer_id")
-      .in("transfer_id", transfers.map((t) => t.id));
+    const ids = transfers.map((t) => t.id);
+    const [{ data: linked }, { data: svcRows }] = await Promise.all([
+      supabase.from("matters").select("transfer_id").in("transfer_id", ids),
+      supabase.from("transfer_services").select(TRANSFER_PROGRESS_SELECT).in("transfer_id", ids),
+    ]);
     (linked ?? []).forEach((m) => {
       const tid = (m as { transfer_id: string | null }).transfer_id;
       if (tid) counts.set(tid, (counts.get(tid) ?? 0) + 1);
     });
+    progressById = transferProgressById(svcRows, ids);
   }
 
   return (
@@ -188,6 +197,12 @@ export default async function AdminTransfersPage({
                     <MetaChip label="Matters" value={counts.get(t.id) ?? 0} />
                     <MetaChip label="Opened" value={formatDate(t.created_at)} />
                   </div>
+
+                  {progressById.get(t.id) && (
+                    <div className="mt-3.5">
+                      <TransferProgressBar progress={progressById.get(t.id)!} />
+                    </div>
+                  )}
                 </Card>
               </Link>
             </li>

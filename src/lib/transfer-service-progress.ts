@@ -143,3 +143,157 @@ export function serviceProgress(
 /** The columns the transfer pages must select for the above to work. */
 export const LINKED_MATTER_SELECT =
   "matters(id, title, current_phase, status, municipality, service_subtype, services(code))";
+
+// ---------------------------------------------------------------------------
+// THE TRANSFER'S OWN PROGRESS — rolled up from its service lines.
+// ---------------------------------------------------------------------------
+
+/**
+ * Zewn, 2026-08-27: *"the property transfers should also have a progress bar
+ * ... and it should be linked to the services. a property transfer is only
+ * complete when each service is marked as done or not applicable."*
+ *
+ * 🔴 THE TRANSFER HAS NO PROGRESS OF ITS OWN, exactly as a service line has none
+ * of its own. This is the same rule one level up: a service line's progress is
+ * its matter's, and a transfer's progress is its service lines'. Giving the
+ * transfer a stored percentage would create a second answer to "how far along is
+ * this" that drifts from the checklist the moment anyone changes a marker.
+ *
+ * WHAT COUNTS AS RESOLVED — his words are "marked as done or not applicable":
+ *   · `not_applicable`  → resolved. Explicitly ruled out of this transaction.
+ *   · `already_done`    → resolved. Someone did it, not necessarily through us.
+ *   · `needed` + a matter that is won or archived → resolved. The work is done.
+ *   · `needed` otherwise → OUTSTANDING. Either no matter yet, or one still running.
+ *   · `not_specified`   → OUTSTANDING, and this is the load-bearing choice.
+ *
+ * ⚠️ WHY `not_specified` IS OUTSTANDING, AND WHAT IT COSTS
+ *   His word is "marked", and `not_specified` is the absence of a mark — nobody
+ *   has yet said whether this service is needed. A transfer with an open
+ *   question on it is not finished.
+ *
+ *   The cost is real and worth knowing before this ships: 063's
+ *   `instantiate_transfer_services` creates all seven lines as `not_specified`,
+ *   so a BRAND-NEW transfer reads 0 of 7 rather than an encouraging blank, and a
+ *   transfer only reaches 100% once staff have explicitly marked the irrelevant
+ *   services `not_applicable`. That may be exactly the forcing function wanted —
+ *   it makes "we never decided about the refund" visible instead of invisible —
+ *   but it is a deliberate choice and reversible in one line if it annoys.
+ *
+ * SUB-SERVICES ARE NOT COUNTED. Only top-level lines (`parent_id === null`) go
+ * into the denominator. A parent that happens to have four children would
+ * otherwise weigh five times as much as one that has none, which would make the
+ * bar a measure of how finely a transfer had been broken down rather than of how
+ * much of it is finished.
+ */
+export interface TransferProgress {
+  /** Service lines that are marked done, already done, or not applicable. */
+  resolved: number;
+  /** Top-level service lines in total. */
+  total: number;
+  /** 0–100, floored. 0 when there is nothing to measure. */
+  percent: number;
+  /** Every line resolved — and at least one line exists. */
+  complete: boolean;
+  /** Short human summary, e.g. "3 of 7 services settled". */
+  label: string;
+}
+
+/**
+ * The shape a service row needs for the roll-up.
+ *
+ * Two ways to say the work behind a `needed` line is finished, because the two
+ * kinds of caller have different budgets:
+ *   · detail pages already ran serviceProgress() per line — pass `progress`
+ *   · LIST pages render many transfers at once and must not run the pipeline
+ *     machinery per row — pass `matterStatus` straight from a light embed
+ * Both agree by construction: serviceProgress() derives `complete` from exactly
+ * the statuses MATTER_DONE lists.
+ */
+export interface TransferProgressRow {
+  parent_id: string | null;
+  status: string;
+  matter_id?: string | null;
+  progress?: ServiceProgress;
+  matterStatus?: string | null;
+}
+
+/** A matter in one of these states has nothing further to run. */
+const MATTER_DONE = new Set(["won", "archived"]);
+
+export function transferProgress(rows: TransferProgressRow[]): TransferProgress {
+  const top = rows.filter((r) => r.parent_id === null);
+  const total = top.length;
+
+  const resolved = top.filter((r) => {
+    if (r.status === "not_applicable" || r.status === "already_done") return true;
+    if (r.status !== "needed") return false;
+    // `needed` counts only once the work behind it is actually finished. The
+    // matter's own state is the authority — so a viewer who cannot see the
+    // matter never counts it as done on a guess.
+    return r.progress?.state === "complete" || MATTER_DONE.has(r.matterStatus ?? "");
+  }).length;
+
+  // No lines at all: a transfer created before 063 instantiated them. Report
+  // nothing rather than a triumphant 100%, which is what 0/0 would otherwise be.
+  if (total === 0) {
+    return { resolved: 0, total: 0, percent: 0, complete: false, label: "No services listed yet" };
+  }
+
+  return {
+    resolved,
+    total,
+    percent: Math.floor((resolved / total) * 100),
+    complete: resolved === total,
+    label:
+      resolved === total
+        ? "All services settled"
+        : `${resolved} of ${total} services settled`,
+  };
+}
+
+/**
+ * The select a LIST page needs to roll up progress for many transfers at once.
+ * `matters(status)` is the whole matter read — the list never needs a pipeline,
+ * only whether the work finished.
+ */
+export const TRANSFER_PROGRESS_SELECT = "transfer_id, parent_id, status, matter_id, matters(status)";
+
+interface ProgressSelectRow {
+  transfer_id: string;
+  parent_id: string | null;
+  status: string;
+  matter_id: string | null;
+  matters?: { status: string | null } | null;
+}
+
+/**
+ * Roll up one query's worth of service rows into progress per transfer.
+ *
+ * Takes the rows rather than the client, so the caller owns the query and its
+ * RLS context — and so a page that already has the rows does not fetch twice.
+ * Transfers with no service lines are simply absent from the map; the component
+ * renders nothing for them.
+ */
+export function transferProgressById(
+  rows: unknown,
+  transferIds: string[]
+): Map<string, TransferProgress> {
+  const byTransfer = new Map<string, TransferProgressRow[]>();
+  for (const raw of (rows as ProgressSelectRow[] | null) ?? []) {
+    const list = byTransfer.get(raw.transfer_id) ?? [];
+    list.push({
+      parent_id: raw.parent_id,
+      status: raw.status,
+      matter_id: raw.matter_id,
+      matterStatus: raw.matters?.status ?? null,
+    });
+    byTransfer.set(raw.transfer_id, list);
+  }
+
+  const out = new Map<string, TransferProgress>();
+  for (const id of transferIds) {
+    const rowsFor = byTransfer.get(id);
+    if (rowsFor?.length) out.set(id, transferProgress(rowsFor));
+  }
+  return out;
+}

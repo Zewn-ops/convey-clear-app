@@ -13,8 +13,10 @@ import {
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
+import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import {
   serviceProgress,
+  transferProgress,
   LINKED_MATTER_SELECT,
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
@@ -118,6 +120,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     progress: serviceProgress(r.status, r.matters ?? null, "client", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
+  const transferRollup = transferProgress(serviceRows);
 
   return (
     <div className="space-y-6">
@@ -168,7 +171,14 @@ export default async function ClientTransferDetail({ params }: { params: Promise
       {(serviceItems?.length ?? 0) > 0 && (
         <Card padding="none" className="overflow-hidden">
           <div className="px-5 py-4 border-b border-line">
-            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">What this transfer needs</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">What this transfer needs</p>
+              {transferRollup.total > 0 && (
+                <div className="w-full sm:w-56">
+                  <TransferProgressBar progress={transferRollup} />
+                </div>
+              )}
+            </div>
           </div>
           {/* No matter links for a client (Zewn, 2026-08-27: "matters should be
               unseen by clients"). This continues the 08-26 decision that hid the

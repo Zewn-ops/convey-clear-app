@@ -4,11 +4,18 @@ import MetaChip from "@/components/ui/MetaChip";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import { workdaysSince } from "@/lib/elapsed";
 import { TRANSFER_STATUS_LABELS, type PropertyTransfer, type TransferStatus } from "@/types";
+import TransferProgressBar from "@/components/transfers/TransferProgressBar";
+import type { TransferProgress } from "@/lib/transfer-service-progress";
 
 /**
  * The property transfer card. Same shape as MatterCard so a firm reads one
- * visual language across both objects, with no phase bar: a transfer has no
- * pipeline of its own, it is the container its matters hang off.
+ * visual language across both objects.
+ *
+ * It carries no PHASE bar, because a transfer has no pipeline of its own — it is
+ * the container its matters hang off. What it does carry, as of 2026-08-27, is a
+ * SETTLED bar rolled up from its service lines: not "how far through a pipeline"
+ * but "how much of this transaction has been decided and dealt with". Different
+ * question, honestly answerable at this level.
  */
 
 const STATUS_TONE: Record<string, StatusTone> = {
@@ -24,10 +31,17 @@ export default function TransferCard({
   transfer: t,
   href,
   matterCount = 0,
+  progress,
 }: {
   transfer: PropertyTransfer;
   href: string;
   matterCount?: number;
+  /**
+   * Rolled up from the transfer's service lines. Omitted where a caller has not
+   * fetched it — the bar then does not render at all, rather than drawing an
+   * empty one that would read as "nothing has happened".
+   */
+  progress?: TransferProgress;
 }) {
   const open = workdaysSince(t.created_at);
   // A registered transfer is finished, so its age is history rather than a
@@ -70,6 +84,14 @@ export default function TransferCard({
         )}
         {t.created_at && <MetaChip label="Opened" value={formatDate(t.created_at)} />}
       </div>
+
+      {/* Below the chips, not among them: the chips are facts about the
+          transfer, this is the answer to "where is it". */}
+      {progress && (
+        <div className="mt-5">
+          <TransferProgressBar progress={progress} />
+        </div>
+      )}
     </li>
   );
 }
