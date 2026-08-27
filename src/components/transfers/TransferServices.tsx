@@ -8,7 +8,7 @@ import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import PhaseProgress from "@/components/ui/PhaseProgress";
 import ServiceSteps from "@/components/ui/ServiceSteps";
 import type { ServiceProgress } from "@/lib/transfer-service-progress";
-import { ChevronRight, Plus, Trash2, ListChecks } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-react";
 
 /**
  * The property transfer as an umbrella over its services.
@@ -70,6 +70,38 @@ const STATUS_TONE: Record<string, StatusTone> = {
   already_done: "ok",
   not_applicable: "waiting",
 };
+
+/**
+ * The staff status <select>, dressed as a StatusPill.
+ *
+ * Kept beside STATUS_TONE deliberately: these fills MUST track
+ * components/ui/StatusPill.tsx, whose label colours are contrast-measured
+ * against white rather than chosen (see the note in that file — re-measure
+ * before changing any fill). If a tone moves there, move it here too.
+ */
+const SELECT_TONE: Record<string, string> = {
+  not_specified: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
+  needed: "bg-action-fill text-white",
+  already_done: "bg-ok-fill text-white",
+  not_applicable: "bg-waiting-fill text-white",
+};
+
+const statusSelectClass = (status: string) =>
+  "appearance-none cursor-pointer rounded-full font-semibold tracking-[0.01em] " +
+  "transition-opacity hover:opacity-90 disabled:opacity-50 " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-1 " +
+  "focus-visible:ring-offset-surface " +
+  (SELECT_TONE[status] ?? SELECT_TONE.not_specified);
+
+/**
+ * Sits over the select's right edge. It is a SIBLING of the select, not a child,
+ * so it cannot inherit the select's text colour — hence the explicit per-status
+ * colour. White on the filled tones, ink on the neutral one, matching the label
+ * it sits beside.
+ */
+const chevronClass = (status: string) =>
+  "pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 opacity-70 " +
+  (status === "not_specified" ? "text-ink-2" : "text-white");
 
 export interface ServiceRow {
   id: string;
@@ -294,20 +326,44 @@ export default function TransferServices({
               )}
 
               {canManage ? (
-                // A native select: the marker is a one-of-three choice, and this
-                // is the control every user already knows how to work.
-                <select
-                  value={r.status}
-                  disabled={busy === r.id}
-                  onChange={(e) => setStatus(r.id, e.target.value)}
-                  className="shrink-0 rounded border border-line bg-surface px-2 py-1 text-xs font-medium text-ink disabled:opacity-50"
-                >
-                  {Object.entries(STATUS_LABEL).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
+                // A native select, WEARING THE PILL. Zewn, 2026-08-27, looking
+                // at the client's read-only view: "i really like this view of
+                // the transfer services, please use this in partner and ccmember
+                // aswell".
+                //
+                // Partner already had it — all three portals share this
+                // component and only `canManage` differed. Admin is the one
+                // surface that cannot simply adopt the pill, because staff are
+                // the ones who SET the marker (§122); the dropdown is the
+                // feature, not an oversight.
+                //
+                // So the control keeps its behaviour and borrows the pill's
+                // appearance: same fill, radius, weight and size as
+                // StatusPill's tones, so a staff member reads the same shape a
+                // client does and can still change it in one click. No
+                // click-to-reveal — this is the surface where changes actually
+                // happen, and an extra click on every change is a poor trade
+                // for a moment of calm.
+                //
+                // `appearance-none` drops the native arrow; `pr-7` plus the
+                // chevron below keeps it obviously a control rather than a
+                // label that mysteriously responds to clicks.
+                <span className="relative shrink-0">
+                  <select
+                    value={r.status}
+                    disabled={busy === r.id}
+                    onChange={(e) => setStatus(r.id, e.target.value)}
+                    aria-label="Service status"
+                    className={`${statusSelectClass(r.status)} py-1 pl-3 pr-7 text-[12px]`}
+                  >
+                    {Object.entries(STATUS_LABEL).map(([v, l]) => (
+                      <option key={v} value={v} className="bg-surface font-medium text-ink">
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className={chevronClass(r.status)} aria-hidden />
+                </span>
               ) : (
                 <StatusPill tone={STATUS_TONE[r.status] ?? "neutral"}>
                   {STATUS_LABEL[r.status] ?? r.status}
@@ -374,18 +430,22 @@ export default function TransferServices({
                     <span className="flex-1 truncate text-sm text-ink-2">{k.label}</span>
                     {canManage ? (
                       <>
-                        <select
-                          value={k.status}
-                          disabled={busy === k.id}
-                          onChange={(e) => setStatus(k.id, e.target.value)}
-                          className="rounded border border-line bg-surface px-2 py-0.5 text-xs text-ink disabled:opacity-50"
-                        >
-                          {Object.entries(STATUS_LABEL).map(([v, l]) => (
-                            <option key={v} value={v}>
-                              {l}
-                            </option>
-                          ))}
-                        </select>
+                        <span className="relative shrink-0">
+                          <select
+                            value={k.status}
+                            disabled={busy === k.id}
+                            onChange={(e) => setStatus(k.id, e.target.value)}
+                            aria-label="Sub-service status"
+                            className={`${statusSelectClass(k.status)} py-0.5 pl-2.5 pr-6 text-[11px]`}
+                          >
+                            {Object.entries(STATUS_LABEL).map(([v, l]) => (
+                              <option key={v} value={v} className="bg-surface font-medium text-ink">
+                                {l}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className={chevronClass(k.status)} aria-hidden />
+                        </span>
                         <button
                           title="Remove"
                           disabled={busy === k.id}
