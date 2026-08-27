@@ -2,6 +2,7 @@ import Link from "next/link";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
 import PhaseProgress from "@/components/ui/PhaseProgress";
+import ServiceSteps from "@/components/ui/ServiceSteps";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import { workdaysSince, relativeDays } from "@/lib/elapsed";
 import {
@@ -123,8 +124,20 @@ export default function MatterCard({
         )}
       </div>
 
+      {/* Circles above the bar, matching the transfer's service lines (Zewn,
+          2026-08-28). A matter has exactly ONE pipeline, so one stepper per card
+          is the honest shape here — and everything it needs was already being
+          computed for the bar.
+
+          Client-facing phase names, as the bar already used: a card in the
+          partner or client portal must never show our internal vocabulary. */}
       {pl && idx >= 0 && (
-        <div className="mt-5">
+        <div className="mt-5 space-y-2">
+          <ServiceSteps
+            steps={steps.map((s) => phaseLabel(pl, s.key, true))}
+            phase={idx + 1}
+            done={idx === steps.length - 1}
+          />
           <PhaseProgress
             phase={idx + 1}
             total={steps.length}

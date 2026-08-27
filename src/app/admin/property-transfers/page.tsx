@@ -200,7 +200,7 @@ export default async function AdminTransfersPage({
 
                   {progressById.get(t.id) && (
                     <div className="mt-3.5">
-                      <TransferProgressBar progress={progressById.get(t.id)!} />
+                      <TransferProgressBar progress={progressById.get(t.id)!} showDots />
                     </div>
                   )}
                 </Card>

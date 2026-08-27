@@ -89,7 +89,7 @@ export default function TransferCard({
           transfer, this is the answer to "where is it". */}
       {progress && (
         <div className="mt-5">
-          <TransferProgressBar progress={progress} />
+          <TransferProgressBar progress={progress} showDots />
         </div>
       )}
     </li>

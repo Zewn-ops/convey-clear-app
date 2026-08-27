@@ -5,6 +5,11 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import { isStaffRole, type PropertyTransfer } from "@/types";
 import TransferCard from "@/components/transfers/TransferCard";
+import {
+  TRANSFER_PROGRESS_SELECT,
+  transferProgressById,
+  type TransferProgress,
+} from "@/lib/transfer-service-progress";
 import { ArrowRight, Building2, Inbox, FileCheck2 } from "lucide-react";
 
 export const metadata = { title: "Admin Overview — ConveyClear" };
@@ -49,6 +54,18 @@ export default async function AdminPage() {
   ((linkedRows as { transfer_id: string | null }[] | null) ?? []).forEach((m) => {
     if (m.transfer_id) counts.set(m.transfer_id, (counts.get(m.transfer_id) ?? 0) + 1);
   });
+
+  // Settled-progress for the stalled transfers shown below. One query for the
+  // section, and only when there is something to show it against.
+  let progressById = new Map<string, TransferProgress>();
+  if (stale.length) {
+    const ids = stale.map((t) => t.id);
+    const { data: svcRows } = await supabase
+      .from("transfer_services")
+      .select(TRANSFER_PROGRESS_SELECT)
+      .in("transfer_id", ids);
+    progressById = transferProgressById(svcRows, ids);
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -137,6 +154,7 @@ export default async function AdminPage() {
                 transfer={t}
                 href={`/admin/property-transfers/${t.id}`}
                 matterCount={counts.get(t.id) ?? 0}
+                progress={progressById.get(t.id)}
               />
             ))}
           </ul>

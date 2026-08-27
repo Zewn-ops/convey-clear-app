@@ -1,4 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
+import ServiceDots from "@/components/transfers/ServiceDots";
 import type { TransferProgress } from "@/lib/transfer-service-progress";
 
 /**
@@ -21,10 +22,17 @@ import type { TransferProgress } from "@/lib/transfer-service-progress";
 export default function TransferProgressBar({
   progress,
   showLabel = true,
+  showDots = false,
 }: {
   progress: TransferProgress;
   /** Off on dense list rows where the count is already implied by context. */
   showLabel?: boolean;
+  /**
+   * One circle per service beside the count (Zewn, 2026-08-28). On by default
+   * nowhere: the detail page already lists every service in full underneath, so
+   * dots there would say the same thing twice. List cards turn it on.
+   */
+  showDots?: boolean;
 }) {
   // Nothing to measure. Say nothing rather than draw an empty bar, which reads
   // as "no progress" when it means "no checklist".
@@ -35,11 +43,16 @@ export default function TransferProgressBar({
   return (
     <div className="min-w-0">
       {showLabel && (
-        <div className="mb-1.5 flex items-center gap-1.5">
-          {complete && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-ok" />}
-          <span className={`text-xs font-medium ${complete ? "text-ok" : "text-ink-2"}`}>
-            {label}
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <span className="flex items-center gap-1.5">
+            {complete && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-ok" />}
+            <span className={`text-xs font-medium ${complete ? "text-ok" : "text-ink-2"}`}>
+              {label}
+            </span>
           </span>
+          {/* One dot per service, beside the count rather than under the bar:
+              the count says how many, the dots say which. */}
+          {showDots && <ServiceDots dots={progress.dots} />}
         </div>
       )}
       <div

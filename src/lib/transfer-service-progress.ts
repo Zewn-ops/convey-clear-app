@@ -193,6 +193,24 @@ export const LINKED_MATTER_SELECT =
  * bar a measure of how finely a transfer had been broken down rather than of how
  * much of it is finished.
  */
+/**
+ * One dot on a transfer card: a single service line, reduced to the only thing a
+ * card has room to say about it.
+ *
+ * `settled` and `running` are different states, not degrees of the same one — a
+ * service with an open matter is being worked, a service still marked
+ * "not specified" has not been decided about. Collapsing them would hide the
+ * distinction the checklist exists to make.
+ */
+export interface TransferServiceDot {
+  /** Service label, for the tooltip and the accessible name. */
+  name: string;
+  /** Marked done / already done / not applicable, or its matter is finished. */
+  settled: boolean;
+  /** Needed, with a matter open against it. */
+  running: boolean;
+}
+
 export interface TransferProgress {
   /** Service lines that are marked done, already done, or not applicable. */
   resolved: number;
@@ -204,6 +222,16 @@ export interface TransferProgress {
   complete: boolean;
   /** Short human summary, e.g. "3 of 7 services settled". */
   label: string;
+  /**
+   * One entry per top-level service, in checklist order.
+   *
+   * Zewn, 2026-08-28, wanted circles on the list pages. A transfer has no single
+   * pipeline to draw a stepper from — it has seven services — so the circles
+   * here are one PER SERVICE rather than per phase. Seven steppers on a list
+   * card would be unreadable; seven dots answer "how much of this is settled"
+   * at the altitude a list actually works at.
+   */
+  dots: TransferServiceDot[];
 }
 
 /**
@@ -223,34 +251,77 @@ export interface TransferProgressRow {
   matter_id?: string | null;
   progress?: ServiceProgress;
   matterStatus?: string | null;
+  /** Service code or label, for the dot's name. */
+  serviceCode?: string | null;
+  label?: string | null;
 }
+
+/**
+ * Service display names for the dots.
+ *
+ * Duplicated from SERVICE_LABELS in components/transfers/TransferServices.tsx
+ * deliberately: that file is a "use client" component, and importing it here
+ * would drag the whole component into every server page that computes progress.
+ * Keep the two in step — they are the same seven codes from 063/066.
+ */
+const SERVICE_NAMES: Record<string, string> = {
+  BP: "Existing Building Plans",
+  CERT: "Certificates",
+  RCF: "Property Rates Clearance",
+  MAD: "Municipal Account Dispute",
+  COO: "Change of Ownership",
+  REFUND: "Refund",
+  OTHER: "Other",
+};
 
 /** A matter in one of these states has nothing further to run. */
 const MATTER_DONE = new Set(["won", "archived"]);
+
+/** Settled = decided and dealt with, by us or by someone else, or ruled out. */
+function isSettled(r: TransferProgressRow): boolean {
+  // `completed` (069) is the case that was missing entirely until now: work WE
+  // finished. Staff previously had to record it as `already_done`, which reads
+  // as "somebody else did it" and destroyed the only record of what the firm
+  // actually delivered.
+  if (r.status === "not_applicable" || r.status === "already_done" || r.status === "completed") {
+    return true;
+  }
+  if (r.status !== "needed") return false;
+  // `needed` counts only once the work behind it is actually finished. The
+  // matter's own state is the authority — so a viewer who cannot see the matter
+  // never counts it as done on a guess.
+  return r.progress?.state === "complete" || MATTER_DONE.has(r.matterStatus ?? "");
+}
 
 export function transferProgress(rows: TransferProgressRow[]): TransferProgress {
   const top = rows.filter((r) => r.parent_id === null);
   const total = top.length;
 
-  const resolved = top.filter((r) => {
-    // `completed` (069) is the case that was missing entirely until now: work WE
-    // finished. Staff previously had to record it as `already_done`, which reads
-    // as "somebody else did it" and destroyed the only record of what the firm
-    // actually delivered.
-    if (r.status === "not_applicable" || r.status === "already_done" || r.status === "completed") {
-      return true;
-    }
-    if (r.status !== "needed") return false;
-    // `needed` counts only once the work behind it is actually finished. The
-    // matter's own state is the authority — so a viewer who cannot see the
-    // matter never counts it as done on a guess.
-    return r.progress?.state === "complete" || MATTER_DONE.has(r.matterStatus ?? "");
-  }).length;
+  const resolved = top.filter(isSettled).length;
+
+  const dots: TransferServiceDot[] = top.map((r) => {
+    const settled = isSettled(r);
+    return {
+      name: r.label?.trim() || SERVICE_NAMES[r.serviceCode ?? ""] || r.serviceCode || "Service",
+      settled,
+      // Work is under way: a matter exists and has not finished. A viewer who
+      // cannot see the matter still gets this from matter_id, which is on the
+      // service row itself rather than behind the RLS-filtered embed.
+      running: !settled && r.status === "needed" && Boolean(r.matter_id),
+    };
+  });
 
   // No lines at all: a transfer created before 063 instantiated them. Report
   // nothing rather than a triumphant 100%, which is what 0/0 would otherwise be.
   if (total === 0) {
-    return { resolved: 0, total: 0, percent: 0, complete: false, label: "No services listed yet" };
+    return {
+      resolved: 0,
+      total: 0,
+      percent: 0,
+      complete: false,
+      label: "No services listed yet",
+      dots: [],
+    };
   }
 
   return {
@@ -262,6 +333,7 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
       resolved === total
         ? "All services settled"
         : `${resolved} of ${total} services settled`,
+    dots,
   };
 }
 
@@ -270,13 +342,16 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
  * `matters(status)` is the whole matter read — the list never needs a pipeline,
  * only whether the work finished.
  */
-export const TRANSFER_PROGRESS_SELECT = "transfer_id, parent_id, status, matter_id, matters(status)";
+export const TRANSFER_PROGRESS_SELECT =
+  "transfer_id, parent_id, status, matter_id, service_code, label, matters(status)";
 
 interface ProgressSelectRow {
   transfer_id: string;
   parent_id: string | null;
   status: string;
   matter_id: string | null;
+  service_code: string | null;
+  label: string | null;
   matters?: { status: string | null } | null;
 }
 
@@ -300,6 +375,8 @@ export function transferProgressById(
       status: raw.status,
       matter_id: raw.matter_id,
       matterStatus: raw.matters?.status ?? null,
+      serviceCode: raw.service_code,
+      label: raw.label,
     });
     byTransfer.set(raw.transfer_id, list);
   }
