@@ -254,6 +254,8 @@ export interface TransferProgressRow {
   /** Service code or label, for the dot's name. */
   serviceCode?: string | null;
   label?: string | null;
+  /** Checklist order (063). The dots are positional and must respect it. */
+  position?: number | null;
 }
 
 /**
@@ -294,7 +296,14 @@ function isSettled(r: TransferProgressRow): boolean {
 }
 
 export function transferProgress(rows: TransferProgressRow[]): TransferProgress {
-  const top = rows.filter((r) => r.parent_id === null);
+  // Sorted, not assumed sorted. The counts below do not care about order, but
+  // `dots` is positional — the third dot must be the third service on every
+  // card — and this function is called from list pages whose queries have no
+  // ORDER BY of their own. Rows without a position keep their arrival order.
+  const top = rows
+    .filter((r) => r.parent_id === null)
+    .slice()
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const total = top.length;
 
   const resolved = top.filter(isSettled).length;
@@ -343,7 +352,7 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
  * only whether the work finished.
  */
 export const TRANSFER_PROGRESS_SELECT =
-  "transfer_id, parent_id, status, matter_id, service_code, label, matters(status)";
+  "transfer_id, parent_id, status, matter_id, service_code, label, position, matters(status)";
 
 interface ProgressSelectRow {
   transfer_id: string;
@@ -352,6 +361,7 @@ interface ProgressSelectRow {
   matter_id: string | null;
   service_code: string | null;
   label: string | null;
+  position: number | null;
   matters?: { status: string | null } | null;
 }
 
@@ -377,6 +387,7 @@ export function transferProgressById(
       matterStatus: raw.matters?.status ?? null,
       serviceCode: raw.service_code,
       label: raw.label,
+      position: raw.position ?? 0,
     });
     byTransfer.set(raw.transfer_id, list);
   }
@@ -384,7 +395,19 @@ export function transferProgressById(
   const out = new Map<string, TransferProgress>();
   for (const id of transferIds) {
     const rowsFor = byTransfer.get(id);
-    if (rowsFor?.length) out.set(id, transferProgress(rowsFor));
+    if (!rowsFor?.length) continue;
+    // 🔴 SORT HERE, not in the caller. The dots are POSITIONAL — the third one
+    // is Property Rates Clearance on every card, or they mean nothing — and a
+    // bare PostgREST select returns rows in whatever order the planner likes.
+    // Found live 2026-08-28: one transfer rendered its three in-flight services
+    // as the LAST three dots, in reverse. The counts were right and the picture
+    // was a lie.
+    //
+    // The detail pages order by `position` in their own query; a list must not
+    // have to remember to. Sorting inside this helper means no caller can get
+    // it wrong.
+    rowsFor.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    out.set(id, transferProgress(rowsFor));
   }
   return out;
 }
