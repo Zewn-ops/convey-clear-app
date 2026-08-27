@@ -15,6 +15,16 @@ export interface TokenData {
   sub_service: string | null;
   drive_folder_id: string | null;
   client_name: string;
+  /**
+   * The two names UNMERGED, alongside the merged `client_name` above.
+   *
+   * The onboarding form wants one name to greet the client by. The POA needs
+   * both at once — a company POA reads "I, <person>, representing <company>" —
+   * so collapsing them loses the distinction it depends on. Both already come
+   * back in the clients select below; only the mapping dropped them.
+   */
+  full_name: string | null;
+  business_name: string | null;
   entity_type: "natural_person" | "business";
   primary_email: string;
   id_number?: string | null;
@@ -112,6 +122,8 @@ export async function validateOnboardingToken(
     sub_service: m.service_notes ?? null,
     drive_folder_id: m.drive_folder_id ?? null,
     client_name: clientName,
+    full_name: c?.full_name ?? null,
+    business_name: c?.business_name ?? null,
     entity_type: entityType,
     primary_email: c?.primary_email ?? "",
     id_number: c?.id_number ?? null,

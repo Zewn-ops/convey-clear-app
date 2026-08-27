@@ -1,38 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { validateOnboardingToken } from "@/lib/onboard-token";
 
-const N8N_BASE = process.env.N8N_WEBHOOK_URL ?? "https://n8n.conveyclear.co.za";
+export const runtime = "nodejs";
 
-interface ClientData {
-  entity_type: string | null;
-  full_name: string | null;
-  business_name: string | null;
-  id_number: string | null;
-  registration_no: string | null;
-  link_id: string | null;
-}
+/**
+ * Pre-filled Power of Attorney for an onboarding link.
+ *
+ * n8n REMOVED 2026-08-27. This used to fetch the client through n8n's
+ * `client-data` webhook — n8n acting as a proxy to a database this app is
+ * already connected to. The hop bought nothing and could fail on its own: an
+ * n8n restart, an expired TLS chain or a VPS hiccup turned a working POA into a
+ * 502, on a public link a client is holding. Documents moved to Supabase
+ * Storage on 06-18; this was the last of the Pipedrive-era plumbing on a
+ * request path.
+ *
+ * Token validation is now the same `validateOnboardingToken` the /onboard page
+ * uses, so a link that renders the form and a link that produces the POA can no
+ * longer disagree about whether it is valid. They were two implementations of
+ * one rule, and the old one here checked neither `used_at` nor `expires_at` —
+ * it only asked whether a row came back.
+ */
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
   if (!token) return new NextResponse("Missing token", { status: 400 });
 
-  let client: ClientData;
-  try {
-    const res = await fetch(
-      `${N8N_BASE}/webhook/client-data?token=${encodeURIComponent(token)}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error(`n8n ${res.status}`);
-    const rows: ClientData[] = await res.json();
-    client = rows[0];
-    if (!client?.link_id) return new NextResponse("Invalid or expired token", { status: 404 });
-  } catch {
-    return new NextResponse("Failed to fetch client data", { status: 502 });
-  }
+  // Service-role: whoever holds an onboarding link is a public visitor with no
+  // session, exactly as on /onboard. The token IS the authorisation.
+  const { data: client, error } = await validateOnboardingToken(createAdminClient(), token);
+  if (!client) return new NextResponse(error ?? "Invalid or expired token", { status: 404 });
 
   const fullName     = client.full_name     ?? "";
   const idNumber     = client.id_number     ?? "";
-  const isBusiness   = client.entity_type === "business" || client.entity_type === "trust";
+  // TokenData folds `trust` into `business`, and both take the representative
+  // form of the POA ("I, <person>, representing <entity>") — the only
+  // distinction this document draws.
+  const isBusiness   = client.entity_type === "business";
   const company      = client.business_name ?? "";
   const regNo        = client.registration_no ?? "";
 
