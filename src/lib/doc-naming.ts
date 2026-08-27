@@ -46,12 +46,22 @@ function extensionOf(fileName: string | null | undefined): string {
 
 export function buildDocumentName(input: {
   documentType: string;
+  /**
+   * Narrows the type where the type alone is ambiguous — "Seller" on a transfer
+   * document, so the seller's and the buyer's certified IDs do not both come out
+   * as "Certified ID — ERF 1234 — 2026-08-27". Sits directly after the type,
+   * because it is part of what the document IS, not what it is about.
+   */
+  qualifier?: string | null;
   subject?: string | null;
   originalFileName?: string | null;
   when?: Date;
 }): string {
   const date = (input.when ?? new Date()).toISOString().slice(0, 10);
   const parts = [clean(docLabel(input.documentType))];
+
+  const qualifier = input.qualifier ? clean(input.qualifier) : "";
+  if (qualifier) parts.push(qualifier);
 
   const subject = input.subject ? clean(input.subject) : "";
   if (subject) parts.push(subject);
@@ -131,11 +141,19 @@ export async function resolveTransferSubject(
 /** Convenience: resolve the property and build the name for a transfer document. */
 export async function canonicalTransferDocumentName(
   admin: SupabaseClient,
-  input: { transferId: string; documentType: string; originalFileName?: string | null }
+  input: {
+    transferId: string;
+    documentType: string;
+    /** 'seller' | 'buyer' (067), or null for a document the transaction owns. */
+    partyRole?: string | null;
+    originalFileName?: string | null;
+  }
 ): Promise<string> {
   const subject = await resolveTransferSubject(admin, input.transferId);
   return buildDocumentName({
     documentType: input.documentType,
+    qualifier:
+      input.partyRole === "seller" ? "Seller" : input.partyRole === "buyer" ? "Buyer" : null,
     subject,
     originalFileName: input.originalFileName,
   });

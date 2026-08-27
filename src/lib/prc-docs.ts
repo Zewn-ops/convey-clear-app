@@ -2,6 +2,7 @@
 // document matrix (Jukka 2026-06-16). The PRC service is code 'RCF'; within it
 // the partner picks a sub-division. Only RCF is built in-portal for now.
 import { COO_DOC_LABELS } from "./coo-docs";
+import { TRANSFER_DOC_LABELS } from "./transfer-doc-types";
 
 export interface PrcSubtype {
   code: "RCF" | "RCC" | "RCA";
@@ -64,12 +65,17 @@ export const PRC_DOC_LABELS: Record<string, string> = {
   proof_of_payment_figures: "Proof of Payment (Figures)",
 };
 
-// One label lookup across COO + PRC doc types, with a humanised fallback. Safe
-// in server components (no client-only imports).
+// One label lookup across the COO, PRC and transfer-supporting doc types, with a
+// humanised fallback. Safe in server components (no client-only imports).
+//
+// Order matters where a code appears twice: COO and PRC win over the transfer
+// map, so a `proof_of_payment_figures` keeps the name it has had since June and
+// only codes nobody else claims are named here.
 export function docLabel(docType: string): string {
   return (
     COO_DOC_LABELS[docType] ??
     PRC_DOC_LABELS[docType] ??
+    TRANSFER_DOC_LABELS[docType] ??
     docType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
   );
 }

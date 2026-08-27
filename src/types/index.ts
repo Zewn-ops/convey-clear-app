@@ -282,6 +282,10 @@ export interface TransferDocument {
   // Set when the document was pulled from a client's FICA vault (054). A party
   // can always see one that came from their OWN vault, shared or not.
   client_document_id?: string | null;
+  // Whose document this is on the transaction (067). NULL = the transaction's
+  // own, e.g. the offer to purchase. Independent of document_type, which says
+  // what the document IS.
+  party_role?: "seller" | "buyer" | null;
   created_at: string;
 }
 

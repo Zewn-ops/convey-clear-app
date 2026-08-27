@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   // would still not be able to read its way to someone else's vault.
   const { data: transfer } = await supabase
     .from("property_transfers")
-    .select("id, reference")
+    .select("id, reference, seller_client_id, buyer_client_id")
     .eq("id", transfer_id)
     .maybeSingle();
   if (!transfer) {
@@ -85,7 +85,9 @@ export async function POST(request: Request) {
 
   const { data: cdoc } = await supabase
     .from("client_documents")
-    .select("id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, status")
+    .select(
+      "id, client_id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, status"
+    )
     .eq("id", client_document_id)
     .maybeSingle();
   if (!cdoc) {
@@ -121,11 +123,25 @@ export async function POST(request: Request) {
   // upload-confirm route. That check exists there because the browser chooses
   // the path; here the path is read off a vault row this caller could already
   // see, and it correctly points into the client-documents bucket.
+  // Whose document it is (067) — derived, never asked. The vault row already
+  // belongs to a client, and the transfer already names its seller and buyer, so
+  // asking the person clicking would be asking them to retype something the
+  // database knows. A vault document belonging to neither side (a firm's own, a
+  // client on the transfer only as 'other') stays NULL rather than guessing.
+  const vaultOwner = (cdoc as { client_id?: string | null }).client_id ?? null;
+  const partyRole =
+    vaultOwner && vaultOwner === (transfer as { seller_client_id?: string | null }).seller_client_id
+      ? "seller"
+      : vaultOwner && vaultOwner === (transfer as { buyer_client_id?: string | null }).buyer_client_id
+        ? "buyer"
+        : null;
+
   const { data: inserted, error } = await admin
     .from("transfer_documents")
     .insert({
       transfer_id,
       document_type: cdoc.document_type || "other",
+      party_role: partyRole,
       file_name: cdoc.file_name,
       mime_type: cdoc.mime_type,
       size_bytes: cdoc.size_bytes,

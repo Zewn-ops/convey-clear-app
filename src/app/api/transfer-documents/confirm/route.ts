@@ -6,6 +6,7 @@ import { logTransferActivity } from "@/lib/activity";
 import { canonicalTransferDocumentName } from "@/lib/doc-naming";
 import { requireTransferUploader } from "@/lib/transfer-upload-access";
 import { notifyStaff } from "@/lib/notify";
+import { isTransferPartyRole } from "@/lib/transfer-doc-types";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     transfer_id?: string;
     storage_path?: string;
     document_type?: string;
+    party_role?: string | null;
     file_name?: string;
     mime_type?: string;
     size_bytes?: number;
@@ -96,11 +98,26 @@ export async function POST(request: Request) {
   // Best-effort, exactly as on the matter side: the file is already in storage by
   // the time we get here, so a naming failure must not lose the upload.
   const docType = body.document_type || "other";
+
+  // Whose document it is (067). Rejected rather than coerced: a wrong role puts
+  // the seller's identity document under the buyer's name in a list whose whole
+  // job is telling the two apart, and the column's CHECK would refuse it anyway
+  // — better a sentence than a constraint violation. Absent or null is valid and
+  // means the document belongs to the transaction itself.
+  const partyRole = body.party_role ?? null;
+  if (partyRole !== null && !isTransferPartyRole(partyRole)) {
+    return NextResponse.json(
+      { message: "party_role must be 'seller', 'buyer', or omitted" },
+      { status: 400 }
+    );
+  }
+
   let displayName = body.file_name || null;
   try {
     displayName = await canonicalTransferDocumentName(admin, {
       transferId: transfer_id,
       documentType: docType,
+      partyRole,
       originalFileName: body.file_name || null,
     });
   } catch (e) {
@@ -110,6 +127,7 @@ export async function POST(request: Request) {
   const row: Record<string, unknown> = {
     transfer_id,
     document_type: docType,
+    party_role: partyRole,
     storage_bucket: TRANSFER_DOCS_BUCKET,
     storage_path,
     file_name: displayName,
@@ -131,7 +149,10 @@ export async function POST(request: Request) {
   // deploying ahead of the migration degrades to "no provenance" rather than
   // "uploads fail". Same play as 040 on the matter side.
   if (error && (error as { code?: string }).code === "42703") {
-    const { original_file_name: _dropped, ...legacyRow } = row;
+    // 041 adds original_file_name; 067 adds party_role. Dropping both keeps a
+    // deploy that lands ahead of either migration at "no provenance, no role"
+    // rather than "uploads fail" — the file is already in storage by now.
+    const { original_file_name: _dropped, party_role: _alsoDropped, ...legacyRow } = row;
     ({ data: doc, error } = await admin
       .from("transfer_documents")
       .insert(legacyRow)

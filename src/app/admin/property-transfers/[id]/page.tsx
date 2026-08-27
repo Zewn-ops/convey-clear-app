@@ -530,6 +530,8 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         canManage
         canDelete={isAdminRole(session.profile?.role)}
         vaultOptions={vaultOptions}
+        sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
+        buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
       />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}

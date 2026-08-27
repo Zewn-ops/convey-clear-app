@@ -369,6 +369,8 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         docs={transferDocsWithUrls}
         canManage={false}
         canUpload={firmMayUpload}
+        sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
+        buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
       />
 
       {/* …but the firm DOES post to the feed — it is the shared channel. */}
