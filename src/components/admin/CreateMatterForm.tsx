@@ -263,13 +263,30 @@ export default function CreateMatterForm({
               <p className="font-semibold text-green-900">Matter created</p>
               <p className="text-sm text-green-800 font-mono">{done.title}</p>
             </div>
+            {/* Open matter LEADS (Zewn, 2026-08-28). Capturing details and
+                documents in place on the matter is the primary path — /onboard
+                is the self-serve fallback for a client who will do it
+                themselves, and api/fica/capture says as much. Offering the link
+                first taught staff to send a form for work they can finish on
+                the page they are one click away from.
+
+                The link is kept, not removed: it is the only route a client or
+                an attorney has to upload matter-level FICA, and three other
+                surfaces still open it. Demoted, not retired — see the note in
+                RESUME_HERE about whether it should be retired properly. */}
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => window.open(`/onboard?token=${done.token}`, "_blank", "noopener")}>
-                Collect FICA docs <ExternalLink className="h-4 w-4" />
+              <Button variant="secondary" onClick={() => router.push(`/admin/matters/${done.matterId}`)}>
+                Open matter
               </Button>
-              <Button variant="outline" onClick={() => router.push(`/admin/matters/${done.matterId}`)}>Open matter</Button>
+              <Button variant="outline" onClick={() => window.open(`/onboard?token=${done.token}`, "_blank", "noopener")}>
+                Send a FICA link instead <ExternalLink className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" onClick={() => setDone(null)}>Create another</Button>
             </div>
+            <p className="text-xs text-green-800">
+              Capture the client&rsquo;s details and documents on the matter itself. The link is for
+              when they will do it themselves.
+            </p>
           </div>
         </div>
       </Card>
