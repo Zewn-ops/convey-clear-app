@@ -7,16 +7,24 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Briefcase,
+  Home,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+// ⚠️ This list had DRIFTED from Sidebar.tsx. "My Matters" was hidden from the
+// desktop nav on 2026-08-26 and left standing here until 2026-08-27 — so a
+// client on a phone still had the tab the decision removed, and PRODUCT.md is
+// explicit that clients are frequently mobile. The same drift bit the admin nav
+// (see admin-nav.ts), which is why that one is now a single shared list.
+//
+// Matters are not a client surface at all now — the route redirects to the
+// transaction. Keep this in step with Sidebar.tsx.
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/matters", label: "My Matters", icon: Briefcase },
+  { href: "/dashboard/transfers", label: "My transfers", icon: Home },
 ];
 
 export default function MobileNav() {

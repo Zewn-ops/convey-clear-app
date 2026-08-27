@@ -96,7 +96,12 @@ export default function TransferServices({
   rows: ServiceRow[];
   /** Staff only. §122 has the markers set by ConveyClear, not by the firm. */
   canManage?: boolean;
-  matterHrefBase?: string;
+  /**
+   * Where "Open matter" points, or `null` for an audience that has no matter
+   * surface at all. Clients pass null (2026-08-27: matters are not theirs to
+   * see); the link would only lead somewhere they cannot go.
+   */
+  matterHrefBase?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -261,7 +266,13 @@ export default function TransferServices({
                 )}
               </button>
 
-              {r.matter_id ? (
+              {/* The link needs BOTH: an audience that has a matter surface,
+                  and a matter this viewer can actually read. `matterTitle` is
+                  set from the RLS-filtered embed, so a null one means the row
+                  points at a matter that is not ours — rendering the link then
+                  produced a 404, found as the buyer 2026-08-27. Never
+                  dead-end (PRODUCT.md §5). */}
+              {r.matter_id && matterHrefBase && r.matterTitle ? (
                 <Link
                   href={`${matterHrefBase}/${r.matter_id}`}
                   className="shrink-0 text-xs font-medium text-action hover:underline"

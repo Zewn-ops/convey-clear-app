@@ -21,6 +21,7 @@ export type ProgressState =
   | "none"        // not_specified / not_applicable — nothing to show
   | "declared"    // already_done — someone did it, not through us
   | "unstarted"   // needed, but no matter opened yet
+  | "hidden"      // a matter IS open, this viewer may not see it
   | "running"     // matter open, somewhere in its pipeline
   | "complete";   // matter won or archived
 
@@ -68,7 +69,20 @@ export type ProgressAudience = "staff" | "client";
 export function serviceProgress(
   status: string,
   matter: LinkedMatterShape | null | undefined,
-  audience: ProgressAudience = "staff"
+  audience: ProgressAudience = "staff",
+  /**
+   * Whether the service line points at a matter AT ALL, independent of whether
+   * this viewer may read it.
+   *
+   * 🔴 Without this, a party who cannot see the matter is told the work has not
+   * STARTED. Found 2026-08-27 as the buyer on a transfer 13 workdays in: the
+   * matter embed is RLS-filtered, so `matter` arrived null and every service
+   * read "Not started" — while the seller, on the same transfer, saw phases and
+   * bars. "Nobody has begun" and "you may not see this" are opposite messages,
+   * and for a buyer waiting on the seller's rates clearance the wrong one is
+   * actively misleading rather than merely unhelpful.
+   */
+  hasMatter = false
 ): ServiceProgress {
   const empty = { phase: 0, total: 0, label: "", steps: [] as string[] };
 
@@ -81,6 +95,12 @@ export function serviceProgress(
   // working on it.
   if (status === "already_done" && !matter) {
     return { state: "declared", ...empty, label: "Already done" };
+  }
+
+  // A matter exists but this viewer cannot read it. Say so, rather than
+  // reporting the transfer as not started — see `hasMatter` above.
+  if (!matter && hasMatter) {
+    return { state: "hidden", ...empty, label: "In progress — not visible to you" };
   }
 
   if (!matter) return { state: "unstarted", ...empty, label: "Not started" };

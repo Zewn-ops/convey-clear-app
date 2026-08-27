@@ -7,14 +7,11 @@ import { getSessionProfile } from "@/lib/auth";
 import { municipalityLabel, formatDate } from "@/lib/utils";
 import { signedDocUrls } from "@/lib/storage";
 import { docLabel } from "@/lib/prc-docs";
-import { matterPhaseLabel } from "@/lib/phase-label";
 import {
   TRANSFER_STATUS_LABELS,
-  MATTER_STATUS_LABELS,
   type TransferStatus,
-  type MatterStatus,
 } from "@/types";
-import { ArrowLeft, FileText, Briefcase } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 import {
   serviceProgress,
@@ -55,14 +52,6 @@ interface TransferRow {
   updated_at: string;
 }
 
-interface MatterRow {
-  id: string;
-  title: string;
-  current_phase: string | null;
-  status: MatterStatus;
-  services?: { code: string | null; name: string | null } | null;
-}
-
 interface DocRow {
   id: string;
   document_type: string;
@@ -93,15 +82,9 @@ export default async function ClientTransferDetail({ params }: { params: Promise
   const transfer = transferRow as TransferRow | null;
   if (!transfer) notFound();
 
-  // The client's OWN matters under this transaction. matters RLS already scopes
-  // to their entities, so the other side's matters on the same transfer are
-  // absent without a filter here.
-  const { data: matterRows } = await supabase
-    .from("matters")
-    .select("id, title, current_phase, status, services(code, name)")
-    .eq("transfer_id", id)
-    .order("created_at", { ascending: false });
-  const matters = (matterRows as MatterRow[] | null) ?? [];
+  // Matters are deliberately NOT read here any more (2026-08-27). The client
+  // does not see them at all — the services umbrella carries the progress, as
+  // the 08-26 decision that hid the Matters tab said it would.
 
   // The umbrella checklist (063), read-only. Reaches the client through
   // client_can_view_transfer() — the party-based function 062 added so that
@@ -132,7 +115,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
   ).map((r) => ({
     ...r,
-    progress: serviceProgress(r.status, r.matters ?? null, "client"),
+    progress: serviceProgress(r.status, r.matters ?? null, "client", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
 
@@ -187,42 +170,20 @@ export default async function ClientTransferDetail({ params }: { params: Promise
           <div className="px-5 py-4 border-b border-line">
             <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">What this transfer needs</p>
           </div>
+          {/* No matter links for a client (Zewn, 2026-08-27: "matters should be
+              unseen by clients"). This continues the 08-26 decision that hid the
+              Matters tab from this nav — the tab went, but the transfer page
+              kept two ways back in, which is how a client still reached matters
+              carrying our internal naming, priority and stage. The services
+              umbrella carries the progress instead, which is what that decision
+              said it would. */}
           <TransferServices
             transferId={id}
             rows={serviceRows}
-            matterHrefBase="/dashboard/matters"
+            matterHrefBase={null}
           />
         </Card>
       )}
-
-      <Card className="space-y-3">
-        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Your matters in this transfer</p>
-        {matters.length === 0 ? (
-          <div className="py-8 text-center">
-            <Briefcase className="h-7 w-7 mx-auto text-ink-3" />
-            <p className="text-sm text-ink-2 mt-2">Nothing on your side yet.</p>
-            <p className="text-xs text-ink-3 mt-1">
-              Rates clearance and change of ownership appear here once they are opened.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-line">
-            {matters.map((m) => (
-              <Link
-                key={m.id}
-                href={`/dashboard/matters/${m.id}`}
-                className="flex items-center justify-between gap-4 py-2.5 hover:bg-raised -mx-2 px-2 rounded"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm text-ink truncate">{m.services?.name ?? m.title}</p>
-                  <p className="text-xs text-ink-3">{matterPhaseLabel(m.current_phase)}</p>
-                </div>
-                <Badge label={MATTER_STATUS_LABELS[m.status]} variant="info" />
-              </Link>
-            ))}
-          </div>
-        )}
-      </Card>
 
       <Card className="space-y-3">
         <div>

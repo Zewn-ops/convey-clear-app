@@ -53,10 +53,13 @@ export default function RequestServiceForm({
           <div className="space-y-3">
             <div>
               <p className="font-semibold text-green-900">Request submitted</p>
-              <p className="text-sm text-green-800">ConveyClear will be in touch. You can track it under My Matters.</p>
+              {/* Points at the transaction, not the matter: matters stopped
+                  being a client surface on 2026-08-27, and "track it under My
+                  Matters" named a tab that no longer exists. */}
+              <p className="text-sm text-green-800">ConveyClear will be in touch. You can track it under My transfers.</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => router.push(`/dashboard/matters/${done}`)}>View my matter</Button>
+              <Button variant="secondary" onClick={() => router.push("/dashboard/transfers")}>View my transfers</Button>
               <Button variant="ghost" onClick={() => setDone(null)}>Request another</Button>
             </div>
           </div>

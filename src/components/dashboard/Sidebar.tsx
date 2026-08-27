@@ -33,7 +33,10 @@ const navItems = [
   { href: "/dashboard/entities", label: "My entities", icon: IdCard, exact: false },
   { href: "/dashboard/properties", label: "My properties", icon: Building, exact: false },
   { href: "/dashboard/request", label: "Request a service", icon: PlusCircle, exact: false },
-  { href: "/dashboard/training", label: "Training", icon: GraduationCap, exact: false },
+  // Training hidden 2026-08-27 (Zewn): "hide the training tab since we dont have
+  // anything for that now". Route kept, same as Matters above — this returns
+  // once there is content behind it.
+  // { href: "/dashboard/training", label: "Training", icon: GraduationCap, exact: false },
 ];
 
 export default function Sidebar({

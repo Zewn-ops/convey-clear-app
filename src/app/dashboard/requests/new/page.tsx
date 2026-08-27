@@ -1,4 +1,4 @@
 import { redirect } from "next/navigation";
 export default function NewRequestPage() {
-  redirect("/dashboard/matters");
+  redirect("/dashboard/transfers");
 }

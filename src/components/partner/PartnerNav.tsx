@@ -40,7 +40,12 @@ const navItems: NavItem[] = [
   { href: "/partner/transfers", label: "Property Transfers", icon: Building2 },
   { href: "/partner/clients", label: "Clients", icon: Users },
   { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },
-  { href: "/partner/training", label: "Training", icon: GraduationCap },
+  // Training hidden 2026-08-27 (Zewn): "hide the training tab since we dont have
+  // anything for that now". Same treatment as Matters above — the ROUTE stays,
+  // only the way in goes. An empty section in front of an attorney on launch
+  // week reads worse than no section, and this is coming back: building the
+  // training content is its own tracked piece of work.
+  // { href: "/partner/training", label: "Training", icon: GraduationCap },
 ];
 
 // Firm-admin-only; appended when isFirmAdmin (migration 037).
