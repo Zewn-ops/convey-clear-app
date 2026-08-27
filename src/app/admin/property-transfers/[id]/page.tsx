@@ -337,7 +337,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
   ).map((r) => ({
     ...r,
-    progress: serviceProgress(r.status, r.matters ?? null),
+    progress: serviceProgress(r.status, r.matters ?? null, "staff"),
     matterTitle: r.matters?.title ?? null,
   }));
 

@@ -132,7 +132,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
   ).map((r) => ({
     ...r,
-    progress: serviceProgress(r.status, r.matters ?? null),
+    progress: serviceProgress(r.status, r.matters ?? null, "client"),
     matterTitle: r.matters?.title ?? null,
   }));
 

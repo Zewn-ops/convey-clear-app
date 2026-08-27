@@ -30,6 +30,16 @@ export interface ServiceProgress {
   phase: number;
   total: number;
   label: string;
+  /**
+   * The phase names in order, for the stepper above the bar.
+   *
+   * Sent as plain strings rather than the Pipeline itself, for the same reason
+   * the rest of this is derived here: the pipeline definitions must not reach
+   * the client bundle. Empty whenever `total` is 0 — a service with no pipeline
+   * yet has no steps to name, and the caller already falls back to a plain label
+   * in that case.
+   */
+  steps: string[];
 }
 
 /** The linked matter, as embedded by the transfer pages. */
@@ -43,11 +53,24 @@ export interface LinkedMatterShape {
   services?: { code: string | null } | null;
 }
 
+/**
+ * Who is reading. Phases carry two names — `internalName` ("Operations") and
+ * `clientName` ("Escalation in Progress") — and only staff should see the first.
+ *
+ * The matter pages have always made this distinction (PipelineProgress takes the
+ * same parameter, and the partner portal passes "client"). The transfer service
+ * lines did not, so the bar's label has been showing internal phase names to
+ * attorneys and clients since §110 shipped. Naming the steps makes that visible
+ * seven times over instead of once, so it is fixed here rather than inherited.
+ */
+export type ProgressAudience = "staff" | "client";
+
 export function serviceProgress(
   status: string,
-  matter: LinkedMatterShape | null | undefined
+  matter: LinkedMatterShape | null | undefined,
+  audience: ProgressAudience = "staff"
 ): ServiceProgress {
-  const empty = { phase: 0, total: 0, label: "" };
+  const empty = { phase: 0, total: 0, label: "", steps: [] as string[] };
 
   if (status === "not_applicable" || status === "not_specified") {
     return { state: "none", ...empty };
@@ -78,9 +101,11 @@ export function serviceProgress(
       phase: 0,
       total: 0,
       label: done ? "Complete" : matter.current_phase ?? "In progress",
+      steps: [],
     };
   }
 
+  const forClient = audience === "client";
   const steps = phaseSteps(pipeline);
   const idx = phaseOrder(pipeline, matter.current_phase);
 
@@ -90,7 +115,8 @@ export function serviceProgress(
     // wants a 1-indexed position, and an unknown phase is the start, not the end.
     phase: done ? steps.length : Math.max(1, idx + 1),
     total: steps.length,
-    label: done ? "Complete" : phaseLabel(pipeline, matter.current_phase),
+    label: done ? "Complete" : phaseLabel(pipeline, matter.current_phase, forClient),
+    steps: steps.map((s) => (forClient ? phaseLabel(pipeline, s.key, true) : s.label)),
   };
 }
 

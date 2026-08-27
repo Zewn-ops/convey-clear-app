@@ -199,7 +199,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     (serviceItems as unknown as (ServiceRow & { matters?: LinkedMatterShape | null })[] | null) ?? []
   ).map((r) => ({
     ...r,
-    progress: serviceProgress(r.status, r.matters ?? null),
+    progress: serviceProgress(r.status, r.matters ?? null, "client"),
     matterTitle: r.matters?.title ?? null,
   }));
 

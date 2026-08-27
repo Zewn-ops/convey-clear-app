@@ -6,6 +6,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import PhaseProgress from "@/components/ui/PhaseProgress";
+import ServiceSteps from "@/components/ui/ServiceSteps";
 import type { ServiceProgress } from "@/lib/transfer-service-progress";
 import { ChevronRight, Plus, Trash2, ListChecks } from "lucide-react";
 
@@ -323,12 +324,24 @@ export default function TransferServices({
             {r.progress && r.progress.state !== "none" && (
               <div className="mt-2 pl-6">
                 {r.progress.total > 0 ? (
-                  <PhaseProgress
-                    phase={r.progress.phase}
-                    total={r.progress.total}
-                    label={r.progress.label}
-                    done={r.progress.state === "complete"}
-                  />
+                  <div className="space-y-2">
+                    {/* Circles above the bar (Zewn, 2026-08-27). They answer
+                        different questions: the circles name the phases this
+                        service actually has, the bar says how far through them
+                        we are. Neither substitutes for the other on a process
+                        where the shape is as unfamiliar as the position. */}
+                    <ServiceSteps
+                      steps={r.progress.steps}
+                      phase={r.progress.phase}
+                      done={r.progress.state === "complete"}
+                    />
+                    <PhaseProgress
+                      phase={r.progress.phase}
+                      total={r.progress.total}
+                      label={r.progress.label}
+                      done={r.progress.state === "complete"}
+                    />
+                  </div>
                 ) : (
                   <p
                     className={`text-xs ${
