@@ -10,6 +10,8 @@ import { signedDocUrls } from "@/lib/storage";
 import ClientVault from "@/components/clients/ClientVault";
 import DetailFields, { type DetailField } from "@/components/ui/DetailFields";
 import { ficaFields } from "@/lib/fica";
+import { vaultGated } from "@/lib/vault-gate";
+import VaultPaywall from "@/components/dashboard/VaultPaywall";
 import { clientDisplayName, type Client, type ClientDocument } from "@/types";
 import { User, Building2, Landmark } from "lucide-react";
 
@@ -72,6 +74,11 @@ export default async function EntitiesPage() {
   ]);
 
   const clients = (clientRows as Client[] | null) ?? [];
+
+  // This is the client portal, so the viewer is never staff — but the rule is
+  // passed explicitly anyway, so a staff surface cannot acquire a paywall by
+  // copying this page. Off entirely unless NEXT_PUBLIC_VAULT_PAYWALL=on.
+  const gated = vaultGated({ isStaff: false });
   const docs = (vaultRows as ClientDocument[] | null) ?? [];
 
   // Signed server-side with the admin client, the same way the staff client page
@@ -153,15 +160,22 @@ export default async function EntitiesPage() {
               />
             </Card>
 
-            {/* readOnly: the client-documents write routes are staff-only, so an
-                editable vault here would render buttons that 403. Reading is the
-                ask — one place to see what is on file per entity. */}
-            <ClientVault
-              clientId={m.clientId}
-              entityType={c.entity_type}
-              docs={docsFor(m.clientId)}
-              readOnly
-            />
+            {/* The paywall EXPLORATION (lib/vault-gate.ts). Off unless
+                NEXT_PUBLIC_VAULT_PAYWALL=on, so this branch is unreachable in
+                every deployment that has not deliberately turned it on. */}
+            {gated ? (
+              <VaultPaywall entityName={clientDisplayName(c)} />
+            ) : (
+              /* readOnly: the client-documents write routes are staff-only, so an
+                 editable vault here would render buttons that 403. Reading is the
+                 ask — one place to see what is on file per entity. */
+              <ClientVault
+                clientId={m.clientId}
+                entityType={c.entity_type}
+                docs={docsFor(m.clientId)}
+                readOnly
+              />
+            )}
           </div>
         );
       })}
