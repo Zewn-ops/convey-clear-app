@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePartner } from "@/lib/partner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { ensureTransferServices } from "@/lib/transfer-services-init";
 
 export const runtime = "nodejs";
 
@@ -136,6 +137,10 @@ export async function POST(request: Request) {
       : error.message;
     return NextResponse.json({ message }, { status: 400 });
   }
+
+  // Every transfer gets its checklist on creation (Zewn, 2026-08-28). Best
+  // effort — the "Create the service list" button remains as the fallback.
+  await ensureTransferServices(admin, transfer.id, auth.userId);
 
   return NextResponse.json({ ok: true, transfer });
 }

@@ -97,6 +97,14 @@ export function serviceProgress(
     return { state: "declared", ...empty, label: "Already done" };
   }
 
+  // "Completed" (069) with no matter behind it: staff finished the work without
+  // it ever becoming a matter in the portal. Same shape as `already_done` — a
+  // finished statement, not a pipeline position — but a different sentence,
+  // because the whole point of 069 is that these two are not the same claim.
+  if (status === "completed" && !matter) {
+    return { state: "declared", ...empty, label: "Completed" };
+  }
+
   // A matter exists but this viewer cannot read it. Say so, rather than
   // reporting the transfer as not started — see `hasMatter` above.
   if (!matter && hasMatter) {
@@ -225,7 +233,13 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
   const total = top.length;
 
   const resolved = top.filter((r) => {
-    if (r.status === "not_applicable" || r.status === "already_done") return true;
+    // `completed` (069) is the case that was missing entirely until now: work WE
+    // finished. Staff previously had to record it as `already_done`, which reads
+    // as "somebody else did it" and destroyed the only record of what the firm
+    // actually delivered.
+    if (r.status === "not_applicable" || r.status === "already_done" || r.status === "completed") {
+      return true;
+    }
     if (r.status !== "needed") return false;
     // `needed` counts only once the work behind it is actually finished. The
     // matter's own state is the authority — so a viewer who cannot see the

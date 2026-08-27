@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { transferProgressBlockedReason, type TransferPartyRow } from "@/lib/transfer-gate";
+import { ensureTransferServices } from "@/lib/transfer-services-init";
 import { syncPartiesFromTransfer } from "@/lib/transfer-party-sync";
 import { requireStaff } from "@/lib/staff";
 
@@ -89,6 +90,10 @@ export async function POST(request: Request) {
   // Mirror the four party columns into transfer_parties, so the parties card
   // and the registration gate see what this form just saved.
   await syncPartiesFromTransfer(admin, transfer.id as string, transferPayload(body));
+
+  // Every transfer gets its checklist on creation (Zewn, 2026-08-28). Best
+  // effort — the "Create the service list" button remains as the fallback.
+  await ensureTransferServices(admin, transfer.id as string, auth.callerId);
 
   return NextResponse.json({ ok: true, transfer });
 }

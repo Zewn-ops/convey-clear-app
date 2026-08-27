@@ -5,6 +5,7 @@ import { type UserRole } from "@/types";
 import { notifyUsers } from "@/lib/notify";
 import { requireStaff } from "@/lib/staff";
 import { logTransferActivity } from "@/lib/activity";
+import { ensureTransferServices } from "@/lib/transfer-services-init";
 
 export const runtime = "nodejs";
 
@@ -129,6 +130,11 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  // The service checklist, so an approved transfer arrives COMPLETE: the firm,
+  // the named conveyancer below, and the seven services to work through. Zewn,
+  // 2026-08-28 — this used to wait behind a button on an empty card.
+  await ensureTransferServices(admin, transfer.id, auth.callerId);
 
   // §92 — the firm that asked IS the conveyancing attorney on this transfer, and
   // the member who asked is the person handling it. Both facts are already in

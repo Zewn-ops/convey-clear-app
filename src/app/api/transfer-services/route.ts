@@ -23,7 +23,21 @@ export const runtime = "nodejs";
  * 403 rather than a silent zero-row update.
  */
 
-const STATUSES = ["needed", "already_done", "not_applicable"] as const;
+/**
+ * ⚠️ Must stay in step with the CHECK on transfer_services.status (064, 069) and
+ * with STATUS_LABEL in components/transfers/TransferServices.tsx. A value the
+ * dropdown offers but this list rejects fails with a 400 that reads like a bug.
+ *
+ * `completed` added by 069 — work WE finished, as opposed to `already_done`,
+ * which is somebody else's, from before or outside us.
+ *
+ * `not_specified` is deliberately ABSENT, and was before this change: it is
+ * 064's starting state, what a row holds before anyone has decided anything.
+ * Setting a service back to "nobody has decided" is not an action staff need,
+ * and leaving it out keeps the marker a record of decisions rather than
+ * something that can be un-decided.
+ */
+const STATUSES = ["needed", "completed", "already_done", "not_applicable"] as const;
 type Status = (typeof STATUSES)[number];
 
 async function callerIsStaff(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {

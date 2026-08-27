@@ -56,9 +56,17 @@ const STATUS_LABEL: Record<string, string> = {
   // has told us, the portal must not assert that a service is needed.
   not_specified: "Not specified",
   needed: "Needs to be done",
+  // 069. "Completed" is OURS; "already done" is somebody else's, before or
+  // outside us. Merging them would destroy the only record of what the firm
+  // actually delivered — which is exactly what staff were forced to do while
+  // there was nowhere else for a finished service to go.
+  completed: "Completed",
   already_done: "Already done",
   not_applicable: "Not applicable",
 };
+
+/** Read in the order a service moves through them, not alphabetically. */
+const STATUS_ORDER = ["not_specified", "needed", "completed", "already_done", "not_applicable"];
 
 // Zewn, 2026-08-26: needs-to-be-done blue, already-done green, not-applicable
 // amber. The tones are named by MEANING rather than colour, so "action" is the
@@ -67,6 +75,10 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_TONE: Record<string, StatusTone> = {
   not_specified: "neutral",
   needed: "action",
+  // Both finished states are green — to anyone reading the list, "done" is
+  // "done", and the distinction between who did it belongs in the label rather
+  // than in a colour nobody would decode.
+  completed: "ok",
   already_done: "ok",
   not_applicable: "waiting",
 };
@@ -82,6 +94,7 @@ const STATUS_TONE: Record<string, StatusTone> = {
 const SELECT_TONE: Record<string, string> = {
   not_specified: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
   needed: "bg-action-fill text-white",
+  completed: "bg-ok-fill text-white",
   already_done: "bg-ok-fill text-white",
   not_applicable: "bg-waiting-fill text-white",
 };
@@ -356,9 +369,9 @@ export default function TransferServices({
                     aria-label="Service status"
                     className={`${statusSelectClass(r.status)} py-1 pl-3 pr-7 text-[12px]`}
                   >
-                    {Object.entries(STATUS_LABEL).map(([v, l]) => (
+                    {STATUS_ORDER.map((v) => (
                       <option key={v} value={v} className="bg-surface font-medium text-ink">
-                        {l}
+                        {STATUS_LABEL[v]}
                       </option>
                     ))}
                   </select>
@@ -438,9 +451,9 @@ export default function TransferServices({
                             aria-label="Sub-service status"
                             className={`${statusSelectClass(k.status)} py-0.5 pl-2.5 pr-6 text-[11px]`}
                           >
-                            {Object.entries(STATUS_LABEL).map(([v, l]) => (
+                            {STATUS_ORDER.map((v) => (
                               <option key={v} value={v} className="bg-surface font-medium text-ink">
-                                {l}
+                                {STATUS_LABEL[v]}
                               </option>
                             ))}
                           </select>
