@@ -5,6 +5,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, isPartnerRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { logTransferActivity } from "@/lib/activity";
+import { notifyTransferMessage } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,23 @@ export async function POST(request: Request) {
   // failure to write it has to surface. `deduped` is a success: the note is on the
   // feed, it was simply already there (a double-submitted click).
   if (!id) return NextResponse.json({ message: "Could not post to the transfer feed." }, { status: 400 });
+
+  // Tell the other side (meeting 2026-08-24 — the conversation exists "to replace
+  // email", and an unnotified message is what sends people back to email).
+  //
+  // Skipped on a dedupe: that is a double-submitted click, and the notification
+  // for the first one has already gone. Best-effort by contract — the message is
+  // written either way, and failing the request now would tell the sender their
+  // post did not land when it did.
+  if (!deduped) {
+    await notifyTransferMessage({
+      transferId,
+      fromSide: isPartnerRole(role) ? "firm" : "conveyclear",
+      authorName: session!.profile!.full_name?.trim() || (isPartnerRole(role) ? "The attorney" : "ConveyClear"),
+      body: text,
+      authorUserId: session!.profile!.id,
+    });
+  }
 
   return NextResponse.json({ ok: true, deduped });
 }

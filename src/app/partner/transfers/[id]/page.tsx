@@ -57,7 +57,13 @@ type ClientRef = {
   business_name: string | null;
 } | null;
 
-type TransferDetail = PropertyTransfer & { seller?: ClientRef; buyer?: ClientRef };
+type TransferDetail = PropertyTransfer & {
+  seller?: ClientRef;
+  buyer?: ClientRef;
+  // The owning firm — i.e. the viewer's own firm here, used to name their
+  // side of the transfer conversation.
+  attorney?: { name: string | null } | null;
+};
 
 type LinkedMatter = Matter & {
   service_subtype?: string | null;
@@ -75,7 +81,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   const { data: transferData } = await supabase
     .from("property_transfers")
     .select(
-      "*, seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
+      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -374,7 +380,13 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
       />
 
       {/* …but the firm DOES post to the feed — it is the shared channel. */}
-      <TransferFeed transferId={id} activities={feed} canPost />
+      <TransferFeed
+        transferId={id}
+        activities={feed}
+        canPost
+        viewerSide="firm"
+        firmName={transfer.attorney?.name ?? null}
+      />
     </div>
   );
 }

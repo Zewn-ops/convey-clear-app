@@ -535,7 +535,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}
-      <TransferFeed transferId={id} activities={feed} canPost />
+      <TransferFeed
+        transferId={id}
+        activities={feed}
+        canPost
+        viewerSide="conveyclear"
+        firmName={transfer.attorney?.name ?? null}
+      />
     </div>
   );
 }

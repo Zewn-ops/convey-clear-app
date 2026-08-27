@@ -178,3 +178,82 @@ export async function notifyMatterParties(
     console.error("[notify] notifyMatterParties failed:", e);
   }
 }
+
+/**
+ * A message was posted to a property transfer's conversation — tell the OTHER
+ * side (meeting 2026-08-24: transfer chat between ConveyClear and the attorney,
+ * "to replace email").
+ *
+ * This is what makes the conversation an actual replacement for email rather
+ * than a shared notepad: before it, a post sat on the transfer until somebody
+ * happened to open the page, so the sender had no reason to trust it had been
+ * seen and went back to email anyway.
+ *
+ * ONE SIDE AT A TIME, and never the author's own side. A transfer conversation
+ * has exactly two of them, so "everyone else" is the wrong fan-out: a staff
+ * member does not need telling that a colleague replied in a thread they can
+ * both already see, and it would double every message in the bell for whichever
+ * team is busier.
+ *
+ * The link differs per audience because the same transfer lives at two URLs, and
+ * a notification that lands a partner on /admin is a dead end — hence two calls
+ * rather than one recipient list.
+ *
+ * Clients are never notified: can_access_transfer (026) excludes them from the
+ * transfer entirely, since a transfer spans both sides of the deal.
+ *
+ * Best-effort like every other producer here — never throws.
+ */
+export async function notifyTransferMessage(input: {
+  transferId: string;
+  fromSide: "conveyclear" | "firm";
+  authorName: string;
+  body: string;
+  authorUserId?: string | null;
+}): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    const { data: t } = await admin
+      .from("property_transfers")
+      .select("id, reference, business_partner_id")
+      .eq("id", input.transferId)
+      .maybeSingle();
+    if (!t) return;
+
+    const ref = (t as { reference: string | null }).reference;
+    const title = ref ? `${ref}: new message` : "New message on a property transfer";
+    // The excerpt is the point of the notification — "you have a message" makes
+    // the recipient open the page to find out whether it mattered.
+    const excerpt = input.body.length > 140 ? `${input.body.slice(0, 137)}…` : input.body;
+    const body = `${input.authorName}: ${excerpt}`;
+
+    if (input.fromSide === "firm") {
+      await notifyStaff({
+        type: "transfer_message",
+        title,
+        body,
+        link: `/admin/property-transfers/${input.transferId}`,
+      });
+      return;
+    }
+
+    const firmId = (t as { business_partner_id: string | null }).business_partner_id;
+    if (!firmId) return; // No firm on the transfer yet — nobody on the other side.
+    const { data: firmUsers } = await admin
+      .from("users")
+      .select("id")
+      .eq("business_partner_id", firmId)
+      .eq("active", true);
+    const ids = ((firmUsers as { id: string }[] | null) ?? [])
+      .map((u) => u.id)
+      .filter((id) => id !== input.authorUserId);
+    await notifyUsers(ids, {
+      type: "transfer_message",
+      title,
+      body,
+      link: `/partner/transfers/${input.transferId}`,
+    });
+  } catch (e) {
+    console.error("[notify] notifyTransferMessage failed:", e);
+  }
+}
