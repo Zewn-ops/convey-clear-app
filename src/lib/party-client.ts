@@ -23,6 +23,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type PartyIdentity = {
   entityType: "natural_person" | "business" | "trust";
   fullName?: string | null;
+  /**
+   * The two halves of a person's name, kept alongside `fullName` rather than
+   * derived from it.
+   *
+   * 023 added first_name/last_name to clients and backfilled them ONCE, by
+   * splitting full_name on the first space. Nothing has written them since, so
+   * every party captured after 2026-08-06 was born with a full_name and two
+   * empty halves — and ficaFields() marks both halves required for a natural
+   * person. The record therefore failed FICA on two fields whose value had just
+   * been typed into the form, which is a large part of why capture felt
+   * half-finished.
+   *
+   * Splitting on a space here would repeat 023's guess and get "van der Merwe"
+   * wrong every time, so the form asks for the two parts and they arrive whole.
+   */
+  firstName?: string | null;
+  lastName?: string | null;
   businessName?: string | null;
   idNumber?: string | null;
   registrationNo?: string | null;
@@ -67,6 +84,8 @@ export async function findOrCreateClientForParty(
 ): Promise<FindOrCreateResult> {
   const entityType = identity.entityType;
   const fullName = clean(identity.fullName);
+  const firstName = clean(identity.firstName);
+  const lastName = clean(identity.lastName);
   const businessName = clean(identity.businessName);
   const idNumber = clean(identity.idNumber);
   const registrationNo = clean(identity.registrationNo);
@@ -102,6 +121,10 @@ export async function findOrCreateClientForParty(
     .insert({
       entity_type: entityType,
       full_name: entityType === "natural_person" ? fullName : null,
+      // Written, not split. See PartyIdentity above: leaving these NULL is what
+      // made every captured person fail FICA on a name that had been typed.
+      first_name: entityType === "natural_person" ? firstName : null,
+      last_name: entityType === "natural_person" ? lastName : null,
       business_name: entityType === "natural_person" ? null : businessName,
       id_number: idNumber,
       registration_no: registrationNo,
@@ -117,8 +140,19 @@ export async function findOrCreateClientForParty(
 
   if (error) {
     // RLS refusing the insert surfaces as 42501, not a 403.
+    //
+    // 070 gave partner firms a scoped INSERT, so the ordinary partner capture
+    // no longer lands here. What still can: a caller with no firm at all (a
+    // client user), or a partner path that forgot to pass scopeToFirmId and so
+    // built an unstamped row. Both are dead ends if the message stops at "no",
+    // which is what PRODUCT.md principle 5 is about — so it names the way out.
     if (error.code === "42501") {
-      return { ok: false, error: "You cannot create client records here." };
+      return {
+        ok: false,
+        error:
+          "You cannot create client records here. Link an existing client instead, " +
+          "or ask ConveyClear to add them.",
+      };
     }
     return { ok: false, error: error.message };
   }

@@ -280,10 +280,18 @@ export default function TransferParties({
   const [mode, setMode] = useState<"entity" | "firm" | "inline">("entity");
   const [linkId, setLinkId] = useState("");
   const [entityType, setEntityType] = useState("natural_person");
+  // A person is named in two halves, a business in one. ficaFields() requires
+  // first_name and last_name separately for a natural person, and until now
+  // capture sent neither — so every captured person was born failing FICA on a
+  // name that had just been typed in. Splitting one box on a space was the
+  // other option and it mangles "van der Merwe".
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [cell, setCell] = useState("");
   const [idNo, setIdNo] = useState("");
+  const [address, setAddress] = useState("");
   // 059 — who at the firm. One of these, never both: a portal user when the
   // firm has them, a typed name when it does not.
   const [contactUserId, setContactUserId] = useState("");
@@ -320,12 +328,28 @@ export default function TransferParties({
       if (contactUserId) body.contactUserId = contactUserId;
       else if (contactName.trim()) body.contactName = contactName.trim();
     } else {
-      if (!name.trim()) return toast.error("A name is required.");
       body.entityType = entityType;
-      if (entityType === "natural_person") body.fullName = name;
-      else body.businessName = name;
+      if (entityType === "natural_person") {
+        if (!firstName.trim() || !lastName.trim()) {
+          return toast.error("A first name and a surname are both required.");
+        }
+        body.firstName = firstName.trim();
+        body.lastName = lastName.trim();
+      } else {
+        if (!name.trim()) return toast.error("A name is required.");
+        body.businessName = name.trim();
+      }
+      // Mirrors the server rule. A captured party becomes a real client record,
+      // and one with no way to reach the person cannot be invited, chased or
+      // FICA-verified. Everything else FICA wants is marked and listed, not
+      // walled off — an attorney often has the name and one contact detail and
+      // nothing more, and refusing the party would send them back to a note.
+      if (!email.trim() && !cell.trim()) {
+        return toast.error("An email address or a cell number is required.");
+      }
       if (email.trim()) body.email = email.trim();
       if (cell.trim()) body.cell = cell.trim();
+      if (address.trim()) body.physicalAddress = address.trim();
       if (idNo.trim()) {
         if (entityType === "natural_person") body.idNumber = idNo.trim();
         else body.registrationNo = idNo.trim();
@@ -345,9 +369,12 @@ export default function TransferParties({
       setAdding(false);
       setLinkId("");
       setName("");
+      setFirstName("");
+      setLastName("");
       setEmail("");
       setCell("");
       setIdNo("");
+      setAddress("");
       router.refresh();
     } finally {
       setBusy(null);
@@ -525,15 +552,45 @@ export default function TransferParties({
                   <option value="trust">Trust</option>
                 </select>
               </label>
-              <label className="flex-1 text-sm">
-                <span className="mb-1 block font-medium text-ink-2">Name</span>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={entityType === "natural_person" ? "Full name" : "Registered name"}
-                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
-                />
-              </label>
+              {entityType === "natural_person" ? (
+                <>
+                  <label className="flex-1 text-sm">
+                    <span className="mb-1 block font-medium text-ink-2">
+                      First name(s)
+                      <span className="ml-1 text-danger">*</span>
+                    </span>
+                    <input
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                    />
+                  </label>
+                  <label className="flex-1 text-sm">
+                    <span className="mb-1 block font-medium text-ink-2">
+                      Surname
+                      <span className="ml-1 text-danger">*</span>
+                    </span>
+                    <input
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                    />
+                  </label>
+                </>
+              ) : (
+                <label className="flex-1 text-sm">
+                  <span className="mb-1 block font-medium text-ink-2">
+                    {entityType === "trust" ? "Trust name" : "Business name (as per CIPC)"}
+                    <span className="ml-1 text-danger">*</span>
+                  </span>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Registered name"
+                    className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                  />
+                </label>
+              )}
             </div>
           )}
 
@@ -543,45 +600,82 @@ export default function TransferParties({
               duplicate check, so capturing the same person twice links instead of
               forking. */}
           {mode === "inline" && (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="flex-1 text-sm">
-                <span className="mb-1 block font-medium text-ink-2">Email</span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.co.za"
+            <>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <label className="flex-1 text-sm">
+                  <span className="mb-1 block font-medium text-ink-2">
+                    Email
+                    <span className="ml-1 text-danger">*</span>
+                  </span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.co.za"
+                    className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                  />
+                </label>
+                <label className="flex-1 text-sm">
+                  <span className="mb-1 block font-medium text-ink-2">
+                    Cell
+                    <span className="ml-1 text-danger">*</span>
+                  </span>
+                  <input
+                    value={cell}
+                    onChange={(e) => setCell(e.target.value)}
+                    placeholder="+27 82 000 0000"
+                    className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                  />
+                </label>
+                <label className="flex-1 text-sm">
+                  <span className="mb-1 block font-medium text-ink-2">
+                    {entityType === "natural_person" ? "ID number" : "Registration no."}
+                    <span className="ml-1 text-danger">*</span>
+                  </span>
+                  <input
+                    value={idNo}
+                    onChange={(e) => setIdNo(e.target.value)}
+                    className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
+                  />
+                </label>
+              </div>
+
+              {/* The address the API has accepted all along and the form never
+                  offered — physicalAddress was handled server-side and written
+                  to the client record, and there was no input for it anywhere
+                  except the editor you reach AFTER capturing. */}
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-ink-2">Address</span>
+                <textarea
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Street, suburb, city"
                   className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
                 />
               </label>
-              <label className="flex-1 text-sm">
-                <span className="mb-1 block font-medium text-ink-2">Cell</span>
-                <input
-                  value={cell}
-                  onChange={(e) => setCell(e.target.value)}
-                  placeholder="+27 82 000 0000"
-                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
-                />
-              </label>
-              <label className="flex-1 text-sm">
-                <span className="mb-1 block font-medium text-ink-2">
-                  {entityType === "natural_person" ? "ID number" : "Registration no."}
-                </span>
-                <input
-                  value={idNo}
-                  onChange={(e) => setIdNo(e.target.value)}
-                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-action"
-                />
-              </label>
-            </div>
+            </>
           )}
 
           {mode === "inline" && (
-            <p className="text-[12.5px] text-ink-3">
-              This creates a <span className="font-medium text-ink-2">client record</span> — with its
-              own FICA vault, reusable on their next matter. If a client already exists with this ID
-              number or email, they are linked instead of duplicated.
-            </p>
+            <div className="space-y-1.5 text-[12.5px] text-ink-3">
+              <p>
+                This creates a <span className="font-medium text-ink-2">client record</span> — with
+                its own FICA vault, reusable on their next matter. If a client already exists with
+                this ID number or email, they are linked instead of duplicated.
+              </p>
+              {/* Marked, not walled off. FICA wants all three starred fields, but
+                  an attorney frequently has a name and one way to reach someone
+                  and nothing else yet — refusing the party at that point sends
+                  them back to recording it in a note, which is the behaviour the
+                  capture flow exists to replace. So the form says what FICA will
+                  want, and asks only for what a contactable record needs. */}
+              <p>
+                <span className="text-danger">*</span> Required for FICA. You can add the party with
+                a name and <span className="font-medium text-ink-2">either</span> an email address or
+                a cell number — anything still outstanding shows on their client record.
+              </p>
+            </div>
           )}
 
           <div className="flex gap-2">
