@@ -191,6 +191,30 @@ export default function TransferServices({
   const mayPickStatus = canManage || canMark;
   const statusOptions = canManage ? STATUS_ORDER : PARTNER_STATUS_ORDER;
 
+  /**
+   * The options for one row, given what it currently holds.
+   *
+   * A <select> whose `value` is not among its <option>s does not show that
+   * value — it renders blank, or silently displays the first option instead.
+   * The firm's list is narrower than the vocabulary, so two ordinary states fall
+   * straight into that hole:
+   *
+   *   · `not_specified` — what EVERY line holds at creation (064's default).
+   *     Zewn, 2026-08-28: "have all the services marked as not specified upon
+   *     creation and then the attorney can choose one of the other options from
+   *     there". Without this the attorney opens a brand-new transfer and every
+   *     service appears to be already marked "Needs to be done".
+   *   · `completed`     — which only staff can set, but the firm can SEE.
+   *
+   * So the current value is always present, and is disabled when it is not one
+   * the firm may choose: the row tells the truth about where it stands, and the
+   * three real choices sit under it. Disabling also matches the database —
+   * 071's trigger refuses `not_specified` and `completed` from a partner, so
+   * offering either as a target would be a control that fails on use.
+   */
+  const optionsFor = (status: string) =>
+    statusOptions.includes(status) ? statusOptions : [status, ...statusOptions];
+
   const top = rows.filter((r) => !r.parent_id).sort((a, b) => a.position - b.position);
   const childrenOf = (id: string) => rows.filter((r) => r.parent_id === id);
 
@@ -406,8 +430,13 @@ export default function TransferServices({
                     aria-label="Service status"
                     className={`${statusSelectClass(r.status)} py-1 pl-3 pr-7 text-[12px]`}
                   >
-                    {statusOptions.map((v) => (
-                      <option key={v} value={v} className="bg-surface font-medium text-ink">
+                    {optionsFor(r.status).map((v) => (
+                      <option
+                        key={v}
+                        value={v}
+                        disabled={!statusOptions.includes(v)}
+                        className="bg-surface font-medium text-ink"
+                      >
                         {STATUS_LABEL[v]}
                       </option>
                     ))}
@@ -488,8 +517,13 @@ export default function TransferServices({
                             aria-label="Sub-service status"
                             className={`${statusSelectClass(k.status)} py-0.5 pl-2.5 pr-6 text-[11px]`}
                           >
-                            {statusOptions.map((v) => (
-                              <option key={v} value={v} className="bg-surface font-medium text-ink">
+                            {optionsFor(k.status).map((v) => (
+                              <option
+                                key={v}
+                                value={v}
+                                disabled={!statusOptions.includes(v)}
+                                className="bg-surface font-medium text-ink"
+                              >
                                 {STATUS_LABEL[v]}
                               </option>
                             ))}
