@@ -68,6 +68,22 @@ const STATUS_LABEL: Record<string, string> = {
 /** Read in the order a service moves through them, not alphabetically. */
 const STATUS_ORDER = ["not_specified", "needed", "completed", "already_done", "not_applicable"];
 
+/**
+ * What the attorney firm may choose (071). Zewn, 2026-08-28: *"their only
+ * options for the dropdown should be 'Needs to be done' 'already Done' 'not
+ * applicable'"*.
+ *
+ * `completed` is absent on purpose — 069 made it mean "WE finished it", so a
+ * firm setting it would claim ConveyClear delivered the work. `not_specified`
+ * is absent because it is the absence of a mark rather than a choice: a firm
+ * can mark, but cannot un-mark.
+ *
+ * ⚠️ Cosmetic only. The real enforcement is 071's trigger, which refuses any
+ * other value however the row is reached — this list just avoids offering a
+ * firm something it would be refused for picking.
+ */
+const PARTNER_STATUS_ORDER = ["needed", "already_done", "not_applicable"];
+
 // Zewn, 2026-08-26: needs-to-be-done blue, already-done green, not-applicable
 // amber. The tones are named by MEANING rather than colour, so "action" is the
 // blue one and "waiting" the amber — see components/ui/StatusPill.tsx, where the
@@ -135,12 +151,27 @@ export default function TransferServices({
   transferId,
   rows,
   canManage = false,
+  canMark = false,
   matterHrefBase = "/admin/matters",
 }: {
   transferId: string;
   rows: ServiceRow[];
-  /** Staff only. §122 has the markers set by ConveyClear, not by the firm. */
+  /**
+   * Staff. The full marker vocabulary plus everything else on a line —
+   * third party, notes, the matter link, adding and removing sub-services.
+   */
   canManage?: boolean;
+  /**
+   * The attorney firm may set the marker, and nothing else (071).
+   *
+   * §122 had these set by ConveyClear alone, and all three layers agreed until
+   * Zewn reversed it on 2026-08-28: *"we need to give the arttorneys the
+   * ability to mark which services they need"*. The firm gets a narrower
+   * vocabulary than staff — see PARTNER_STATUS_ORDER.
+   *
+   * Ignored when `canManage` is true; staff already have the wider control.
+   */
+  canMark?: boolean;
   /**
    * Where "Open matter" points, or `null` for an audience that has no matter
    * surface at all. Clients pass null (2026-08-27: matters are not theirs to
@@ -153,6 +184,12 @@ export default function TransferServices({
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+
+  // Staff get the full vocabulary, the firm a narrowed one, everyone else a
+  // read-only pill. Kept as two derived values so the three call sites below
+  // cannot drift apart.
+  const mayPickStatus = canManage || canMark;
+  const statusOptions = canManage ? STATUS_ORDER : PARTNER_STATUS_ORDER;
 
   const top = rows.filter((r) => !r.parent_id).sort((a, b) => a.position - b.position);
   const childrenOf = (id: string) => rows.filter((r) => r.parent_id === id);
@@ -338,7 +375,7 @@ export default function TransferServices({
                 )
               )}
 
-              {canManage ? (
+              {mayPickStatus ? (
                 // A native select, WEARING THE PILL. Zewn, 2026-08-27, looking
                 // at the client's read-only view: "i really like this view of
                 // the transfer services, please use this in partner and ccmember
@@ -369,7 +406,7 @@ export default function TransferServices({
                     aria-label="Service status"
                     className={`${statusSelectClass(r.status)} py-1 pl-3 pr-7 text-[12px]`}
                   >
-                    {STATUS_ORDER.map((v) => (
+                    {statusOptions.map((v) => (
                       <option key={v} value={v} className="bg-surface font-medium text-ink">
                         {STATUS_LABEL[v]}
                       </option>
@@ -441,7 +478,7 @@ export default function TransferServices({
                 {kids.map((k) => (
                   <div key={k.id} className="flex items-center gap-3">
                     <span className="flex-1 truncate text-sm text-ink-2">{k.label}</span>
-                    {canManage ? (
+                    {mayPickStatus ? (
                       <>
                         <span className="relative shrink-0">
                           <select
@@ -451,7 +488,7 @@ export default function TransferServices({
                             aria-label="Sub-service status"
                             className={`${statusSelectClass(k.status)} py-0.5 pl-2.5 pr-6 text-[11px]`}
                           >
-                            {STATUS_ORDER.map((v) => (
+                            {statusOptions.map((v) => (
                               <option key={v} value={v} className="bg-surface font-medium text-ink">
                                 {STATUS_LABEL[v]}
                               </option>

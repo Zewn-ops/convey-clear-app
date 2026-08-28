@@ -108,6 +108,19 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     ((myFirm as { partner_type?: string } | null)?.partner_type ?? "") as (typeof DOC_UPLOADING_FIRM_TYPES)[number]
   );
 
+  // 071 — may this firm mark which services it needs?
+  //
+  // The same firm-type set as uploading, and deliberately the same constant
+  // rather than a second identical list: `business_partner` covers law firms AND
+  // estate agencies (059, §112), Zewn's note said "attorneys", and two lists
+  // that must agree are two lists that eventually will not. If agencies should
+  // ever mark services, that is a deliberate widening and the constant is where
+  // it happens, once.
+  //
+  // ⚠️ Role gate only. RLS (transfer_services_partner_mark) still decides whether
+  // it is THIS transfer, and 071's trigger decides what may change on the row.
+  const firmMayMarkServices = firmMayUpload;
+
   // Parties (050). RLS on transfer_parties routes through can_access_transfer,
   // so these rows exist only for transfers this firm already works.
   const { data: partyRows } = await supabase
@@ -299,6 +312,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         <TransferServices
           transferId={id}
           rows={serviceRows}
+          canMark={firmMayMarkServices}
           matterHrefBase="/partner/matters"
         />
       </Card>

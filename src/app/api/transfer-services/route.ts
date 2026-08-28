@@ -40,6 +40,24 @@ export const runtime = "nodejs";
 const STATUSES = ["needed", "completed", "already_done", "not_applicable"] as const;
 type Status = (typeof STATUSES)[number];
 
+/**
+ * What the ATTORNEY FIRM may set (071). Zewn, 2026-08-28: *"their only options
+ * for the dropdown should be 'Needs to be done' 'already Done' 'not
+ * applicable'"*.
+ *
+ * `completed` is absent and must stay absent: 069 created it to mean "WE
+ * finished it", and it is the field the firm's delivery is read out of. A firm
+ * setting it would assert that ConveyClear completed work.
+ *
+ * `already_done` IS here — it means somebody outside us already did this, which
+ * is the attorney's to know, not ours.
+ *
+ * ⚠️ This list is the SECOND of two enforcement points, not the only one.
+ * 071's trigger enforces the same three values in the database, because
+ * PostgREST is reachable without this route. Keep them in step.
+ */
+const PARTNER_STATUSES = ["needed", "already_done", "not_applicable"] as const;
+
 async function callerIsStaff(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {
   const { data } = await supabase
     .from("users")
@@ -126,9 +144,12 @@ export async function PATCH(req: Request) {
   if (!rateLimit(`transfer-services:${clientIp(req)}`, 60, 60_000)) {
     return NextResponse.json({ error: "Too many requests. Try again shortly." }, { status: 429 });
   }
-  if (!(await callerIsStaff(supabase, user.id))) {
-    return NextResponse.json({ error: "Only ConveyClear staff can change the service list." }, { status: 403 });
-  }
+  // 071 — the firm may mark, and may do nothing else. Staff keep the full PATCH.
+  // RLS decides WHICH transfers they can reach (transfer_services_partner_mark
+  // routes through can_access_transfer), and 071's trigger independently refuses
+  // any column other than status. This check exists so a partner gets a sentence
+  // instead of a database error.
+  const isStaff = await callerIsStaff(supabase, user.id);
 
   let body: {
     id?: string;
@@ -146,21 +167,45 @@ export async function PATCH(req: Request) {
   const id = clean(body.id, 64);
   if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
+  const allowed = isStaff ? STATUSES : PARTNER_STATUSES;
+
   const patch: Record<string, unknown> = {};
   if (body.status !== undefined) {
-    if (!STATUSES.includes(body.status as Status)) {
+    if (!(allowed as readonly string[]).includes(body.status)) {
       return NextResponse.json(
-        { error: `status must be one of: ${STATUSES.join(", ")}.` },
-        { status: 400 }
+        {
+          error: isStaff
+            ? `status must be one of: ${STATUSES.join(", ")}.`
+            : // Named rather than a bare list: a firm that tried to set
+              // "completed" should learn WHY it is not theirs to set, not just
+              // that the value was rejected.
+              `A firm may mark a service ${PARTNER_STATUSES.join(", ")}. ` +
+              `Only ConveyClear can mark a service completed.`,
+        },
+        { status: isStaff ? 400 : 403 }
       );
     }
     patch.status = body.status;
   }
+
   // null is a meaningful value for these three — it clears the field — so they
   // are distinguished from "absent" rather than being coerced.
-  if (body.thirdParty !== undefined) patch.third_party = clean(body.thirdParty, 120);
-  if (body.notes !== undefined) patch.notes = clean(body.notes, 2000);
-  if (body.matterId !== undefined) patch.matter_id = clean(body.matterId, 64);
+  //
+  // 071: these three are STAFF ONLY. A firm sending them is refused outright
+  // rather than having them quietly dropped — silently ignoring half a request
+  // is how a caller comes to believe it worked.
+  if (!isStaff) {
+    if (body.thirdParty !== undefined || body.notes !== undefined || body.matterId !== undefined) {
+      return NextResponse.json(
+        { error: "A firm may only change the service marker." },
+        { status: 403 }
+      );
+    }
+  } else {
+    if (body.thirdParty !== undefined) patch.third_party = clean(body.thirdParty, 120);
+    if (body.notes !== undefined) patch.notes = clean(body.notes, 2000);
+    if (body.matterId !== undefined) patch.matter_id = clean(body.matterId, 64);
+  }
 
   if (!Object.keys(patch).length) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
