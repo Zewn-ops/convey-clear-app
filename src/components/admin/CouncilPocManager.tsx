@@ -151,7 +151,13 @@ export default function CouncilPocManager({ initialPocs }: { initialPocs: Counci
         </Card>
       )}
 
-      <Card padding="none">
+      {/* overflow-hidden is load-bearing, not decoration. Card is rounded-lg and
+          does NOT clip its children, so the header row's square bg-raised
+          rectangle painted straight through the rounded corners — and in dark
+          mode the ring is drawn rounded, which made the two square ears at the
+          top of the table obvious. Fourteen other table cards already carry
+          this class; this one and UserManager were missed. */}
+      <Card padding="none" className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
