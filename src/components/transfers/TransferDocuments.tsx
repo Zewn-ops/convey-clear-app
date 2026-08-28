@@ -295,6 +295,34 @@ export default function TransferDocuments({
           const held = presentNamed.has(t);
           const doc = current.find((d) => d.document_type === t && d.disapproved_at == null);
           const pending = canManage && held && doc?.approved_at == null;
+
+          /**
+           * Re-uploading one of the five REPLACES it — it does not add a second.
+           *
+           * Zewn, 2026-08-28: "when the attorney reuploads one of the transfer
+           * documents then it should replace that document instead of
+           * adding/duplicating it".
+           *
+           * The tile used to call upload(f, t) with no replaces_id, so a second
+           * deed search landed beside the first. Both then sat in the rows below
+           * with no way to tell which one was current, while the "x of 5" count
+           * stayed the same — it counts DISTINCT TYPES, so the duplicate was
+           * invisible in the number and confusing everywhere else.
+           *
+           * The disapproved case is the one worth being explicit about. A
+           * disapproved document is deliberately absent from presentNamed — the
+           * file is held and has to be replaced — so `held` is false and the tile
+           * reads "Not uploaded". Uploading there must still SUPERSEDE the
+           * disapproved row rather than sit next to it, because replacing it is
+           * precisely what the disapproval asked for.
+           *
+           * The server decides whether this particular caller may supersede this
+           * particular row: staff are unrestricted, a firm may only replace its
+           * OWN firm's upload, or it is refused with a sentence saying so. That
+           * check is deliberately not duplicated here — the point is that no path
+           * silently creates a duplicate any more.
+           */
+          const supersedes = doc ?? current.find((d) => d.document_type === t);
           return (
             <li key={t}>
               {/* ⚠️ mayUpload, NOT canManage. §112 split authorship from control
@@ -353,7 +381,7 @@ export default function TransferDocuments({
                       // Reset first: picking the same file twice in a row fires no
                       // change event otherwise, so a failed upload cannot be retried.
                       e.target.value = "";
-                      if (f) upload(f, t);
+                      if (f) upload(f, t, supersedes?.id);
                     }}
                   />
                 )}
