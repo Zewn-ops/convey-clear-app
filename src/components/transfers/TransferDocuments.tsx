@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { UploadCloud, FileText, FilePlus2, CheckCircle2, RotateCcw, Trash2, Files, Pencil, Check, X, FolderInput } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { docLabel } from "@/lib/prc-docs";
+import TransferUploadPanel from "@/components/transfers/TransferUploadPanel";
 import {
   SUPPORTING_DOC_GROUPS,
   SUPPORTING_DOC_TYPES,
@@ -62,6 +63,7 @@ export default function TransferDocuments({
   vaultOptions = [],
   sellerName = null,
   buyerName = null,
+  nameSubject = null,
 }: {
   transferId: string;
   docs: Doc[];
@@ -81,6 +83,13 @@ export default function TransferDocuments({
    */
   sellerName?: string | null;
   buyerName?: string | null;
+  /**
+   * What a document on this transfer is ABOUT, for the name preview — the
+   * property, falling back to the firm's reference, exactly as
+   * resolveTransferSubject() picks it server-side. Passed in rather than
+   * fetched so the preview cannot disagree with the name the server stores.
+   */
+  nameSubject?: string | null;
   /**
    * Staff. Approving, sharing, disapproving and archiving — everything that
    * decides what a document MEANS or who sees it.
@@ -150,9 +159,21 @@ export default function TransferDocuments({
   })).filter((g) => g.docs.length > 0);
   const partyNames = { seller: sellerName, buyer: buyerName };
 
-  async function upload(file: File, docType: string, replacesId?: string, role?: string | null) {
-    if (!ALLOWED.includes(file.type)) return toast.error("Only PDF, JPG, PNG or WebP files");
-    if (file.size > MAX_SIZE) return toast.error("File must be under 10 MB");
+  async function upload(
+    file: File,
+    docType: string,
+    replacesId?: string,
+    role?: string | null,
+    displayName?: string | null
+  ) {
+    if (!ALLOWED.includes(file.type)) {
+      toast.error("Only PDF, JPG, PNG or WebP files");
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast.error("File must be under 10 MB");
+      return;
+    }
 
     setBusy(replacesId ?? "__new");
     try {
@@ -177,6 +198,7 @@ export default function TransferDocuments({
           document_type: docType,
           party_role: role || null,
           file_name: file.name,
+          display_name: displayName ?? null,
           mime_type: file.type,
           size_bytes: file.size,
           replaces_id: replacesId ?? null,
@@ -422,80 +444,15 @@ export default function TransferDocuments({
         )}
 
         {mayUpload && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              const f = e.dataTransfer.files?.[0];
-              if (f) upload(f, type, undefined, partyRole);
-            }}
-            className={`mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 transition-colors ${
-              dragging ? "border-line bg-action-fill/5" : "border-line"
-            }`}
-          >
-            {/* Two questions, two controls. They are independent — a certified ID
-                can be the seller's or the buyer's, and an offer to purchase is
-                neither — so folding them into one dropdown would either lose an
-                answer or multiply the options by three. */}
-            <label className="min-w-[12rem] flex-1 text-xs font-medium text-ink-3">
-              Document type
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
-              >
-                {SUPPORTING_DOC_GROUPS.map((g) => (
-                  <optgroup key={g.label} label={g.label}>
-                    {g.types.map((t) => (
-                      <option key={t} value={t}>
-                        {docLabel(t)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-
-            <label className="min-w-[11rem] flex-1 text-xs font-medium text-ink-3">
-              Whose document is it?
-              <select
-                value={partyRole}
-                onChange={(e) => setPartyRole(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]"
-              >
-                {/* Empty is a real answer, not a prompt to choose: the offer to
-                    purchase and the municipal account belong to the transaction.
-                    It is listed last so the two common answers come first. */}
-                <option value="seller">{partyRoleLabel("seller", partyNames)}</option>
-                <option value="buyer">{partyRoleLabel("buyer", partyNames)}</option>
-                <option value="">Not party-specific</option>
-              </select>
-            </label>
-
-            <input
-              ref={fileRef}
-              type="file"
-              className="sr-only"
-              accept=".pdf,.jpg,.jpeg,.png,.webp"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) upload(f, type, undefined, partyRole);
-                e.target.value = "";
-              }}
+          <div className="mt-3">
+            <TransferUploadPanel
+              busy={busy === "__new"}
+              partyNames={partyNames}
+              nameSubject={nameSubject}
+              onUpload={(file, docType, role, displayName) =>
+                upload(file, docType, undefined, role, displayName)
+              }
             />
-            <button
-              type="button"
-              disabled={busy === "__new"}
-              onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-action-fill px-3 py-2 text-sm font-medium text-white hover:bg-action-fill/90 disabled:opacity-50"
-            >
-              <UploadCloud className="h-4 w-4" /> {busy === "__new" ? "Uploading…" : "Upload"}
-            </button>
           </div>
         )}
       </div>

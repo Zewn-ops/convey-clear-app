@@ -27,6 +27,8 @@ export async function POST(request: Request) {
     document_type?: string;
     party_role?: string | null;
     file_name?: string;
+    /** Uploader's chosen name, overriding the canonical one. Optional. */
+    display_name?: string | null;
     mime_type?: string;
     size_bytes?: number;
     replaces_id?: string | null;
@@ -122,6 +124,25 @@ export async function POST(request: Request) {
     });
   } catch (e) {
     console.error("[transfer-documents/confirm] canonical naming failed", e);
+  }
+
+  // An explicit override wins over the canonical name. The upload panel shows
+  // the generated name and offers a pencil, so someone arriving here with a
+  // display_name has deliberately taken it over — 040's rename already allows
+  // exactly this after the fact, and refusing it at upload time would only make
+  // people upload and then immediately rename.
+  //
+  // Sanitised the same way buildDocumentName sanitises its parts: a name is a
+  // filename in a council pack and in a download, so the characters that break
+  // one break the other. Trimmed to a length no filesystem argues with, and
+  // ignored entirely if it empties out.
+  if (typeof body.display_name === "string") {
+    const override = body.display_name
+      .replace(/[\\/:*?"<>|]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 180);
+    if (override) displayName = override;
   }
 
   const row: Record<string, unknown> = {

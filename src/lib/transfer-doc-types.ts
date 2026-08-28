@@ -97,3 +97,51 @@ export function partyRoleLabel(
 export function isTransferPartyRole(value: unknown): value is TransferPartyRole {
   return value === "seller" || value === "buyer";
 }
+
+/**
+ * Guess a document type, and sometimes a party, from the uploader's filename.
+ *
+ * A convenience, never an assertion. The uploader sees the result in a control
+ * they can change before anything is saved, so a wrong guess costs one click
+ * and a right one saves two. That asymmetry is the whole justification — this
+ * would not be worth having if it ran after the upload rather than before it.
+ *
+ * Order matters: the first pattern to match wins, so the specific ones come
+ * before the general. "certified id of the representative" must not be caught
+ * by the plain `id` rule.
+ */
+const TYPE_HINTS: { type: string; test: RegExp }[] = [
+  { type: "id_certified_representative", test: /\brep(resentative)?\b/i },
+  { type: "id_certified_trustee", test: /\btrustee\b/i },
+  // No trailing \b on "auth": it has to match inside "authority", where the
+  // boundary would fall between two word characters and never fire.
+  { type: "letter_of_authority", test: /(\bletter[\s_-]*of[\s_-]*auth|\bloa\b)/i },
+  { type: "cor_14_3", test: /\bcor[\s_-]*14/i },
+  { type: "cipc_docs", test: /\bcipc\b/i },
+  { type: "poa", test: /\b(power[\s_-]*of[\s_-]*attorney|poa)\b/i },
+  { type: "proof_of_address", test: /\b(proof[\s_-]*of[\s_-]*(address|residence)|por|utility)\b/i },
+  { type: "tax_clearance", test: /\b(tax[\s_-]*clearance|sars)\b/i },
+  { type: "offer_to_purchase", test: /\b(offer[\s_-]*to[\s_-]*purchase|otp|sale[\s_-]*agreement)\b/i },
+  { type: "municipal_account", test: /\b(municipal|rates[\s_-]*account|statement)\b/i },
+  // Last of the type rules: "id" appears inside plenty of words, so it only
+  // gets a look once nothing more specific has matched.
+  { type: "id_certified", test: /\b(id|identity)\b/i },
+];
+
+const PARTY_HINTS: { role: TransferPartyRole; test: RegExp }[] = [
+  { role: "seller", test: /\b(seller|vendor|transferor)\b/i },
+  { role: "buyer", test: /\b(buyer|purchaser|transferee)\b/i },
+];
+
+export function guessFromFileName(fileName: string): {
+  type?: string;
+  role?: TransferPartyRole;
+} {
+  // Strip the extension so ".pdf" cannot influence anything, and treat
+  // separators as spaces so `seller_id_certified.pdf` reads as three words.
+  const stem = fileName.replace(/\.[A-Za-z0-9]{1,8}$/, "").replace(/[_-]+/g, " ");
+  return {
+    type: TYPE_HINTS.find((h) => h.test.test(stem))?.type,
+    role: PARTY_HINTS.find((h) => h.test.test(stem))?.role,
+  };
+}

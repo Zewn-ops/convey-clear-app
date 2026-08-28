@@ -382,6 +382,8 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
       {/* The firm uploads (attorney firms only, §112) but does not manage: staff
           approve, share and archive. The route enforces both halves — this only
           decides whether to draw the control. */}
+      {/* nameSubject mirrors resolveTransferSubject() exactly, so the name
+          previewed in the upload panel is the name the server stores. */}
       <TransferDocuments
         transferId={id}
         docs={transferDocsWithUrls}
@@ -389,6 +391,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         canUpload={firmMayUpload}
         sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
         buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
+        nameSubject={transfer.property_description || transfer.reference}
       />
 
       {/* …but the firm DOES post to the feed — it is the shared channel. */}

@@ -537,6 +537,8 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
 
       {/* Documents about the property itself — reused by every matter above
           instead of being fetched once per matter (migration 034). */}
+      {/* nameSubject mirrors resolveTransferSubject() exactly, so the name
+          previewed in the upload panel is the name the server stores. */}
       <TransferDocuments
         transferId={id}
         docs={transferDocsWithUrls}
@@ -545,6 +547,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         vaultOptions={vaultOptions}
         sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
         buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
+        nameSubject={transfer.property_description || transfer.reference}
       />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}
