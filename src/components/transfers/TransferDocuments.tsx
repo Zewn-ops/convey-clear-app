@@ -297,12 +297,35 @@ export default function TransferDocuments({
           const pending = canManage && held && doc?.approved_at == null;
           return (
             <li key={t}>
+              {/* ⚠️ mayUpload, NOT canManage. §112 split authorship from control
+                  on 2026-08-11 — "attorneys are responsible for uploading
+                  transfer documents like the deed search", and ConveyClear then
+                  decides who sees them. The server has always agreed
+                  (requireTransferUploader passes attorney firms, and the confirm
+                  route puts no restriction on document_type), and the supporting
+                  documents below already gate on mayUpload. These five tiles were
+                  the one place still gating on canManage, which partner pages
+                  pass as false — so the tile rendered as a cursor-pointer label
+                  with a hover lift and an "Upload the …" tooltip, and contained
+                  no input at all. It looked like the control it was not.
+                  Zewn, 2026-08-28: "partners cant upload the 5 main docs for some
+                  reason. only cc admin has the ability."
+
+                  The affordance now follows the permission, so a viewer who
+                  genuinely may not upload is not invited to try. */}
               <label
                 className={
-                  "relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-xl p-3 text-center shadow-chip transition-shadow hover:shadow-lg " +
+                  "relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl p-3 text-center shadow-chip transition-shadow " +
+                  (mayUpload ? "cursor-pointer hover:shadow-lg " : "cursor-default ") +
                   (held ? "bg-ok-tint" : "bg-surface")
                 }
-                title={held ? `${docLabel(t)} — uploaded` : `Upload the ${docLabel(t)}`}
+                title={
+                  held
+                    ? `${docLabel(t)} — uploaded`
+                    : mayUpload
+                      ? `Upload the ${docLabel(t)}`
+                      : `${docLabel(t)} — not uploaded yet`
+                }
               >
                 {held && (
                   <CheckCircle2
@@ -319,7 +342,7 @@ export default function TransferDocuments({
                 <span className="text-[10.5px] uppercase tracking-[0.07em] text-ink-3">
                   {pending ? "Awaiting approval" : held ? "Uploaded" : "Not uploaded"}
                 </span>
-                {canManage && (
+                {mayUpload && (
                   <input
                     type="file"
                     className="sr-only"
