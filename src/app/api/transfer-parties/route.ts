@@ -84,6 +84,12 @@ export async function POST(req: Request) {
   const clientId = typeof b.clientId === "string" && b.clientId ? b.clientId : null;
   const firmId = typeof b.firmId === "string" && b.firmId ? b.firmId : null;
 
+  // Read once, up here, because the capture branch below needs the caller's firm
+  // to scope the client record it creates — 070's INSERT policy only accepts a
+  // row stamped with the caller's own firm id. It was previously read after the
+  // party insert, where only the write-back needed it.
+  const me = await callerProfile(supabase, user.id);
+
   const row: Record<string, unknown> = { transfer_id: transferId, role };
   let createdClient: { id: string; name: string } | null = null;
 
@@ -117,8 +123,17 @@ export async function POST(req: Request) {
     // and can be reused on the next matter. The inline columns stay on the
     // table for the rows created before this, and for the PATCH path.
     const entityType = b.entityType as string | undefined;
-    const fullName = typeof b.fullName === "string" ? b.fullName.trim() : "";
     const businessName = typeof b.businessName === "string" ? b.businessName.trim() : "";
+    // A person's name arrives in halves now — ficaFields() requires both, and
+    // splitting one field on a space gets "van der Merwe" wrong. `fullName` is
+    // still what the rest of the portal displays, so it is composed here rather
+    // than asked for twice.
+    const firstName = typeof b.firstName === "string" ? b.firstName.trim() : "";
+    const lastName = typeof b.lastName === "string" ? b.lastName.trim() : "";
+    const fullName =
+      [firstName, lastName].filter(Boolean).join(" ") ||
+      (typeof b.fullName === "string" ? b.fullName.trim() : "");
+
     if (!entityType || !["natural_person", "business", "trust"].includes(entityType)) {
       return NextResponse.json({ error: "Pick a person, business or trust." }, { status: 400 });
     }
@@ -126,16 +141,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "A name is required." }, { status: 400 });
     }
 
+    const email = typeof b.email === "string" ? b.email.trim() : "";
+    const cell = typeof b.cell === "string" ? b.cell.trim() : "";
+    // The one FICA-required field enforced rather than merely marked.
+    //
+    // ficaFields() requires cell AND email AND (ID | registration number), and
+    // walling all of those off would break the ordinary case: an attorney adds
+    // a seller knowing a name and one way to reach them, and the rest arrives
+    // with the FICA pack. The form marks every required field and says what is
+    // still outstanding.
+    //
+    // But this creates a real client record, and a client record with no way to
+    // reach the person cannot be invited, chased or FICA-verified — it can only
+    // sit there. So: at least one contact route, and the form says which.
+    if (!email && !cell) {
+      return NextResponse.json(
+        { error: "An email address or a cell number is required — this creates a client record, and one with neither cannot be contacted." },
+        { status: 400 }
+      );
+    }
+
     const made = await findOrCreateClientForParty(supabase, {
       entityType: entityType as "natural_person" | "business" | "trust",
       fullName,
+      firstName,
+      lastName,
       businessName,
       idNumber: b.idNumber as string,
       registrationNo: b.registrationNo as string,
-      email: b.email as string,
-      cell: b.cell as string,
+      email,
+      cell,
       physicalAddress: b.physicalAddress as string,
-    });
+      // 070 — a partner may only create a client stamped with their OWN firm,
+      // and the deduplicator must search that same scope or it would match (and
+      // then render) another firm's client. Staff pass nothing: they dedupe
+      // against everything, because they can see everything.
+    }, { scopeToFirmId: me.isStaff ? null : me.firmId });
     if (!made.ok) return NextResponse.json({ error: made.error }, { status: 400 });
     row.client_id = made.clientId;
     // §108 — an attorney assigning a party who is not in the system creates them
@@ -170,7 +211,6 @@ export async function POST(req: Request) {
 
   // Keep the transfer's own columns in step, so the Edit form and the detail
   // card show the party that was just added. Staff only — see callerProfile.
-  const me = await callerProfile(supabase, user.id);
   if (me.isStaff) {
     await syncTransferFromParty(
       createAdminClient(),
