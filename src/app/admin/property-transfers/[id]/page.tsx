@@ -13,7 +13,6 @@ import {
   type RawTransferParty,
 } from "@/lib/transfer-parties";
 import DetailFields from "@/components/ui/DetailFields";
-import { getPipeline, phaseLabel, stageLabel } from "@/lib/pipelines";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   isStaffRole,
@@ -344,6 +343,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   }));
   const transferRollup = transferProgress(serviceRows);
 
+  // Matters on this transfer that no service line is tracking. See the note on
+  // the card below for why these have to be shown somewhere.
+  const trackedMatterIds = new Set(
+    serviceRows.map((r) => r.matter_id).filter((v): v is string => Boolean(v))
+  );
+  const unlistedMatters = linked.filter((m) => !trackedMatterIds.has(m.id));
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
@@ -443,14 +449,77 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         />
       </Card>
 
-      {/* Linked matters — the point of the hub */}
-      <Card accent="service" padding="none">
-        <div className="px-5 py-4 border-b border-line">
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
-            Matters in this transfer · {linked.length}
-          </p>
-        </div>
-        <div className="px-5 py-4 border-b border-line space-y-4">
+      {/* ── Matters NOT represented on the checklist ───────────────────────
+          Zewn, 2026-08-28: "i think we can remove the matters in this transfer
+          block now, its been replaced by the services tab no?"
+
+          Mostly yes. As a PROGRESS display it is fully replaced — phase, stage
+          and status are all said better by the service lines' circles and bars,
+          so those columns are gone.
+
+          🔴 BUT IT CANNOT SIMPLY BE DELETED, because a service line tracks at
+          most ONE matter. api/admin/matters puts it plainly: "a transfer can
+          legitimately carry two matters of the same service (a rates clearance
+          re-run after a failed one), and the first is the one the checklist is
+          tracking". The second matter sets matters.transfer_id and attaches to
+          no line — delete this block and it is still on the transfer while
+          being invisible on it.
+
+          So the block now shows ONLY what the checklist cannot: matters with no
+          service line pointing at them. On an ordinary transfer that is none,
+          and the whole card disappears — which is the clean page he was after,
+          without losing the exception.
+
+          ▶ REVISIT (noted in RESUME_HERE §3.5): the real fix is to let a
+          service line hold more than one matter, or to let one be linked to a
+          line from the line itself. Both are bigger than this, and both would
+          let this card go entirely. */}
+      {unlistedMatters.length > 0 && (
+        <Card accent="service" padding="none">
+          <div className="border-b border-line px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+              Other matters on this transaction · {unlistedMatters.length}
+            </p>
+            <p className="mt-1 text-xs text-ink-3">
+              Attached to the transfer but not tracked by a service above — a repeat of a
+              service already listed, or one linked by hand.
+            </p>
+          </div>
+          <ul className="divide-y divide-line">
+            {unlistedMatters.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/admin/matters/${m.id}`}
+                    className="font-medium text-ink hover:text-action hover:underline"
+                  >
+                    {m.title || "Untitled"}
+                  </Link>
+                  {m.services?.name && <p className="mt-0.5 text-xs text-ink-3">{m.services.name}</p>}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {m.status && (
+                    <Badge label={MATTER_STATUS_LABELS[m.status]} variant={matterStatusVariant(m.status)} />
+                  )}
+                  <UnlinkMatterButton matterId={m.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Creating and linking stay, but as ACTIONS rather than as a table.
+          Jukka, meeting 1: "we want to move away from linking matters and
+          instead create matters within the property transfer immediately" — so
+          creating is first. Linking an existing matter stays because a PRC
+          opened months before anyone knew it belonged to this transaction still
+          has to be attachable, and no service line offers that today.
+
+          Native <details>: this is a server component, and a disclosure needs
+          no JavaScript to be one. */}
+      <Card padding="none">
+        <div className="space-y-4 px-5 py-4">
           <details className="group">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-action hover:underline">
               <Plus className="h-4 w-4" /> Create a matter in this transfer
@@ -474,61 +543,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             <LinkMatterControl transferId={id} candidates={candidates} />
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line bg-raised">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {linked.map((m) => {
-                const pipeline = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-                return (
-                  <tr key={m.id} className="hover:bg-raised transition-colors">
-                    <td className="px-5 py-3">
-                      <Link href={`/admin/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
-                        {m.title || "Untitled"}
-                      </Link>
-                      {m.services?.name && <p className="text-xs text-ink-3 mt-0.5">{m.services.name}</p>}
-                    </td>
-                    <td className="px-5 py-3 text-ink-2 hidden md:table-cell">
-                      {m.current_phase ? (pipeline ? phaseLabel(pipeline, m.current_phase) : m.current_phase) : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
-                      {pipeline ? (m.current_stage ? stageLabel(pipeline, m.current_stage) : "—") : m.current_stage || "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      {m.status && <Badge label={MATTER_STATUS_LABELS[m.status]} variant={matterStatusVariant(m.status)} />}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <UnlinkMatterButton matterId={m.id} />
-                    </td>
-                  </tr>
-                );
-              })}
-              {linked.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-ink-3">
-                    No matters linked yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* Create a matter INSIDE the transfer (Jukka, meeting 1: "we want to move
-            away from linking matters and instead create matters within the property
-            transfer immediately"). Linking an existing matter stays — a PRC opened
-            months before anyone knew it was part of this transaction still has to
-            be attachable — but creating is now the primary path, so it is first.
-
-            Native <details>: this is a server component, and a disclosure needs no
-            JavaScript to be a disclosure. */}
       </Card>
 
       {/* What this transfer is about (056). Always rendered, linked or not —
