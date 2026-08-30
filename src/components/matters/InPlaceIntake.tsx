@@ -119,7 +119,7 @@ export default function InPlaceIntake({
         missingParty: true,
       });
     }
-  } else if (code === "RCF") {
+  } else if (code === "PRC") {
     const seller = sorted[0] ?? null;
     groups.push({
       key: seller?.id ?? "seller",

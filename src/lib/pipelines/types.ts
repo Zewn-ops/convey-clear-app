@@ -58,9 +58,9 @@ export interface PipelinePhase {
 }
 
 export interface Pipeline {
-  serviceCode: string;        // "COO" | "RCF"
+  serviceCode: string;        // "COO" | "PRC"
   municipality: string;       // "COT"
-  subtype?: string;           // "RCF" | "RCC" (PRC sub-divisions)
+  subtype?: string;           // "RCA" | "RCF" | "RCC" (PRC stages, 072)
   label: string;              // human label e.g. "City of Tshwane — Change of Ownership"
   prePhase: { key: string; name: string };               // "New Instruction"
   phases: PipelinePhase[];

@@ -25,30 +25,39 @@ import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-reac
  * prevents anyone doing anything.
  */
 
-// Keys are `services.code`, NOT the meeting's abbreviations. 063 used EBP/PRC
-// and those two lines could never link to a matter — see 066.
+// Keys are `services.code`. 072 renamed four of them to the vocabulary the
+// councils actually use (BP→EBP, CERT→COC, RCF→PRC, REFUND→REF); both sides of
+// the checklist/services convention moved together in that one migration,
+// because 066 is the record of what happens when they drift apart.
 export const SERVICE_LABELS: Record<string, string> = {
-  BP: "Existing Building Plans",
-  CERT: "Certificates",
-  RCF: "Property Rates Clearance",
+  EBP: "Existing Building Plans",
+  COC: "Certificates",
   MAD: "Municipal Account Dispute",
+  PRC: "Property Rates Clearance",
   COO: "Change of Ownership",
-  REFUND: "Refund",
+  REF: "Refund",
   OTHER: "Other",
 };
 
-/** The default line items, in municipal order — mirrors instantiate_transfer_services (063). */
-export const DEFAULT_SERVICE_CODES = ["BP", "CERT", "RCF", "MAD", "COO", "REFUND", "OTHER"] as const;
+/**
+ * The default line items, in the canonical order — mirrors
+ * instantiate_transfer_services (072).
+ *
+ * Zewn, 2026-08-31, on the three council sheets: the order is the SAME for
+ * every council. The numbering on each sheet is the order that discussion
+ * happened in, not data.
+ */
+export const DEFAULT_SERVICE_CODES = ["EBP", "COC", "MAD", "PRC", "COO", "REF", "OTHER"] as const;
 
 /** §114 — these must be complete before Change of Ownership proceeds. */
-const COO_PREREQUISITES = ["BP", "CERT", "RCF", "MAD"] as const;
+const COO_PREREQUISITES = ["EBP", "COC", "MAD", "PRC"] as const;
 
 /** The sub-services named in the meeting. Suggestions, not a closed list. */
 const SUGGESTED: Record<string, string[]> = {
   // §118
-  BP: ["Occupational certificate", "Sectional scheme plans", "Site development plan", "Floor plans"],
+  EBP: ["Occupational certificate", "Sectional scheme plans", "Site development plan", "Floor plans"],
   // §120
-  CERT: ["Electrical", "Building standards", "Environmental", "Gas"],
+  COC: ["Electrical", "Building standards", "Environmental", "Gas"],
 };
 
 const STATUS_LABEL: Record<string, string> = {

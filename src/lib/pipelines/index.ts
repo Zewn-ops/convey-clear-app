@@ -26,7 +26,7 @@ export function getPipeline(
       (p) =>
         p.serviceCode === svc &&
         p.municipality === muni &&
-        (p.subtype ?? undefined) === (svc === "RCF" ? sub : undefined)
+        (p.subtype ?? undefined) === (svc === "PRC" ? sub : undefined)
     ) ?? null
   );
 }

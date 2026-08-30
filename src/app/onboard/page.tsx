@@ -66,11 +66,11 @@ export default async function OnboardPage({
     return <ErrorPage reason={reason} token={token} requested={requested} />;
   }
 
-  // PRC / Rates Clearance (service code RCF; both RCF + RCC subtypes) gets the
-  // rates-clearance doc set. PRC matters now carry a single seller party, so this
-  // MUST come before the parties check below — otherwise they'd be sent to the
-  // COO multi-party form and shown COO documents.
-  if (data.service_code === "RCF") {
+  // PRC / Rates Clearance (service code PRC since 072; subtypes RCA/RCF/RCC)
+  // gets the rates-clearance doc set. PRC matters now carry a single seller
+  // party, so this MUST come before the parties check below — otherwise they'd
+  // be sent to the COO multi-party form and shown COO documents.
+  if (data.service_code === "PRC") {
     return <PrcOnboardForm token={token} data={data} />;
   }
 

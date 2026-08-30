@@ -4,7 +4,7 @@ import type { Pipeline } from "./types";
 // The Phase-2 COT decision is a branching outcome stage: Approved / Delayed /
 // Rejected, where Delayed + Rejected each require a one-of reason.
 export const cotRcf: Pipeline = {
-  serviceCode: "RCF",
+  serviceCode: "PRC",
   municipality: "COT",
   subtype: "RCF",
   label: "City of Tshwane — Rates Clearance Figures (Memo)",

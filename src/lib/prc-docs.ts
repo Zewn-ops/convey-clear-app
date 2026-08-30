@@ -1,6 +1,10 @@
-// Property Rates Clearance (PRC) — sub-divisions + the RCF per-municipality
-// document matrix (Jukka 2026-06-16). The PRC service is code 'RCF'; within it
-// the partner picks a sub-division. Only RCF is built in-portal for now.
+// Property Rates Clearance (PRC) — stages + the RCF per-municipality document
+// matrix (Jukka 2026-06-16). The PRC service is code 'PRC' since 072; within it
+// the partner picks a stage. Only RCF and RCC are built in-portal for now.
+//
+// Zewn, 2026-08-31: RCA / RCF / RCC are sequential stages of one job — RCA opens
+// the rates clearance account, RCF gets the figures from it, RCC gets the
+// certificate. Not three alternatives.
 import { COO_DOC_LABELS } from "./coo-docs";
 import { TRANSFER_DOC_LABELS } from "./transfer-doc-types";
 
