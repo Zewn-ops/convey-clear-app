@@ -12,6 +12,12 @@ export const CLIENT_DOCS_BUCKET = "client-documents";
 // clearance figure for the whole transaction, reused by each matter inside it.
 // Path "<transferId>/<uuid>-<file>"; scoped by can_access_transfer.
 export const TRANSFER_DOCS_BUCKET = "transfer-documents";
+// Firm-level documents (migration 073) — what the councils ask OF THE FIRM
+// once, rather than per transaction: bank confirmation letter, fidelity fund
+// certificate, PoA (attorneys), PoA (address), SLA, POPIA. Path
+// "<firmId>/<uuid>-<file>"; the leading firm UUID is what the storage RLS
+// scopes reads against, exactly as the client vault does.
+export const FIRM_DOCS_BUCKET = "firm-documents";
 
 function safeName(fileName: string): string {
   return (fileName || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
@@ -27,6 +33,10 @@ export function clientObjectPath(clientId: string, fileName: string): string {
 
 export function transferObjectPath(transferId: string, fileName: string): string {
   return `${transferId}/${randomUUID()}-${safeName(fileName)}`;
+}
+
+export function firmObjectPath(firmId: string, fileName: string): string {
+  return `${firmId}/${randomUUID()}-${safeName(fileName)}`;
 }
 
 // Short-lived signed download URL (default 5 min). Returns null if it can't sign.

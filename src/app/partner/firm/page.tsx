@@ -11,6 +11,9 @@ import CouncilLoginsCard, {
   type FirmMember,
   type StoredLogin,
 } from "@/components/partner/CouncilLoginsCard";
+import FirmDocumentsCard, {
+  type FirmDocumentRow,
+} from "@/components/partner/FirmDocumentsCard";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = { title: "Firm Details — ConveyClear Partner" };
@@ -42,6 +45,7 @@ export default async function PartnerFirmPage() {
     { data: bpRows },
     { data: memberRows },
     { data: loginRows },
+    { data: documentRows },
   ] = await Promise.all([
     supabase.from("firms").select(FIRM_FIELDS).eq("id", auth.partnerId).maybeSingle(),
     supabase
@@ -64,6 +68,11 @@ export default async function PartnerFirmPage() {
       .select("user_id, municipality, updated_at")
       .eq("firm_id", auth.partnerId)
       .order("municipality", { ascending: true }),
+    supabase
+      .from("firm_documents")
+      .select("id, document_type, file_name, created_at")
+      .eq("firm_id", auth.partnerId)
+      .order("created_at", { ascending: false }),
   ]);
 
   const firm = (firmRow as unknown as (FirmCouncilFields & { name: string }) | null) ?? null;
@@ -71,6 +80,7 @@ export default async function PartnerFirmPage() {
   const bpNumbers = (bpRows as BpNumber[] | null) ?? [];
   const members = (memberRows as FirmMember[] | null) ?? [];
   const stored = (loginRows as StoredLogin[] | null) ?? [];
+  const documents = (documentRows as FirmDocumentRow[] | null) ?? [];
   const firmName = firm?.name ?? "Your firm";
 
   return (
@@ -96,6 +106,7 @@ export default async function PartnerFirmPage() {
         banking={banking}
         bpNumbers={bpNumbers}
       />
+      <FirmDocumentsCard documents={documents} />
       <CouncilLoginsCard members={members} stored={stored} />
     </div>
   );
