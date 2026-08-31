@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import TransferCard from "@/components/transfers/TransferCard";
 import EmptyState from "@/components/ui/EmptyState";
 import { TRANSFER_STATUS_LABELS, type PropertyTransfer } from "@/types";
-import { Plus, Building2, FileEdit } from "lucide-react";
+import { Plus, Building2, FileEdit, Inbox } from "lucide-react";
 import FilterBar from "@/components/ui/FilterBar";
 import { type Facet } from "@/components/ui/FilterRail";
 import {
@@ -137,12 +137,23 @@ export default async function PartnerTransfersPage({
             {total} transfer{total === 1 ? "" : "s"} · every matter in one transaction, together
           </p>
         </div>
-        <Link
-          href="/partner/transfers/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-        >
-          <Plus className="h-4 w-4" /> Request a transfer
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* §5.10 — where a request went, and why one was declined. Its own
+              page rather than a section here: this list is transfers that
+              EXIST, and a declined request is precisely one that does not. */}
+          <Link
+            href="/partner/transfers/requests"
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3.5 py-2 text-sm font-semibold text-ink-2 transition-colors duration-150 ease-out hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          >
+            <Inbox className="h-4 w-4" /> Requests
+          </Link>
+          <Link
+            href="/partner/transfers/new"
+            className="inline-flex items-center gap-1.5 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+          >
+            <Plus className="h-4 w-4" /> Request a transfer
+          </Link>
+        </div>
       </div>
 
       {/* Unfinished requests, above the transfers they will become. Zewn,
@@ -157,7 +168,11 @@ export default async function PartnerTransfersPage({
           </p>
           <p className="mt-0.5 text-xs text-ink-3">
             Only your firm can see these. ConveyClear is not told about a draft
-            until you send it.
+            until you send it.{" "}
+            <Link href="/partner/transfers/requests" className="font-medium text-action hover:underline">
+              See all requests
+            </Link>
+            .
           </p>
           <ul className="mt-3 space-y-2">
             {drafts.map((d) => (
