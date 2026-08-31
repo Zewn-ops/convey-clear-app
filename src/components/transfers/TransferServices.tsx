@@ -32,19 +32,9 @@ import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-reac
  * prevents anyone doing anything.
  */
 
-// Keys are `services.code`. 072 renamed four of them to the vocabulary the
-// councils actually use (BP→EBP, CERT→COC, RCF→PRC, REFUND→REF); both sides of
-// the checklist/services convention moved together in that one migration,
-// because 066 is the record of what happens when they drift apart.
-export const SERVICE_LABELS: Record<string, string> = {
-  EBP: "Existing Building Plans",
-  COC: "Certificates",
-  MAD: "Municipal Account Dispute",
-  PRC: "Property Rates Clearance",
-  COO: "Change of Ownership",
-  REF: "Refund",
-  OTHER: "Other",
-};
+import { SERVICE_LABELS, serviceLabel } from "@/lib/councils/types";
+// Re-exported so the modules that already import it from here keep working.
+export { SERVICE_LABELS };
 
 /**
  * The default line items, in the canonical order — mirrors
@@ -261,7 +251,7 @@ export default function TransferServices({
   // Outstanding prerequisites, for the advisory note on Change of Ownership.
   const outstanding = top
     .filter((r) => COO_PREREQUISITES.includes(r.service_code as never) && r.status === "needed")
-    .map((r) => SERVICE_LABELS[r.service_code ?? ""] ?? r.service_code);
+    .map((r) => serviceLabel(r.service_code));
 
   async function call(init: RequestInit & { url: string }, key: string) {
     setBusy(key);
@@ -464,7 +454,7 @@ export default function TransferServices({
                   }`}
                 />
                 <span className="truncate text-[15px] font-medium text-ink">
-                  {SERVICE_LABELS[code] ?? code}
+                  {serviceLabel(code)}
                 </span>
                 {kids.length > 0 && (
                   <span className="shrink-0 text-xs tabular-nums text-ink-3">{kids.length}</span>

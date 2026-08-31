@@ -87,7 +87,12 @@ export default async function TransferRequestsPage() {
             {[
               r.suggested_reference?.trim(),
               r.municipality ? municipalityLabel(r.municipality) : null,
-              `Sent ${formatDate(r.created_at)}`,
+              // A draft has not been sent to anybody, and the line above
+              // this list says so. Matches the transfers-page banner,
+              // which also reads "Saved" off updated_at.
+              r.status === "draft"
+                ? `Saved ${formatDate(r.updated_at)}`
+                : `Sent ${formatDate(r.created_at)}`,
             ]
               .filter(Boolean)
               .join(" · ")}

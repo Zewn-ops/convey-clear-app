@@ -114,6 +114,41 @@ export const SERVICE_ORDER = [
 ] as const;
 export type ServiceCode = (typeof SERVICE_ORDER)[number];
 
+/**
+ * Display names for the seven codes, beside the order they are declared in.
+ *
+ * 🔴 THIS LIVES HERE BECAUSE IT DRIFTED. The map was defined twice -- in
+ * components/transfers/TransferServices.tsx and again in
+ * lib/transfer-service-progress.ts, whose comment said "keep the two in step".
+ * 072 renamed four codes (BP→EBP, CERT→COC, RCF→PRC, REFUND→REF) and moved
+ * only the first copy, so the progress dots silently fell back to raw codes
+ * for exactly those four. Found on production 2026-08-31.
+ *
+ * That is 066 happening a second time, so the duplicate is gone rather than
+ * corrected: this module is plain data with no "use client" and no server
+ * imports, so both sides can import it.
+ */
+export const SERVICE_LABELS: Record<ServiceCode, string> = {
+  EBP: "Existing Building Plans",
+  COC: "Certificates",
+  MAD: "Municipal Account Dispute",
+  PRC: "Property Rates Clearance",
+  COO: "Change of Ownership",
+  REF: "Refund",
+  OTHER: "Other",
+};
+
+/**
+ * The label for a code that came out of the database, where it is nullable and
+ * typed `string`. Returns the raw code for anything unrecognised, so a service
+ * added in SQL before it is added here still renders as itself rather than as
+ * a blank or a crash.
+ */
+export function serviceLabel(code: string | null | undefined): string {
+  if (!code) return "Service";
+  return SERVICE_LABELS[code as ServiceCode] ?? code;
+}
+
 /** RCA opens the account, RCF gets the figures, RCC gets the certificate. */
 export type PrcStage = PrcSubtype["code"];
 
