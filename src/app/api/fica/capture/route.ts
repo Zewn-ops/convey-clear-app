@@ -41,6 +41,8 @@ interface Body {
     work_number?: string;
     email?: string;
     designation?: string;
+    /** 079 — the one director who represents the business. */
+    is_representative?: boolean;
   }[];
   consents?: {
     popia?: boolean;
@@ -222,17 +224,34 @@ export async function POST(request: Request) {
   // Replace-in-full: the form edits the whole list, so a removed director must
   // actually disappear. Scoped to is_director so other contacts survive.
   if (body.directors) {
+    // 079 — at most ONE representative per client, enforced by a partial unique
+    // index. Taking the first flagged one rather than passing several through
+    // means a form that somehow sends two gets a clear result instead of a
+    // constraint violation, and the index is still the boundary.
+    let representativeTaken = false;
+
     const rows = body.directors
       .filter((d) => (d.full_name ?? "").trim() || (d.email ?? "").trim())
-      .map((d) => ({
-        client_id: clientId,
-        name: `${d.full_name ?? ""} ${d.surname ?? ""}`.trim(),
-        email: d.email || null,
-        cell: d.cell || null,
-        work_number: d.work_number || null,
-        designation: d.designation || null,
-        is_director: true,
-      }));
+      .map((d) => {
+        const isRep = Boolean(d.is_representative) && !representativeTaken;
+        if (isRep) representativeTaken = true;
+        return {
+          client_id: clientId,
+          // `name` stays the display string every existing reader uses, and
+          // 079's two columns carry the halves the form actually collected.
+          // Writing only the merged string is what turned (Jan | van der
+          // Merwe) into (Jan van der | Merwe) on the way back out.
+          name: `${d.full_name ?? ""} ${d.surname ?? ""}`.trim(),
+          first_name: (d.full_name ?? "").trim() || null,
+          last_name: (d.surname ?? "").trim() || null,
+          email: d.email || null,
+          cell: d.cell || null,
+          work_number: d.work_number || null,
+          designation: d.designation || null,
+          is_director: true,
+          is_representative: isRep,
+        };
+      });
 
     await admin.from("contacts").delete().eq("client_id", clientId).eq("is_director", true);
     if (rows.length > 0) {

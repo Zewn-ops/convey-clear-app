@@ -156,7 +156,9 @@ export async function buildFicaSubjects(
             .order("created_at", { ascending: false }),
           supabase
             .from("contacts")
-            .select("client_id, name, email, cell, work_number, designation")
+            .select(
+              "client_id, name, first_name, last_name, email, cell, work_number, designation, is_representative"
+            )
             .in("client_id", ids)
             .eq("is_director", true),
         ])
@@ -215,25 +217,58 @@ export interface DirectorInput {
   work_number: string;
   email: string;
   designation: string;
+  /** 079 — the one director who represents the business. At most one per client. */
+  is_representative?: boolean;
 }
 
 /**
- * `contacts.name` is one string, but the form edits first name(s) and surname
- * separately (the same split as migration 023/024). Last token = surname; the
- * rest are first names, so "Anna Maria van der Merwe" keeps its surname intact
- * only as far as a single field can — which is why the two are stored apart going
- * forward and this is only a read-side best effort.
+ * A director's name, in halves.
+ *
+ * 🔴 THE SPLIT WAS DESTROYING REAL NAMES. `contacts.name` is one column, and
+ * the FICA capture route wrote `${full_name} ${surname}` into it while this
+ * function split it back on whitespace taking the LAST token as the surname. So
+ * a director captured correctly as (Jan | van der Merwe) was stored as
+ * "Jan van der Merwe" and read back as (Jan van der | Merwe) — the form already
+ * had both halves, and only the storage threw one away.
+ *
+ * 079 gives `contacts` real first_name / last_name columns and the route now
+ * writes them. Rows that predate it keep NULL there — deliberately not
+ * backfilled, since splitting them is the same guess made permanent — so the
+ * old behaviour survives as a FALLBACK for exactly those rows and nothing else.
+ *
+ * Same defect §4.2 fixed for transfer parties, and the same one 023 created for
+ * clients.
  */
 export function toDirectors(
   rows:
-    | { name?: string | null; email?: string | null; cell?: string | null; work_number?: string | null; designation?: string | null }[]
+    | {
+        name?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        email?: string | null;
+        cell?: string | null;
+        work_number?: string | null;
+        designation?: string | null;
+        is_representative?: boolean | null;
+      }[]
     | null
     | undefined
 ): DirectorInput[] {
   return (rows ?? []).map((r) => {
-    const parts = (r.name ?? "").trim().split(/\s+/).filter(Boolean);
-    const surname = parts.length > 1 ? parts[parts.length - 1] : "";
-    const first = parts.length > 1 ? parts.slice(0, -1).join(" ") : (parts[0] ?? "");
+    const stored = {
+      first: (r.first_name ?? "").trim(),
+      last: (r.last_name ?? "").trim(),
+    };
+
+    // Only guess when the row has no halves of its own.
+    let first = stored.first;
+    let surname = stored.last;
+    if (!first && !surname) {
+      const parts = (r.name ?? "").trim().split(/\s+/).filter(Boolean);
+      surname = parts.length > 1 ? parts[parts.length - 1] : "";
+      first = parts.length > 1 ? parts.slice(0, -1).join(" ") : (parts[0] ?? "");
+    }
+
     return {
       full_name: first,
       surname,
@@ -241,6 +276,7 @@ export function toDirectors(
       work_number: r.work_number ?? "",
       email: r.email ?? "",
       designation: r.designation ?? "",
+      is_representative: Boolean(r.is_representative),
     };
   });
 }
