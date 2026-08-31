@@ -564,6 +564,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
         buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
         nameSubject={transfer.property_description || transfer.reference}
+        municipality={transfer.municipality}
       />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}

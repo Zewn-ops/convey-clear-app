@@ -7,6 +7,7 @@ import { canonicalTransferDocumentName } from "@/lib/doc-naming";
 import { requireTransferUploader } from "@/lib/transfer-upload-access";
 import { notifyStaff } from "@/lib/notify";
 import { isTransferPartyRole } from "@/lib/transfer-doc-types";
+import { resolveDocClass } from "@/lib/doc-classes";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,9 @@ export async function POST(request: Request) {
 
   const { data: transfer } = await supabase
     .from("property_transfers")
-    .select("id")
+    // municipality comes back for 076: which council this transfer is at
+    // decides whether a document is an input, supporting or an output.
+    .select("id, municipality")
     .eq("id", transfer_id)
     .maybeSingle();
   if (!transfer) return NextResponse.json({ message: "Transfer not found or access denied" }, { status: 403 });
@@ -145,10 +148,24 @@ export async function POST(request: Request) {
     if (override) displayName = override;
   }
 
+  // 076 — input, supporting or output, resolved from the council config and
+  // STORED rather than computed on read. A later change to what a council
+  // requires must not retrospectively re-file documents that were uploaded
+  // under the old rules.
+  //
+  // The party role is what separates the two halves of Zewn's own example: the
+  // seller's deed search is an input, the buyer's is an output.
+  const docClass = resolveDocClass(
+    (transfer as { municipality: string | null }).municipality,
+    docType,
+    partyRole
+  );
+
   const row: Record<string, unknown> = {
     transfer_id,
     document_type: docType,
     party_role: partyRole,
+    doc_class: docClass,
     storage_bucket: TRANSFER_DOCS_BUCKET,
     storage_path,
     file_name: displayName,
@@ -170,10 +187,16 @@ export async function POST(request: Request) {
   // deploying ahead of the migration degrades to "no provenance" rather than
   // "uploads fail". Same play as 040 on the matter side.
   if (error && (error as { code?: string }).code === "42703") {
-    // 041 adds original_file_name; 067 adds party_role. Dropping both keeps a
-    // deploy that lands ahead of either migration at "no provenance, no role"
-    // rather than "uploads fail" — the file is already in storage by now.
-    const { original_file_name: _dropped, party_role: _alsoDropped, ...legacyRow } = row;
+    // 041 adds original_file_name; 067 adds party_role; 076 adds doc_class.
+    // Dropping all three keeps a deploy that lands ahead of any of those
+    // migrations at "no provenance, no role, no class" rather than "uploads
+    // fail" — the file is already in storage by now.
+    const {
+      original_file_name: _dropped,
+      party_role: _alsoDropped,
+      doc_class: _classDropped,
+      ...legacyRow
+    } = row;
     ({ data: doc, error } = await admin
       .from("transfer_documents")
       .insert(legacyRow)

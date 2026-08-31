@@ -286,6 +286,11 @@ export interface TransferDocument {
   // own, e.g. the offer to purchase. Independent of document_type, which says
   // what the document IS.
   party_role?: "seller" | "buyer" | null;
+  // Input, supporting or output (076). Resolved from the council config at
+  // upload and STORED, so a later change to what a council requires cannot
+  // retrospectively re-file documents. NULL on rows uploaded before the split
+  // — deliberately not backfilled, and shown as such rather than guessed at.
+  doc_class?: "input" | "supporting" | "output" | null;
   created_at: string;
 }
 
