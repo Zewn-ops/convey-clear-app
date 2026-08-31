@@ -7,6 +7,7 @@
 // certificate. Not three alternatives.
 import { COO_DOC_LABELS } from "./coo-docs";
 import { TRANSFER_DOC_LABELS } from "./transfer-doc-types";
+import { councilServiceSpec } from "./councils";
 
 export interface PrcSubtype {
   code: "RCF" | "RCC" | "RCA";
@@ -105,6 +106,93 @@ export function prcRcfDocs(sellerEntityType?: string | null): PrcDocRule[] {
     { docType: "proof_of_application", optional: true },
     { docType: "proof_of_payment_figures", optional: true },
   ];
+}
+
+/**
+ * The documents a rates-clearance matter needs, for its STAGE and its COUNCIL.
+ *
+ * §5.8, marked *very important* by Zewn: "we also need to rework the document
+ * uploads proccess for matters, specifically for PRC (RCA,RCF and RCC)".
+ *
+ * 🔴 THE GAP THIS CLOSES. `prcRcfDocs()` above is shaped entirely around the
+ * RCF: the seller's FICA, plus an optional proof of application and proof of
+ * payment. Every PRC matter got that list — an RCA and an RCC included — even
+ * though an RCA opens the account (so there is no account statement to show
+ * yet) and an RCC follows the figures (so the RCF output is itself an input).
+ * And none of it varied by council, while the three handwritten sheets differ
+ * on exactly this.
+ *
+ * WHAT IT COMPOSES, AND WHY IT DOES NOT SIMPLY REPLACE
+ *   The entity-driven FICA in `prcRcfDocs()` is correct and hard-won — a
+ *   business shows CIPC plus the representative's certified ID, a trust its
+ *   letter of authority plus the trustee's. The councils do not restate that
+ *   detail; their sheets say "ID / CIPC / LoA" on one line. So the FICA rules
+ *   stay authoritative and the council adds what it asks for on top.
+ *
+ * WHAT IS DELIBERATELY EXCLUDED
+ *   · `firm`-owned documents — the bank confirmation letter, the FFC, the PoA.
+ *     They live on the firm record (073) and autofill (§11.3); asking an
+ *     attorney to attach the firm's own FFC to every matter is the thing that
+ *     upgrade exists to stop.
+ *   · `output` documents — what ConveyClear produces is not something the
+ *     attorney uploads at intake.
+ *
+ * Falls back to `prcRcfDocs()` when the council has no spec for the stage, so
+ * an unspecified council behaves exactly as it does today rather than showing
+ * an empty checklist.
+ */
+export function prcStageDocs(
+  stage: string | null | undefined,
+  sellerEntityType?: string | null,
+  municipality?: string | null
+): PrcDocRule[] {
+  const fica = prcRcfDocs(sellerEntityType);
+  const spec = councilServiceSpec(municipality, "PRC", normalisePrcStage(stage));
+  if (!spec) return fica;
+
+  const seen = new Set(fica.map((d) => d.docType));
+  const out: PrcDocRule[] = [...fica];
+
+  // The councils write identity as ONE line — "ID / CIPC / LoA" — meaning
+  // whichever applies to this entity. prcRcfDocs() has already made that
+  // choice, correctly and by entity type, so every other member of the family
+  // must be skipped rather than offered as an optional extra. Without this a
+  // natural person was shown empty CIPC and letter-of-authority slots, and a
+  // business was shown a plain certified ID beside the representative's.
+  const ficaFamily = [
+    "id_certified",
+    "id_certified_representative",
+    "id_certified_trustee",
+    "cipc_docs",
+    "letter_of_authority",
+    "letter_of_authority_council",
+  ];
+  const ficaAnswered = fica.some((d) => ficaFamily.includes(d.docType));
+
+  for (const req of spec.documents) {
+    if (req.owner === "firm") continue;      // autofills from the firm record
+    if (req.docClass === "output") continue; // not the attorney's to upload
+    if (seen.has(req.type)) continue;
+    if (ficaAnswered && ficaFamily.includes(req.type)) continue;
+
+    // A slot is keyed by (party, document type), so a generic `other` cannot
+    // be one: two "other" documents would collide on the same key and the
+    // second would render as the first. The councils use `other` for things
+    // like a memo, which the generic uploader elsewhere on the page already
+    // takes.
+    if (req.type === "other") continue;
+
+    seen.add(req.type);
+    out.push({ docType: req.type, optional: req.optional });
+  }
+
+  return out;
+}
+
+/** 'rca' / 'RCA ' / null → a stage the council registry recognises, or null. */
+function normalisePrcStage(stage?: string | null): PrcStageCode | null {
+  const up = (stage ?? "").trim().toUpperCase();
+  return up === "RCA" || up === "RCF" || up === "RCC" ? up : null;
 }
 
 // Whether COJ-style "Query Reference Number" applies to the referral form.

@@ -250,6 +250,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
       <InPlaceIntake
         matterId={matter.id}
         serviceCode={serviceCode}
+        serviceSubtype={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
         parties={parties}
         documents={docs}
         municipality={matter.municipality}

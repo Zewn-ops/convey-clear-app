@@ -907,6 +907,7 @@ export default async function AdminMatterDetailPage({
       <InPlaceIntake
         matterId={id}
         serviceCode={svc?.code ?? null}
+        serviceSubtype={(matter as { service_subtype?: string | null }).service_subtype ?? null}
         parties={parties}
         documents={documents}
         municipality={matter.municipality}
