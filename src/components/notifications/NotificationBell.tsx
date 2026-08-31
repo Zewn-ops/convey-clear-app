@@ -423,6 +423,24 @@ export default function NotificationBell({ base }: { base: string }) {
             <span className="text-xs text-ink-3">You are up to date</span>
           </div>
         )}
+
+        {/* §5.1 — the way from the panel to the page.
+            The two have always been halves of one feature: the panel is capped
+            and marks everything read the moment it opens, the page is the
+            durable record that does not. Without this link the page was
+            reachable only by typing the URL, which is most of what "the
+            notifications sidebar is different from the notifications tab" was
+            describing. `base` is already the portal's root, so this works in
+            all three. */}
+        <div className="border-t border-line px-4 py-2.5">
+          <Link
+            href={`${base}/notifications`}
+            onClick={() => setOpen(false)}
+            className="block text-center text-xs font-semibold text-action hover:underline"
+          >
+            See all notifications
+          </Link>
+        </div>
       </aside>
     </>
   );
