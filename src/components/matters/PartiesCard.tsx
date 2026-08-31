@@ -33,6 +33,9 @@ export default function PartiesCard({
   matterId,
   ficaSubjects = [],
   isStaff = false,
+  municipality = null,
+  serviceCode = null,
+  prcStage = null,
 }: {
   parties: MatterParty[];
   manage?: boolean;
@@ -41,6 +44,11 @@ export default function PartiesCard({
   /** Subjects for these parties; the matter's own client is handled elsewhere. */
   ficaSubjects?: FicaSubject[];
   isStaff?: boolean;
+  /** 080/§5.12 — passed straight to SubjectSection so the council can raise
+   *  its extra party fields to required for the right side of the deal. */
+  municipality?: string | null;
+  serviceCode?: string | null;
+  prcStage?: string | null;
 }) {
   if (!parties || parties.length === 0) return null;
   const ordered = [...parties].sort((a, b) => partyRoleOrder(a.role) - partyRoleOrder(b.role));
@@ -96,6 +104,9 @@ export default function PartiesCard({
                     matterId={matterId}
                     subject={subjectFor(p.id)!}
                     isStaff={isStaff}
+                    municipality={municipality}
+                    serviceCode={serviceCode}
+                    prcStage={prcStage}
                   />
                 </div>
               )}

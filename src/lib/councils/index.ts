@@ -22,6 +22,7 @@ import {
   type PrcStage,
   type ServiceCode,
 } from "./types";
+import { COUNCIL_PARTY_FIELD_KEYS } from "../fica";
 
 export * from "./types";
 export { FIRM_DOC_TYPES, firmDocLabel } from "../firm-docs";
@@ -160,6 +161,53 @@ export function councilIssues(
   prcStage?: PrcStage | null
 ): string[] {
   return councilServiceSpec(municipality, serviceCode, prcStage)?.issues ?? [];
+}
+
+/**
+ * §5.12 — which CLIENT fields this council demands of this party, here.
+ *
+ * Zewn: "in order for us to do an RCA for the buyer during a COO, we need a
+ * bunch of additional info for COT … because they are reqyuired on the etshwane
+ * portal." The list is the council's own form, transcribed field by field, and
+ * it lives in `cot.ts` — City of Ekurhuleni asks markedly less of the buyer and
+ * its config says so by not listing them.
+ *
+ * Returns the keys to RAISE TO REQUIRED. The fields themselves are always
+ * capturable (`COUNCIL_PARTY_FIELDS` in lib/fica), because a field that only
+ * appears once a council is chosen is a field nobody fills in early.
+ */
+export function councilPartyFieldKeys(
+  municipality: string | null | undefined,
+  serviceCode: ServiceCode | string | null | undefined,
+  prcStage: PrcStage | string | null | undefined,
+  partyRole: string | null | undefined
+): string[] {
+  if (!serviceCode) return [];
+  const stage = (prcStage ?? "").toUpperCase();
+  const spec = councilServiceSpec(
+    municipality,
+    serviceCode,
+    stage === "RCA" || stage === "RCF" || stage === "RCC" ? stage : null
+  );
+  if (!spec?.fields) return [];
+  const role = (partyRole ?? "").toLowerCase();
+
+  return spec.fields
+    .filter((f) => !f.optional && (f.owner === "seller" || f.owner === "buyer") && f.owner === role)
+    .map((f) => f.key)
+    // 🔴 Only keys that are REAL, CAPTURABLE client fields.
+    //
+    // A council's `fields` list serves two jobs: documenting what the sheet
+    // asks for, and driving what the form requires. Most entries do both, but
+    // some are descriptive — CoE's RCA says `buyer_contact` ("Buyer name,
+    // surname, email and cell") and COT's COC says `electrical_phase`. Those
+    // are notes to a reader, not columns on `clients`.
+    //
+    // Returning one would raise a requirement that can never be satisfied,
+    // because nothing renders a field for it — leaving every CoE buyer
+    // permanently FICA-incomplete with no way to fix it. Caught by the smoke
+    // test before it shipped.
+    .filter((key) => (COUNCIL_PARTY_FIELD_KEYS as readonly string[]).includes(key));
 }
 
 /** Does this council ask rates-vs-utilities on a clearance? (§11.17) */

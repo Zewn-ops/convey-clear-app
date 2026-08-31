@@ -237,10 +237,20 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         matterId={params.id}
         ficaSubjects={ficaSubjects}
         isStaff={false}
+        municipality={matter.municipality}
+        serviceCode={serviceCode}
+        prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
       />
 
       {/* In-place FICA — client details + consent, without an onboarding link. */}
-      <InPlaceFica matterId={params.id} subjects={ficaSubjects} isStaff={false} />
+      <InPlaceFica
+        matterId={params.id}
+        subjects={ficaSubjects}
+        isStaff={false}
+        municipality={matter.municipality}
+        serviceCode={serviceCode}
+        prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
+      />
 
       {/* In-place intake — service-aware required-document checklist + upload.
           Partners upload on the client's behalf and may mark an optional document

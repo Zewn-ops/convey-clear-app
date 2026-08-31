@@ -236,6 +236,26 @@ export const COT: Council = {
           note: 'Sheet: "① R+U  ② U only  ③ R only". Decides which account ' +
             "number and statement above are required.",
         },
+        // §5.12 — the eTshwane "Purchaser details" screenshot taped to the COT
+        // sheet, field for field, ticks kept and strikes dropped. 080 adds the
+        // columns; naming them HERE is what makes them required, and only for
+        // a City of Tshwane RCA. The CoE sheet asks markedly less of the buyer,
+        // and its config says so by not listing them.
+        { key: "title", label: "Title", owner: "buyer" },
+        { key: "initials", label: "Initials", owner: "buyer" },
+        { key: "nationality", label: "Nationality", owner: "buyer" },
+        { key: "id_type", label: "ID type", owner: "buyer" },
+        { key: "marital_status", label: "Marital status", owner: "buyer" },
+        {
+          key: "language",
+          label: "Language of communication",
+          owner: "buyer",
+        },
+        { key: "street_number", label: "Street number", owner: "buyer" },
+        { key: "street_name", label: "Street name", owner: "buyer" },
+        { key: "suburb", label: "Suburb", owner: "buyer" },
+        { key: "city", label: "City", owner: "buyer" },
+        { key: "postal_code", label: "Postal code", owner: "buyer" },
       ],
       notes: [
         'The sheet strikes out a bare "RATES ACCOUNT NUMBER" bullet and ' +

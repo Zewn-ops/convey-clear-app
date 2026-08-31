@@ -15,6 +15,7 @@ import {
   type CaptureMethod,
 } from "@/lib/fica";
 import type { Client } from "@/types";
+import { councilPartyFieldKeys } from "@/lib/councils";
 
 interface Director {
   full_name: string;
@@ -52,6 +53,12 @@ export interface FicaSubject {
   directors: Director[];
   /** Entity type from the PARTY, so we can name what's missing before a client exists. */
   partyEntity?: string | null;
+  /**
+   * 'seller' | 'buyer' | … — 080/§5.12. The council asks for the extra eTshwane
+   * fields of the BUYER, not of both sides, so raising them to required without
+   * the role would demand a marital status of the seller too.
+   */
+  partyRole?: string | null;
 }
 
 // In-place FICA capture — the client details and consent that, until now, only the
@@ -66,10 +73,17 @@ export default function InPlaceFica({
   matterId,
   subjects,
   isStaff,
+  municipality = null,
+  serviceCode = null,
+  prcStage = null,
 }: {
   matterId: string;
   subjects: FicaSubject[];
   isStaff: boolean;
+  /** 080/§5.12 — which council, which service, which rates-clearance stage. */
+  municipality?: string | null;
+  serviceCode?: string | null;
+  prcStage?: string | null;
 }) {
   // Party-based subjects now live INSIDE their own party card (PartiesCard), so
   // capturing a buyer's details is one continuous move from reading their name
@@ -103,10 +117,16 @@ export function SubjectSection({
   matterId,
   subject,
   isStaff,
+  municipality = null,
+  serviceCode = null,
+  prcStage = null,
 }: {
   matterId: string;
   subject: FicaSubject;
   isStaff: boolean;
+  municipality?: string | null;
+  serviceCode?: string | null;
+  prcStage?: string | null;
 }) {
   const { client, consents, directors: initialDirectors, label } = subject;
   const router = useRouter();
@@ -114,7 +134,17 @@ export function SubjectSection({
   const [saving, setSaving] = useState(false);
 
   const entity = client?.entity_type ?? "natural_person";
-  const fields = visibleFicaFields(entity, isStaff);
+  // §5.12 — the council may raise some of the optional extras to required for
+  // THIS party, here. `councilPartyFieldKeys` returns nothing for a council
+  // with no spec, or a party the sheet does not ask about, so the form is
+  // unchanged everywhere except where a council actually demands more.
+  const councilRequired = councilPartyFieldKeys(
+    municipality,
+    serviceCode,
+    prcStage,
+    subject.partyRole
+  );
+  const fields = visibleFicaFields(entity, isStaff, councilRequired);
   const details = detailsStatus(client, entity);
   const consent = consentStatus(consents);
   const isEntity = entity === "business" || entity === "trust";
@@ -301,6 +331,23 @@ export function SubjectSection({
                     placeholder={f.hint}
                     className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   />
+                ) : f.type === "select" ? (
+                  // 080 — ID type and marital status are closed lists on the
+                  // council's own form. A free-text value would pass capture
+                  // here and fail at submission to the portal, which is the
+                  // worst place to find out.
+                  <select
+                    value={form[f.key] ?? ""}
+                    onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                  >
+                    <option value="">— Not captured —</option>
+                    {(f.options ?? []).map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
                   <input
                     type={f.key === "municipal_password" ? "password" : (f.type ?? "text")}
