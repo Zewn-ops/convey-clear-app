@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requirePartner } from "@/lib/partner";
-import TransferRequestForm from "@/components/transfers/TransferRequestForm";
+import { createClient } from "@/lib/supabase/server";
+import TransferRequestForm, {
+  type TransferRequestDraft,
+} from "@/components/transfers/TransferRequestForm";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = { title: "Request a Property Transfer — ConveyClear Partner" };
@@ -12,10 +15,34 @@ export const dynamic = "force-dynamic";
 // without firms reaching each other's contacts (§84) — the firm now asks and
 // ConveyClear opens it. The old PartnerTransferForm is still in the tree
 // alongside the disabled route, in case Jukka wants the 07-16 behaviour back.
-export default async function RequestTransferPage() {
+export default async function RequestTransferPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ draft?: string }>;
+}) {
   // Gate the page itself, not just the API — a non-partner should never see the form.
   const auth = await requirePartner();
   if ("error" in auth) redirect("/partner");
+
+  // 078 — resuming an unfinished request. RLS is the scope: a draft is
+  // readable only by the firm that owns it, so a guessed id from another firm
+  // simply returns nothing and the page renders a blank form rather than
+  // leaking that the row exists.
+  const params = await searchParams;
+  const draftId = params?.draft;
+  let draft: TransferRequestDraft | null = null;
+  if (draftId) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("transfer_requests")
+      .select(
+        "id, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes"
+      )
+      .eq("id", draftId)
+      .eq("status", "draft")
+      .maybeSingle();
+    draft = (data as TransferRequestDraft | null) ?? null;
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -24,14 +51,15 @@ export default async function RequestTransferPage() {
       </Link>
       <div>
         <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
-          Request a property transfer
+          {draft ? "Finish your request" : "Request a property transfer"}
         </h1>
         <p className="text-sm text-ink-3 mt-1">
-          Send us the transaction and ConveyClear will open it. You will be notified as soon as it
-          is set up, and it will appear in your transfers.
+          {draft
+            ? "Picking up where you left off. Nothing here has reached ConveyClear yet."
+            : "Send us the transaction and ConveyClear will open it. You will be notified as soon as it is set up, and it will appear in your transfers."}
         </p>
       </div>
-      <TransferRequestForm />
+      <TransferRequestForm draft={draft} />
     </div>
   );
 }

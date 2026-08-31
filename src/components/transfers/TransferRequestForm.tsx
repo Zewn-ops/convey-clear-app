@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Send } from "lucide-react";
+import { Send, Save } from "lucide-react";
 
 /**
  * A firm asks ConveyClear to open a property transfer (055).
@@ -32,55 +32,100 @@ const MUNICIPALITIES = [
   { value: "OTHER", label: "Other" },
 ];
 
-export default function TransferRequestForm() {
+export interface TransferRequestDraft {
+  id: string;
+  property_description: string | null;
+  municipality: string | null;
+  suggested_reference: string | null;
+  seller_name: string | null;
+  seller_email: string | null;
+  seller_cell: string | null;
+  buyer_name: string | null;
+  buyer_email: string | null;
+  buyer_cell: string | null;
+  notes: string | null;
+}
+
+export default function TransferRequestForm({
+  draft,
+}: {
+  /**
+   * An existing draft being finished (078). Zewn, 2026-08-31: "if they get
+   * halfway with a request and want to return later they can draft it and
+   * finish it later on."
+   */
+  draft?: TransferRequestDraft | null;
+} = {}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
-    property_description: "",
-    municipality: "",
-    suggested_reference: "",
-    seller_name: "",
-    seller_email: "",
-    seller_cell: "",
-    buyer_name: "",
-    buyer_email: "",
-    buyer_cell: "",
-    notes: "",
+    property_description: draft?.property_description ?? "",
+    municipality: draft?.municipality ?? "",
+    suggested_reference: draft?.suggested_reference ?? "",
+    seller_name: draft?.seller_name ?? "",
+    seller_email: draft?.seller_email ?? "",
+    seller_cell: draft?.seller_cell ?? "",
+    buyer_name: draft?.buyer_name ?? "",
+    buyer_email: draft?.buyer_email ?? "",
+    buyer_cell: draft?.buyer_cell ?? "",
+    notes: draft?.notes ?? "",
   });
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.property_description.trim()) {
-      toast.error("Describe the property — an erf number or address.");
-      return;
-    }
-    if (!form.suggested_reference.trim()) {
-      toast.error("Your transfer reference is required.");
-      return;
+  /**
+   * One writer for both buttons.
+   *
+   * The required-field checks apply to SUBMISSION only — a draft that cannot
+   * be saved until it is complete is not a draft. 078 says the same thing in
+   * the database with conditional CHECKs, so these are the readable message
+   * rather than the boundary.
+   */
+  async function save(asDraft: boolean) {
+    if (!asDraft) {
+      if (!form.property_description.trim()) {
+        toast.error("Describe the property — an erf number or address.");
+        return;
+      }
+      if (!form.suggested_reference.trim()) {
+        toast.error("Your transfer reference is required.");
+        return;
+      }
     }
     setBusy(true);
     try {
       const r = await fetch("/api/partner/transfer-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          status: asDraft ? "draft" : "pending",
+          // Present when finishing a draft, so the row is updated rather than
+          // a second one created.
+          id: draft?.id,
+        }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
-        toast.error(j.message ?? "Could not send that request.");
+        toast.error(j.message ?? "Could not save that.");
         return;
       }
-      toast.success("Request sent to ConveyClear.");
+      toast.success(
+        asDraft ? "Draft saved — finish it whenever." : "Request sent to ConveyClear."
+      );
       router.push("/partner/transfers");
       router.refresh();
     } catch {
-      toast.error("Could not send that request.");
+      toast.error("Could not save that.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    await save(false);
   }
 
   const input =
@@ -172,14 +217,35 @@ export default function TransferRequestForm() {
         <textarea rows={3} className={input} value={form.notes} onChange={set("notes")} />
       </label>
 
-      <button
-        type="submit"
-        disabled={busy}
-        className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <Send className="h-4 w-4" />
-        {busy ? "Sending…" : "Send request"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={busy}
+          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Send className="h-4 w-4" />
+          {busy ? "Sending…" : "Send request"}
+        </button>
+
+        {/* type="button", so the browser's own `required` validation never
+            fires on this path — the whole point is saving something
+            incomplete. Both required fields keep their native validation for
+            "Send request", where it belongs. */}
+        <button
+          type="button"
+          onClick={() => save(true)}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-2 hover:bg-raised disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save className="h-4 w-4" />
+          Save as draft
+        </button>
+
+        <p className="text-xs text-ink-3">
+          A draft stays with your firm — ConveyClear does not see it until you
+          send it.
+        </p>
+      </div>
     </form>
   );
 }
