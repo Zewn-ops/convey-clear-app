@@ -4,7 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, KeyRound } from "lucide-react";
+import CouncilCredentialRow, {
+  type AdminCredentialRow,
+} from "@/components/admin/CouncilCredentialRow";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   isStaffRole,
@@ -53,7 +56,17 @@ export default async function AdminFirmDetailPage({
 
   // A transfer references a firm through EITHER the attorney or the estate-agent
   // column, so both are matched here.
-  const [{ data: userRows }, { data: matterRows }, { data: transferRows }] = await Promise.all([
+  // 🔒 Council logins: METADATA ONLY here. The ciphertext is never selected
+  // into a page — a value crosses the wire one at a time, from
+  // /api/admin/council-credentials, when an admin clicks the eye. RLS (074)
+  // restricts this table to the admin tier, so a services/ops session sees an
+  // empty list rather than a forbidden error.
+  const [
+    { data: userRows },
+    { data: matterRows },
+    { data: transferRows },
+    { data: credentialRows },
+  ] = await Promise.all([
     supabase
       .from("users")
       .select("id, email, full_name, first_name, last_name, role, active")
@@ -71,11 +84,34 @@ export default async function AdminFirmDetailPage({
       .or(`business_partner_id.eq.${id},estate_agent_partner_id.eq.${id}`)
       .order("created_at", { ascending: false })
       .limit(25),
+    supabase
+      .from("firm_council_credentials")
+      .select("id, user_id, municipality, key_version, updated_at")
+      .eq("firm_id", id)
+      .order("municipality", { ascending: true }),
   ]);
 
   const users = (userRows as Pick<AppUser, "id" | "email" | "full_name" | "first_name" | "last_name" | "role" | "active">[] | null) ?? [];
   const matters = (matterRows as MatterRow[] | null) ?? [];
   const transfers = (transferRows as (Pick<PropertyTransfer, "id" | "reference" | "status" | "property_description"> & { business_partner_id: string | null })[] | null) ?? [];
+
+  const userName = (uid: string) => {
+    const u = users.find((x) => x.id === uid);
+    if (!u) return "Unknown user";
+    return u.full_name || [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "Unknown user";
+  };
+
+  const credentials: AdminCredentialRow[] = (
+    (credentialRows as
+      | { id: string; user_id: string; municipality: string; key_version: number; updated_at: string }[]
+      | null) ?? []
+  ).map((c) => ({
+    id: c.id,
+    municipality: c.municipality,
+    key_version: c.key_version,
+    updated_at: c.updated_at,
+    person: userName(c.user_id),
+  }));
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -180,6 +216,31 @@ export default async function AdminFirmDetailPage({
           )}
         </div>
       </Card>
+
+      {canWrite && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="px-5 py-3 border-b border-line">
+            <h2 className="text-sm font-semibold text-ink flex items-center gap-1.5">
+              <KeyRound className="h-3.5 w-3.5 text-action" />
+              Council portal logins ({credentials.length})
+            </h2>
+            <p className="text-xs text-ink-3 mt-0.5">
+              Entered by the firm, readable only here. Each reveal fetches one
+              login on its own — nothing secret is loaded with this page.
+            </p>
+          </div>
+          <div className="divide-y divide-line">
+            {credentials.map((c) => (
+              <CouncilCredentialRow key={c.id} row={c} />
+            ))}
+            {credentials.length === 0 && (
+              <p className="px-5 py-8 text-center text-sm text-ink-3">
+                This firm has not captured any council logins yet.
+              </p>
+            )}
+          </div>
+        </Card>
+      )}
 
       <Card padding="none" className="overflow-hidden">
         <div className="px-5 py-3 border-b border-line">
