@@ -270,6 +270,14 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   }));
   const transferRollup = transferProgress(serviceRows);
 
+  // Matters on this transfer that no service line is tracking — the only thing
+  // the checklist above cannot show. Same derivation as the admin page, so the
+  // two portals cannot disagree about what counts as an exception.
+  const trackedMatterIds = new Set(
+    serviceRows.map((r) => r.matter_id).filter((v): v is string => Boolean(v))
+  );
+  const unlistedMatters = linked.filter((m) => !trackedMatterIds.has(m.id));
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
@@ -374,78 +382,72 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         />
       </Card>
 
-      <Card padding="none" className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-line">
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
-            Matters in this transfer · {linked.length}
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line bg-raised">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {linked.map((m) => {
-                const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-                return (
-                  <tr key={m.id} className="hover:bg-raised transition-colors">
-                    <td className="px-5 py-3">
-                      <Link href={`/partner/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
-                        {m.title || "Untitled"}
-                      </Link>
-                      {m.services?.name && <p className="text-xs text-ink-3 mt-0.5">{m.services.name}</p>}
-                    </td>
-                    <td className="px-5 py-3 text-ink-2 hidden md:table-cell">
-                      {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
-                      {pl
-                        ? m.current_stage
-                          ? isStageClientVisible(pl, m.current_stage)
-                            ? stageLabel(pl, m.current_stage)
-                            : "In progress"
-                          : "—"
-                        : m.current_stage || "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      {m.status && (
-                        <StatusPill
-                          tone={
-                            ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
-                              m.status
-                            ] ?? "neutral"
-                          }
-                        >
-                          {MATTER_STATUS_LABELS[m.status]}
-                        </StatusPill>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Link href={`/partner/matters/${m.id}`} className="text-xs font-semibold text-action hover:underline">View</Link>
-                    </td>
-                  </tr>
-                );
-              })}
-              {linked.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-ink-3">
-                    No matters linked yet. Matters ConveyClear opens for this transaction can be attached here.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* The firm attaches its own referred matters (Meeting 2). Server route
-            re-checks both matter and transfer belong to this firm. */}
-        <div className="px-5 py-4 border-t border-line">
+      {/* §5.2 / §5.13 — the same block as the admin page, at last.
+          `e7308e3` turned this into an exception list on 2026-08-28 and only
+          touched the admin file, so the two portals have shown the same data in
+          two different shapes ever since. That is the drift §5.13 exists to
+          catch, and Zewn named it directly: "we need to revisit how and why the
+          matters link to the prop trfs. currently its a bit all over the place
+          and messy."
+
+          Why an exception list rather than a table: the services checklist
+          above already lists every service, its progress and a link to the
+          matter realising it, so a table of the same matters is the same
+          information twice. What the checklist CANNOT show is a matter no
+          service line points at — a transfer legitimately carries two matters
+          of the same service (a rates clearance re-run), and the second
+          attaches to the transfer and to no line. Delete this and it is on the
+          transfer while being invisible on it.
+
+          ⚠️ This does NOT narrow what partners can see, which §5.6 asked to
+          widen. Every matter still appears above, with more detail than the
+          table carried; only the duplicate listing goes. */}
+      {unlistedMatters.length > 0 && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="border-b border-line px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+              Other matters on this transaction · {unlistedMatters.length}
+            </p>
+            <p className="mt-1 text-xs text-ink-3">
+              Attached to the transfer but not tracked by a service above — a
+              repeat of a service already listed, or one linked by hand.
+            </p>
+          </div>
+          <ul className="divide-y divide-line">
+            {unlistedMatters.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/partner/matters/${m.id}`}
+                    className="font-medium text-ink hover:text-action hover:underline"
+                  >
+                    {m.title || "Untitled"}
+                  </Link>
+                  {m.services?.name && (
+                    <p className="mt-0.5 text-xs text-ink-3">{m.services.name}</p>
+                  )}
+                </div>
+                {m.status && (
+                  <StatusPill
+                    tone={
+                      ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
+                        m.status
+                      ] ?? "neutral"
+                    }
+                  >
+                    {MATTER_STATUS_LABELS[m.status]}
+                  </StatusPill>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* The firm attaches its own referred matters (Meeting 2). Server route
+          re-checks both matter and transfer belong to this firm. */}
+      <Card padding="none">
+        <div className="px-5 py-4">
           <LinkMatterControl transferId={id} candidates={candidates} endpoint="/api/partner/transfers/link" />
         </div>
       </Card>

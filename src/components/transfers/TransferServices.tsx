@@ -174,6 +174,7 @@ export default function TransferServices({
   canMark = false,
   matterHrefBase = "/admin/matters",
   municipality = null,
+  linkableMatters = [],
 }: {
   transferId: string;
   rows: ServiceRow[];
@@ -205,6 +206,18 @@ export default function TransferServices({
    * is config in lib/councils rather than a conditional here.
    */
   municipality?: string | null;
+  /**
+   * §5.2 — matters on this transfer that no line is tracking, so a line can
+   * adopt one from the line itself.
+   *
+   * Zewn: "we need to revisit how and why the matters link to the prop trfs.
+   * currently its a bit all over the place and messy." It was: a matter could
+   * be attached to the TRANSFER from one control and to a LINE only by opening
+   * it as a matter from that line — and `PATCH /api/transfer-services
+   * { matterId }` has existed the whole time with nothing calling it. The
+   * "Other matters" card exists precisely to catch what fell through.
+   */
+  linkableMatters?: { id: string; title: string | null; serviceName?: string | null }[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -315,6 +328,28 @@ export default function TransferServices({
           : "Scope updated"
       );
     }
+  }
+
+  /**
+   * Point a service line at a matter that already exists (§5.2).
+   *
+   * Staff only, like every other column on the line but `status` (071). Passing
+   * null clears the line's link — which does NOT detach the matter from the
+   * transfer, because `matters.transfer_id` is a separate fact. The matter
+   * simply moves back to "Other matters on this transaction", where it is still
+   * visible rather than lost.
+   */
+  async function setLineMatter(id: string, matterId: string) {
+    const ok = await call(
+      {
+        url: "/api/transfer-services",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, matterId: matterId || null }),
+      },
+      id
+    );
+    if (ok) toast.success(matterId ? "Matter tracked on this line" : "Line cleared");
   }
 
   async function addSub(parentId: string, label: string) {
@@ -526,6 +561,34 @@ export default function TransferServices({
 
             {r.third_party && (
               <p className="mt-1 pl-6 text-xs text-ink-3">Rendered by {r.third_party}</p>
+            )}
+
+            {/* §5.2 — adopt an existing matter, from the line that should be
+                tracking it. Only where there is something to adopt: an empty
+                dropdown is a control that cannot do anything, and the "Open as
+                matter" link beside it already covers the ordinary case of
+                starting fresh. */}
+            {canManage && !r.parent_id && !r.matter_id && linkableMatters.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 pl-6">
+                <label className="text-xs text-ink-3" htmlFor={`adopt-${r.id}`}>
+                  Track an existing matter
+                </label>
+                <select
+                  id={`adopt-${r.id}`}
+                  value=""
+                  disabled={busy === r.id}
+                  onChange={(e) => setLineMatter(r.id, e.target.value)}
+                  className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink"
+                >
+                  <option value="">— Choose —</option>
+                  {linkableMatters.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title || "Untitled"}
+                      {m.serviceName ? ` · ${m.serviceName}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             {/* PRC splits three ways (§5.9). The stage is not decoration: a

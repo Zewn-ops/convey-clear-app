@@ -472,6 +472,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           rows={serviceRows}
           canManage
           municipality={transfer.municipality}
+          // §5.2 — the same list the "Other matters" card below shows. A line
+          // can adopt one, which is what that card was standing in for.
+          linkableMatters={unlistedMatters.map((m) => ({
+            id: m.id,
+            title: m.title,
+            serviceName: m.services?.name ?? null,
+          }))}
         />
       </Card>
 
