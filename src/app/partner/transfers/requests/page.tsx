@@ -171,7 +171,14 @@ export default async function TransferRequestsPage() {
                   In progress ({open.length})
                 </h2>
                 <p className="mt-0.5 text-xs text-ink-3">
-                  Drafts are yours alone until you send them.
+                  {/* NOT "yours alone": 078 left the firm's own branch of
+                      055's read policy as `firm_id = app_user_partner_id()`,
+                      so a colleague at the same firm sees this draft --
+                      confirmed on production 2026-08-31. Only ConveyClear is
+                      shut out until it is sent. Matches the transfers-page
+                      banner, which said it correctly all along. */}
+                  Visible to your firm. ConveyClear is not told about a draft
+                  until you send it.
                 </p>
               </div>
               <div className="divide-y divide-line">{open.map(row)}</div>
