@@ -44,6 +44,39 @@ const NAMED_DOC_TYPES = [
 /** Rows are grouped in this order; NULL — the transaction's own — comes last. */
 const PARTY_GROUPS: (string | null)[] = ["seller", "buyer", null];
 
+/**
+ * Input · supporting · output (076), in the order work actually moves through
+ * them: what we were given, what proves who people are, what we produced.
+ *
+ * Zewn, 2026-08-31: "easier to navigate and specify things that way". So this
+ * is the top-level grouping and party is the line inside it — the reverse of
+ * what shipped on 08-26, because the first question an attorney asks of a pile
+ * of documents is what stage it belongs to, not whose it is.
+ */
+const CLASS_GROUPS: ("input" | "supporting" | "output" | null)[] = [
+  "input",
+  "supporting",
+  "output",
+  // Everything uploaded before the split. Named honestly rather than folded
+  // into "supporting", which would assert something about them that nobody
+  // ever decided.
+  null,
+];
+
+const CLASS_GROUP_LABELS: Record<string, string> = {
+  input: "Input documents",
+  supporting: "Supporting documents",
+  output: "Output documents",
+  unclassified: "Filed before documents were split",
+};
+
+const CLASS_GROUP_HINTS: Record<string, string> = {
+  input: "What ConveyClear received to start the work.",
+  supporting: "Identity and verification material.",
+  output: "What ConveyClear produced.",
+  unclassified: "Uploaded before input, supporting and output were separated.",
+};
+
 type Doc = TransferDocument & { url?: string; usedOn?: number };
 
 export interface VaultDocOption {
@@ -64,6 +97,7 @@ export default function TransferDocuments({
   sellerName = null,
   buyerName = null,
   nameSubject = null,
+  municipality = null,
 }: {
   transferId: string;
   docs: Doc[];
@@ -90,6 +124,12 @@ export default function TransferDocuments({
    * fetched so the preview cannot disagree with the name the server stores.
    */
   nameSubject?: string | null;
+  /**
+   * The transfer's council (076). Decides which class a new document files
+   * under, because the answer is per council and per party rather than a
+   * property of the document type.
+   */
+  municipality?: string | null;
   /**
    * Staff. Approving, sharing, disapproving and archiving — everything that
    * decides what a document MEANS or who sees it.
@@ -153,10 +193,18 @@ export default function TransferDocuments({
   // when they go looking for one.
   const namedDocs = current.filter((d) => NAMED_DOC_TYPES.includes(d.document_type));
   const supporting = current.filter((d) => !NAMED_DOC_TYPES.includes(d.document_type));
-  const supportingByParty = PARTY_GROUPS.map((role) => ({
-    role,
-    docs: supporting.filter((d) => (d.party_role ?? null) === role),
-  })).filter((g) => g.docs.length > 0);
+  // Grouped by class first (076), and by party within it. Both questions get
+  // answered without either being buried: the heading says what stage the
+  // document belongs to, the sub-heading whose it is.
+  const supportingByClass = CLASS_GROUPS.map((cls) => ({
+    cls,
+    parties: PARTY_GROUPS.map((role) => ({
+      role,
+      docs: supporting.filter(
+        (d) => (d.doc_class ?? null) === cls && (d.party_role ?? null) === role
+      ),
+    })).filter((g) => g.docs.length > 0),
+  })).filter((g) => g.parties.length > 0);
   const partyNames = { seller: sellerName, buyer: buyerName };
 
   async function upload(
@@ -428,20 +476,33 @@ export default function TransferDocuments({
           )}
         </div>
 
-        {supportingByParty.length > 0 ? (
-          <div className="space-y-3">
-            {supportingByParty.map((g) => (
-              <div key={g.role ?? "none"}>
-                <p className="text-xs font-medium text-ink-2">
-                  {partyRoleLabel(g.role, partyNames)}
-                </p>
-                <ul className="divide-y divide-line">
-                  {g.docs.map((d) => (
-                    <DocRow key={d.id} d={d} {...rowProps} />
-                  ))}
-                </ul>
-              </div>
-            ))}
+        {supportingByClass.length > 0 ? (
+          <div className="space-y-5">
+            {supportingByClass.map((group) => {
+              const key = group.cls ?? "unclassified";
+              return (
+                <div key={key}>
+                  <p className="mono text-[10px] font-bold uppercase tracking-[0.11em] text-ink-3">
+                    {CLASS_GROUP_LABELS[key]}
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-3">{CLASS_GROUP_HINTS[key]}</p>
+                  <div className="mt-2 space-y-3">
+                    {group.parties.map((g) => (
+                      <div key={g.role ?? "none"}>
+                        <p className="text-xs font-medium text-ink-2">
+                          {partyRoleLabel(g.role, partyNames)}
+                        </p>
+                        <ul className="divide-y divide-line">
+                          {g.docs.map((d) => (
+                            <DocRow key={d.id} d={d} {...rowProps} />
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-ink-3">
@@ -500,6 +561,7 @@ export default function TransferDocuments({
               busy={busy === "__new"}
               partyNames={partyNames}
               nameSubject={nameSubject}
+              municipality={municipality}
               onUpload={(file, docType, role, displayName) =>
                 upload(file, docType, undefined, role, displayName)
               }

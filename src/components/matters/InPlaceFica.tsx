@@ -15,6 +15,7 @@ import {
   type CaptureMethod,
 } from "@/lib/fica";
 import type { Client } from "@/types";
+import { councilPartyFieldKeys } from "@/lib/councils";
 
 interface Director {
   full_name: string;
@@ -23,7 +24,21 @@ interface Director {
   work_number: string;
   email: string;
   designation: string;
+  /** 079 — the one who represents the company. At most one per client. */
+  is_representative?: boolean;
 }
+
+/**
+ * §5.14 — Zewn, 2026-08-31: "for business entities, we need to make provisions
+ * for up to 3 directors with the ability to select one of them as the
+ * representative."
+ *
+ * Three SLOTS, not a hard limit. CIPC does not cap directors at three, so 079
+ * deliberately puts no CHECK in the database — a form should offer what a form
+ * should offer, and refusing a legitimate fourth director is a different thing
+ * from not making room for one on screen.
+ */
+const SUGGESTED_DIRECTORS = 3;
 
 // One FICA "subject" on a matter. A single-client matter has one (the matter's own
 // client). A COO matter has one PER PARTY — buyer and seller are separate entities
@@ -38,6 +53,12 @@ export interface FicaSubject {
   directors: Director[];
   /** Entity type from the PARTY, so we can name what's missing before a client exists. */
   partyEntity?: string | null;
+  /**
+   * 'seller' | 'buyer' | … — 080/§5.12. The council asks for the extra eTshwane
+   * fields of the BUYER, not of both sides, so raising them to required without
+   * the role would demand a marital status of the seller too.
+   */
+  partyRole?: string | null;
 }
 
 // In-place FICA capture — the client details and consent that, until now, only the
@@ -52,10 +73,17 @@ export default function InPlaceFica({
   matterId,
   subjects,
   isStaff,
+  municipality = null,
+  serviceCode = null,
+  prcStage = null,
 }: {
   matterId: string;
   subjects: FicaSubject[];
   isStaff: boolean;
+  /** 080/§5.12 — which council, which service, which rates-clearance stage. */
+  municipality?: string | null;
+  serviceCode?: string | null;
+  prcStage?: string | null;
 }) {
   // Party-based subjects now live INSIDE their own party card (PartiesCard), so
   // capturing a buyer's details is one continuous move from reading their name
@@ -89,10 +117,16 @@ export function SubjectSection({
   matterId,
   subject,
   isStaff,
+  municipality = null,
+  serviceCode = null,
+  prcStage = null,
 }: {
   matterId: string;
   subject: FicaSubject;
   isStaff: boolean;
+  municipality?: string | null;
+  serviceCode?: string | null;
+  prcStage?: string | null;
 }) {
   const { client, consents, directors: initialDirectors, label } = subject;
   const router = useRouter();
@@ -100,7 +134,17 @@ export function SubjectSection({
   const [saving, setSaving] = useState(false);
 
   const entity = client?.entity_type ?? "natural_person";
-  const fields = visibleFicaFields(entity, isStaff);
+  // §5.12 — the council may raise some of the optional extras to required for
+  // THIS party, here. `councilPartyFieldKeys` returns nothing for a council
+  // with no spec, or a party the sheet does not ask about, so the form is
+  // unchanged everywhere except where a council actually demands more.
+  const councilRequired = councilPartyFieldKeys(
+    municipality,
+    serviceCode,
+    prcStage,
+    subject.partyRole
+  );
+  const fields = visibleFicaFields(entity, isStaff, councilRequired);
   const details = detailsStatus(client, entity);
   const consent = consentStatus(consents);
   const isEntity = entity === "business" || entity === "trust";
@@ -287,6 +331,23 @@ export function SubjectSection({
                     placeholder={f.hint}
                     className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   />
+                ) : f.type === "select" ? (
+                  // 080 — ID type and marital status are closed lists on the
+                  // council's own form. A free-text value would pass capture
+                  // here and fail at submission to the portal, which is the
+                  // worst place to find out.
+                  <select
+                    value={form[f.key] ?? ""}
+                    onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                  >
+                    <option value="">— Not captured —</option>
+                    {(f.options ?? []).map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
                   <input
                     type={f.key === "municipal_password" ? "password" : (f.type ?? "text")}
@@ -306,6 +367,11 @@ export function SubjectSection({
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
                   {entity === "trust" ? "Trustees" : "Directors"}
+                  {directors.length > SUGGESTED_DIRECTORS && (
+                    <span className="ml-1.5 font-normal normal-case tracking-normal text-ink-3">
+                      ({directors.length})
+                    </span>
+                  )}
                 </p>
                 <button
                   type="button"
@@ -321,6 +387,17 @@ export function SubjectSection({
                 </button>
               </div>
               {directors.length === 0 && <p className="text-xs text-ink-3">None captured.</p>}
+
+              {/* 079 — which one represents the company. Said here rather than
+                  left implicit, because the portal has always asked for the
+                  "Representative's Certified ID" without recording who that
+                  is, and the answer changes whose documents are wanted. */}
+              {entity === "business" && directors.length > 0 && (
+                <p className="mb-2 text-xs text-ink-3">
+                  Mark the one who represents the company. Their certified ID and
+                  proof of residence are the ones asked for.
+                </p>
+              )}
               <div className="space-y-2">
                 {directors.map((d, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -346,6 +423,37 @@ export function SubjectSection({
                         />
                       ))}
                     </div>
+                    {entity === "business" && (
+                      // A radio, not a checkbox: 079's partial unique index
+                      // allows one representative per client, and a control
+                      // that lets you tick two would be offering something the
+                      // database refuses. Clicking the marked one clears it,
+                      // because "no representative chosen yet" is a real state.
+                      <label
+                        className="mt-1 flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-ink-3"
+                        title="The director who represents the company"
+                      >
+                        <input
+                          type="radio"
+                          name="representative"
+                          checked={Boolean(d.is_representative)}
+                          onChange={() =>
+                            setDirectors((ds) =>
+                              ds.map((x, j) => ({ ...x, is_representative: j === i }))
+                            )
+                          }
+                          onClick={() => {
+                            if (d.is_representative) {
+                              setDirectors((ds) =>
+                                ds.map((x) => ({ ...x, is_representative: false }))
+                              );
+                            }
+                          }}
+                          className="accent-[var(--cc-action)]"
+                        />
+                        Rep
+                      </label>
+                    )}
                     <button
                       type="button"
                       onClick={() => setDirectors((ds) => ds.filter((_, j) => j !== i))}

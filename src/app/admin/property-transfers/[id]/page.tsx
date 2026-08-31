@@ -13,7 +13,7 @@ import {
   type RawTransferParty,
 } from "@/lib/transfer-parties";
 import DetailFields from "@/components/ui/DetailFields";
-import { formatDate, municipalityLabel } from "@/lib/utils";
+import { formatDate, municipalityLabel, formatRands } from "@/lib/utils";
 import {
   isStaffRole,
   isAdminRole,
@@ -66,11 +66,31 @@ type ClientRef = {
 // PostgREST needs the FK constraint name to disambiguate: property_transfers has
 // TWO foreign keys into firms (attorney + estate agent) and TWO into
 // clients (seller + buyer).
+type MemberRef = {
+  id: string;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+};
+
+/** The designated ConveyClear member (077), as a name for the fourth block. */
+function memberOf(m?: MemberRef | null): { id: string; name: string } | null {
+  if (!m) return null;
+  const name =
+    m.full_name ||
+    [m.first_name, m.last_name].filter(Boolean).join(" ") ||
+    m.email ||
+    "ConveyClear member";
+  return { id: m.id, name };
+}
+
 type TransferDetail = PropertyTransfer & {
   attorney?: FirmRef;
   estate_agent?: FirmRef;
   seller?: ClientRef;
   buyer?: ClientRef;
+  designated_member?: MemberRef | null;
 };
 
 type LinkedMatter = Matter & {
@@ -103,7 +123,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const { data: transferData } = await supabase
     .from("property_transfers")
     .select(
-      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), estate_agent:firms!property_transfers_estate_agent_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
+      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), estate_agent:firms!property_transfers_estate_agent_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name), designated_member:users!property_transfers_designated_member_id_fkey(id, full_name, first_name, last_name, email)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -143,6 +163,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     supabase
       .from("transfer_services")
       .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + "prc_subtype, rates_scope, "
         + LINKED_MATTER_SELECT)
       .eq("transfer_id", id)
       .order("position", { ascending: true }),
@@ -387,6 +408,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           canEdit
           clientHrefBase="/admin/clients"
           showIdNumbers
+          designatedMember={memberOf(transfer.designated_member)}
         />
         {!transfer.business_partner_id && (
           <div className="mt-4 rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
@@ -410,6 +432,9 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             { label: "Council", value: municipalityLabel(transfer.municipality) },
             { label: "Attorney firm", value: transfer.attorney?.name ?? null, required: true },
             { label: "Reference", value: transfer.reference },
+            // 077 — the Bert Smith cover sheet puts the price up front, so it
+            // sits with the headline fields rather than under "extra".
+            { label: "Purchase price", value: formatRands(transfer.purchase_price) },
             { label: "Property", value: transfer.property_description, wide: true },
           ]}
           extra={[
@@ -446,6 +471,14 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           transferId={id}
           rows={serviceRows}
           canManage
+          municipality={transfer.municipality}
+          // §5.2 — the same list the "Other matters" card below shows. A line
+          // can adopt one, which is what that card was standing in for.
+          linkableMatters={unlistedMatters.map((m) => ({
+            id: m.id,
+            title: m.title,
+            serviceName: m.services?.name ?? null,
+          }))}
         />
       </Card>
 
@@ -562,6 +595,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
         buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
         nameSubject={transfer.property_description || transfer.reference}
+        municipality={transfer.municipality}
       />
 
       {/* The transaction's history + conversation, shared with the owning firm. */}

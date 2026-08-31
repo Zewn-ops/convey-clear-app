@@ -4,7 +4,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { municipalityLabel, formatDate } from "@/lib/utils";
+import { municipalityLabel, formatDate, formatRands } from "@/lib/utils";
 import { signedDocUrls } from "@/lib/storage";
 import { docLabel } from "@/lib/prc-docs";
 import {
@@ -50,6 +50,11 @@ interface TransferRow {
   property_description: string | null;
   municipality: string | null;
   status: TransferStatus;
+  // 077 — added to `client_transfers` on Zewn's explicit decision, 2026-08-31:
+  // "the sale price can be available to all, its just one number which is
+  // purchase price". The view is the security boundary; the column is in it
+  // because that decision put it there, not because this page wanted it.
+  purchase_price: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -78,7 +83,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
   // and this 404s, which is also the right answer for one that does not exist.
   const { data: transferRow } = await supabase
     .from("client_transfers")
-    .select("id, reference, property_description, municipality, status, created_at, updated_at")
+    .select("id, reference, property_description, municipality, status, purchase_price, created_at, updated_at")
     .eq("id", id)
     .maybeSingle();
   const transfer = transferRow as TransferRow | null;
@@ -96,6 +101,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
   const { data: serviceItems } = await supabase
     .from("transfer_services")
     .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + "prc_subtype, rates_scope, "
         + LINKED_MATTER_SELECT)
     .eq("transfer_id", id)
     .order("position", { ascending: true });
@@ -158,6 +164,12 @@ export default async function ClientTransferDetail({ params }: { params: Promise
             </dd>
           </div>
           <div>
+            <dt className="text-xs text-ink-3">Purchase price</dt>
+            <dd className={formatRands(transfer.purchase_price) ? "text-sm text-ink" : "text-sm text-ink-3 italic"}>
+              {formatRands(transfer.purchase_price) ?? "Not captured"}
+            </dd>
+          </div>
+          <div>
             <dt className="text-xs text-ink-3">Opened</dt>
             <dd className="text-sm text-ink">{formatDate(transfer.created_at)}</dd>
           </div>
@@ -191,6 +203,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
             transferId={id}
             rows={serviceRows}
             matterHrefBase={null}
+            municipality={transfer.municipality}
           />
         </Card>
       )}

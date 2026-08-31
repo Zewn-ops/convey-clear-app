@@ -13,7 +13,7 @@ import {
 import DetailFields from "@/components/ui/DetailFields";
 import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
-import { formatDate, municipalityLabel } from "@/lib/utils";
+import { formatDate, municipalityLabel, formatRands } from "@/lib/utils";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
@@ -59,6 +59,53 @@ type ClientRef = {
   business_name: string | null;
 } | null;
 
+type MemberRef = {
+  id: string;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+};
+
+/**
+ * The designated ConveyClear member (077), as a name for the fourth block.
+ *
+ * The firm sees who at ConveyClear is on this — the question an attorney asks
+ * before picking up the phone, and one the portal could not answer at all.
+ *
+ * 🔒 Read with the SERVICE ROLE, and it has to be. `users` carries one SELECT
+ * policy, 006's `users_self_read` (`auth_user_id = auth.uid() OR
+ * app_is_staff()`), so a PostgREST embed off property_transfers comes back null
+ * for every partner — the block read "Nobody assigned yet" on every transfer,
+ * forever, which is the exact opposite of the point. Caught in review
+ * 2026-08-31.
+ *
+ * Scoped to the one id already on a transfer this firm can see, and returns a
+ * NAME and nothing else. Email is the last resort rather than a display choice,
+ * so a member with no name recorded still reads as somebody.
+ */
+async function designatedMemberOf(
+  memberId: string | null
+): Promise<{ id: string; name: string } | null> {
+  if (!memberId) return null;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("users")
+    .select("id, full_name, first_name, last_name, email")
+    .eq("id", memberId)
+    .maybeSingle();
+  const m = data as MemberRef | null;
+  if (!m) return null;
+  return {
+    id: m.id,
+    name:
+      m.full_name ||
+      [m.first_name, m.last_name].filter(Boolean).join(" ") ||
+      m.email ||
+      "ConveyClear member",
+  };
+}
+
 type TransferDetail = PropertyTransfer & {
   seller?: ClientRef;
   buyer?: ClientRef;
@@ -90,6 +137,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
 
   const transfer = transferData as TransferDetail | null;
   if (!transfer) notFound();
+
+  // Resolved separately rather than embedded — see designatedMemberOf().
+  const designatedMember = await designatedMemberOf(transfer.designated_member_id);
 
   // §112 — only attorney firms author transfer documents; an estate agency on the
   // same transfer reads them. Mirrors DOC_UPLOADING_FIRM_TYPES in
@@ -133,6 +183,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   const { data: serviceItems } = await supabase
     .from("transfer_services")
     .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + "prc_subtype, rates_scope, "
         + LINKED_MATTER_SELECT)
     .eq("transfer_id", id)
     .order("position", { ascending: true });
@@ -219,6 +270,14 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   }));
   const transferRollup = transferProgress(serviceRows);
 
+  // Matters on this transfer that no service line is tracking — the only thing
+  // the checklist above cannot show. Same derivation as the admin page, so the
+  // two portals cannot disagree about what counts as an exception.
+  const trackedMatterIds = new Set(
+    serviceRows.map((r) => r.matter_id).filter((v): v is string => Boolean(v))
+  );
+  const unlistedMatters = linked.filter((m) => !trackedMatterIds.has(m.id));
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
@@ -268,6 +327,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           entities={entityOptions}
           firms={firmOptions}
           canEdit
+          designatedMember={designatedMember}
         />
       </Card>
 
@@ -281,6 +341,10 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
             { label: "Reference", value: transfer.reference },
             { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
             { label: "Council", value: municipalityLabel(transfer.municipality) },
+            // 077 — visible to the firm as well as staff. Zewn: "the sale price
+            // can be available to all, its just one number which is purchase
+            // price."
+            { label: "Purchase price", value: formatRands(transfer.purchase_price) },
             { label: "Property", value: transfer.property_description, wide: true },
           ]}
           extra={[
@@ -314,81 +378,76 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           rows={serviceRows}
           canMark={firmMayMarkServices}
           matterHrefBase="/partner/matters"
+          municipality={transfer.municipality}
         />
       </Card>
 
-      <Card padding="none" className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-line">
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
-            Matters in this transfer · {linked.length}
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line bg-raised">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Matter</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden md:table-cell">Phase</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide hidden lg:table-cell">Stage</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-ink-3 uppercase tracking-wide">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {linked.map((m) => {
-                const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-                return (
-                  <tr key={m.id} className="hover:bg-raised transition-colors">
-                    <td className="px-5 py-3">
-                      <Link href={`/partner/matters/${m.id}`} className="font-medium text-ink hover:text-action hover:underline">
-                        {m.title || "Untitled"}
-                      </Link>
-                      {m.services?.name && <p className="text-xs text-ink-3 mt-0.5">{m.services.name}</p>}
-                    </td>
-                    <td className="px-5 py-3 text-ink-2 hidden md:table-cell">
-                      {m.current_phase ? (pl ? phaseLabel(pl, m.current_phase, true) : m.current_phase) : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-ink-3 hidden lg:table-cell">
-                      {pl
-                        ? m.current_stage
-                          ? isStageClientVisible(pl, m.current_stage)
-                            ? stageLabel(pl, m.current_stage)
-                            : "In progress"
-                          : "—"
-                        : m.current_stage || "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      {m.status && (
-                        <StatusPill
-                          tone={
-                            ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
-                              m.status
-                            ] ?? "neutral"
-                          }
-                        >
-                          {MATTER_STATUS_LABELS[m.status]}
-                        </StatusPill>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Link href={`/partner/matters/${m.id}`} className="text-xs font-semibold text-action hover:underline">View</Link>
-                    </td>
-                  </tr>
-                );
-              })}
-              {linked.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-ink-3">
-                    No matters linked yet. Matters ConveyClear opens for this transaction can be attached here.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* The firm attaches its own referred matters (Meeting 2). Server route
-            re-checks both matter and transfer belong to this firm. */}
-        <div className="px-5 py-4 border-t border-line">
+      {/* §5.2 / §5.13 — the same block as the admin page, at last.
+          `e7308e3` turned this into an exception list on 2026-08-28 and only
+          touched the admin file, so the two portals have shown the same data in
+          two different shapes ever since. That is the drift §5.13 exists to
+          catch, and Zewn named it directly: "we need to revisit how and why the
+          matters link to the prop trfs. currently its a bit all over the place
+          and messy."
+
+          Why an exception list rather than a table: the services checklist
+          above already lists every service, its progress and a link to the
+          matter realising it, so a table of the same matters is the same
+          information twice. What the checklist CANNOT show is a matter no
+          service line points at — a transfer legitimately carries two matters
+          of the same service (a rates clearance re-run), and the second
+          attaches to the transfer and to no line. Delete this and it is on the
+          transfer while being invisible on it.
+
+          ⚠️ This does NOT narrow what partners can see, which §5.6 asked to
+          widen. Every matter still appears above, with more detail than the
+          table carried; only the duplicate listing goes. */}
+      {unlistedMatters.length > 0 && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="border-b border-line px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+              Other matters on this transaction · {unlistedMatters.length}
+            </p>
+            <p className="mt-1 text-xs text-ink-3">
+              Attached to the transfer but not tracked by a service above — a
+              repeat of a service already listed, or one linked by hand.
+            </p>
+          </div>
+          <ul className="divide-y divide-line">
+            {unlistedMatters.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/partner/matters/${m.id}`}
+                    className="font-medium text-ink hover:text-action hover:underline"
+                  >
+                    {m.title || "Untitled"}
+                  </Link>
+                  {m.services?.name && (
+                    <p className="mt-0.5 text-xs text-ink-3">{m.services.name}</p>
+                  )}
+                </div>
+                {m.status && (
+                  <StatusPill
+                    tone={
+                      ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
+                        m.status
+                      ] ?? "neutral"
+                    }
+                  >
+                    {MATTER_STATUS_LABELS[m.status]}
+                  </StatusPill>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* The firm attaches its own referred matters (Meeting 2). Server route
+          re-checks both matter and transfer belong to this firm. */}
+      <Card padding="none">
+        <div className="px-5 py-4">
           <LinkMatterControl transferId={id} candidates={candidates} endpoint="/api/partner/transfers/link" />
         </div>
       </Card>
@@ -406,6 +465,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
         buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
         nameSubject={transfer.property_description || transfer.reference}
+        municipality={transfer.municipality}
       />
 
       {/* …but the firm DOES post to the feed — it is the shared channel. */}

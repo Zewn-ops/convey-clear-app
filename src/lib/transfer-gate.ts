@@ -17,10 +17,11 @@ import { phaseOrder } from "@/lib/pipelines";
  *
  * ⚠️ Deliberately NOT every service. Business Compliance, Trading Licences,
  * Fire Safety, Hawkers and Liquor never involve a property transaction, so a
- * blanket rule would make those service lines impossible to run. `RCF` is the
- * service code for Property Rates Clearance (subtypes RCF/RCC).
+ * blanket rule would make those service lines impossible to run. `PRC` is the
+ * service code for Property Rates Clearance (stages RCA/RCF/RCC; renamed from
+ * `RCF` by 072, which separated the umbrella from the stage of the same name).
  */
-export const TRANSFER_GATED_SERVICES = ["COO", "RCF"] as const;
+export const TRANSFER_GATED_SERVICES = ["COO", "PRC"] as const;
 
 export function requiresTransfer(serviceCode?: string | null): boolean {
   const code = (serviceCode ?? "").toUpperCase();

@@ -28,15 +28,17 @@ type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean 
 
 const navItems: NavItem[] = [
   { href: "/partner", label: "Overview", icon: LayoutDashboard, exact: true },
-  // Matters hidden 2026-08-26 (Zewn): "they shouldnt see any of the matters. We
-  // will rather have the progress bars and related stuff show in the services
-  // umbrella we created for the property transfers. Hide the matters tab from
-  // partners for now. Will bring it back later if needed."
+  // Hidden 2026-08-26 (Zewn): "Hide the matters tab from partners for now. Will
+  // bring it back later if needed." RESTORED 2026-08-31 (§5.6): "the matters
+  // needs to be visible for partners again in a full sense... the attorneys
+  // will need to fill in a lot of info... and also to be able to track and
+  // monitor the updates... so they must be full like the prop trfs."
   //
-  // The ROUTE is deliberately left in place. RLS still scopes it, so a stale
-  // bookmark keeps working rather than 404-ing, and bringing the tab back is a
-  // one-line revert instead of a rebuild.
-  // { href: "/partner/matters", label: "Matters", icon: Briefcase },
+  // Leaving the route in place while hiding the tab is what made this a
+  // one-line revert rather than a rebuild — and it also meant the overview's
+  // own stat tiles pointed at a page a partner had no way back to for five
+  // days, which is the cost of hiding a way in without hiding what links to it.
+  { href: "/partner/matters", label: "Matters", icon: Briefcase },
   { href: "/partner/transfers", label: "Property Transfers", icon: Building2 },
   { href: "/partner/clients", label: "Clients", icon: Users },
   { href: "/partner/enquiries", label: "Enquiries", icon: MessageSquare },

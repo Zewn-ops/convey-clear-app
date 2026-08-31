@@ -164,6 +164,24 @@ export interface Client {
   marketing_opt_in?: boolean | null;
   popia_consent_at?: string | null;
   terms_accepted_at?: string | null;
+  // 080 — what the eTshwane portal demands of a buyer on a rates clearance
+  // application, taken field by field off the council's own form. Every one is
+  // OPTIONAL here and required only for a City of Tshwane RCA; the requirement
+  // lives in src/lib/councils, never on the client record itself.
+  title?: string | null;
+  initials?: string | null;
+  nationality?: string | null;
+  /** 'rsa_id' | 'passport' — the two the council form offers. */
+  id_type?: string | null;
+  marital_status?: string | null;
+  language?: string | null;
+  // The address in the five boxes the portal actually has. `physical_address`
+  // stays as it is and is never split to fill these.
+  street_number?: string | null;
+  street_name?: string | null;
+  suburb?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
 }
 
 export interface Matter {
@@ -286,6 +304,11 @@ export interface TransferDocument {
   // own, e.g. the offer to purchase. Independent of document_type, which says
   // what the document IS.
   party_role?: "seller" | "buyer" | null;
+  // Input, supporting or output (076). Resolved from the council config at
+  // upload and STORED, so a later change to what a council requires cannot
+  // retrospectively re-file documents. NULL on rows uploaded before the split
+  // — deliberately not backfilled, and shown as such rather than guessed at.
+  doc_class?: "input" | "supporting" | "output" | null;
   created_at: string;
 }
 
@@ -417,6 +440,13 @@ export interface PropertyTransfer {
   // opened before anyone has built the property profile.
   property_id: string | null;
   notes: string | null;
+  // The headline figure from the firm's own cover sheet (077). Visible to
+  // everyone who can see the transfer — staff, the firm and the client alike.
+  purchase_price: number | null;
+  // The ConveyClear member responsible (077), mirroring matters.current_owner_id.
+  // ⚠️ An assignment, never a permission: no policy reads it, and naming
+  // someone must not shut their colleagues out.
+  designated_member_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -26,6 +26,10 @@ type TransferFields = {
   seller_client_id?: string;
   buyer_client_id?: string;
   notes?: string;
+  /** 077 — the headline figure from the Bert Smith cover sheet. */
+  purchase_price?: string | number | null;
+  /** 077 — the ConveyClear member responsible for this transfer. */
+  designated_member_id?: string | null;
 };
 
 const STATUSES = ["open", "registered", "cancelled", "on_hold"];
@@ -33,6 +37,52 @@ const STATUSES = ["open", "registered", "cancelled", "on_hold"];
 function clean(v?: string | null): string | null {
   const s = (v ?? "").trim();
   return s.length ? s : null;
+}
+
+/**
+ * The purchase price, or null.
+ *
+ * Accepts what people actually paste out of an offer to purchase, in the
+ * format this application itself displays. `formatRands` uses en-ZA, where a
+ * SPACE is the thousands separator and a COMMA is the decimal mark:
+ *
+ *     R 1 250 000,00     one and a quarter million rand
+ *
+ * 🔴 Stripping commas as thousands separators — the obvious implementation, and
+ * the one this function shipped with — reads that as 125000000. A hundredfold
+ * overstatement of a purchase price, on a field 077 publishes to the client.
+ * Caught in review 2026-08-31.
+ *
+ * So: spaces and the currency symbol go, a trailing `,dd` is decimals, and any
+ * remaining comma is a thousands separator (for someone typing the en-US form).
+ *
+ * Anything that does not leave a finite non-negative number becomes null, never
+ * 0. `Number("")` is 0, which is how "R" and a field of spaces both used to
+ * store a free transfer — a claim, where null is the truth.
+ */
+function cleanPrice(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") {
+    return Number.isFinite(v) && v >= 0 ? v : null;
+  }
+  if (typeof v !== "string") return null;
+
+  let t = v.replace(/[Rr\s\u00a0]/g, "");
+  if (!t) return null;
+
+  // "1 250 000,00" — a comma with exactly two digits after it, at the end.
+  const decimal = t.match(/^(.*),(\d{1,2})$/);
+  if (decimal) {
+    t = `${decimal[1].replace(/,/g, "")}.${decimal[2]}`;
+  } else {
+    t = t.replace(/,/g, "");
+  }
+
+  // Number("") is 0 and Number("1.2.3") is NaN; only a real number survives.
+  if (!/^\d+(\.\d+)?$/.test(t)) return null;
+
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 function transferPayload(body: TransferFields) {
@@ -44,6 +94,11 @@ function transferPayload(body: TransferFields) {
     seller_client_id: clean(body.seller_client_id),
     buyer_client_id: clean(body.buyer_client_id),
     notes: clean(body.notes),
+    purchase_price: cleanPrice(body.purchase_price),
+    // ⚠️ Assignment, not permission. No policy reads this column (077), and
+    // naming someone must not shut their colleagues out — the same warning 059
+    // gives about naming a contact at a firm.
+    designated_member_id: clean(body.designated_member_id),
   };
 }
 

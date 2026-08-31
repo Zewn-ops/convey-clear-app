@@ -4,7 +4,7 @@ import type { Pipeline } from "./types";
 // 2026-06-22. Same shape as RCF; the COT decision outcome = Certificate
 // Approved / Delayed / Rejected, with Rejected carrying a one-of reason.
 export const cotRcc: Pipeline = {
-  serviceCode: "RCF",
+  serviceCode: "PRC",
   municipality: "COT",
   subtype: "RCC",
   label: "City of Tshwane — Rates Clearance Certificate",

@@ -8,6 +8,13 @@ import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import PhaseProgress from "@/components/ui/PhaseProgress";
 import ServiceSteps from "@/components/ui/ServiceSteps";
 import type { ServiceProgress } from "@/lib/transfer-service-progress";
+import { PRC_SUBTYPES, prcStageLabel } from "@/lib/prc-docs";
+import {
+  councilAsksRatesScope,
+  RATES_SCOPES,
+  RATES_SCOPE_LABELS,
+  type RatesScope,
+} from "@/lib/councils";
 import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-react";
 
 /**
@@ -25,30 +32,39 @@ import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-reac
  * prevents anyone doing anything.
  */
 
-// Keys are `services.code`, NOT the meeting's abbreviations. 063 used EBP/PRC
-// and those two lines could never link to a matter — see 066.
+// Keys are `services.code`. 072 renamed four of them to the vocabulary the
+// councils actually use (BP→EBP, CERT→COC, RCF→PRC, REFUND→REF); both sides of
+// the checklist/services convention moved together in that one migration,
+// because 066 is the record of what happens when they drift apart.
 export const SERVICE_LABELS: Record<string, string> = {
-  BP: "Existing Building Plans",
-  CERT: "Certificates",
-  RCF: "Property Rates Clearance",
+  EBP: "Existing Building Plans",
+  COC: "Certificates",
   MAD: "Municipal Account Dispute",
+  PRC: "Property Rates Clearance",
   COO: "Change of Ownership",
-  REFUND: "Refund",
+  REF: "Refund",
   OTHER: "Other",
 };
 
-/** The default line items, in municipal order — mirrors instantiate_transfer_services (063). */
-export const DEFAULT_SERVICE_CODES = ["BP", "CERT", "RCF", "MAD", "COO", "REFUND", "OTHER"] as const;
+/**
+ * The default line items, in the canonical order — mirrors
+ * instantiate_transfer_services (072).
+ *
+ * Zewn, 2026-08-31, on the three council sheets: the order is the SAME for
+ * every council. The numbering on each sheet is the order that discussion
+ * happened in, not data.
+ */
+export const DEFAULT_SERVICE_CODES = ["EBP", "COC", "MAD", "PRC", "COO", "REF", "OTHER"] as const;
 
 /** §114 — these must be complete before Change of Ownership proceeds. */
-const COO_PREREQUISITES = ["BP", "CERT", "RCF", "MAD"] as const;
+const COO_PREREQUISITES = ["EBP", "COC", "MAD", "PRC"] as const;
 
 /** The sub-services named in the meeting. Suggestions, not a closed list. */
 const SUGGESTED: Record<string, string[]> = {
   // §118
-  BP: ["Occupational certificate", "Sectional scheme plans", "Site development plan", "Floor plans"],
+  EBP: ["Occupational certificate", "Sectional scheme plans", "Site development plan", "Floor plans"],
   // §120
-  CERT: ["Electrical", "Building standards", "Environmental", "Gas"],
+  COC: ["Electrical", "Building standards", "Environmental", "Gas"],
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -142,6 +158,10 @@ export interface ServiceRow {
   notes: string | null;
   matter_id: string | null;
   position: number;
+  /** 072 — which rates-clearance stage a PRC line is. Null until chosen. */
+  prc_subtype?: string | null;
+  /** 075 — rates only, utilities only, or both. Null where unasked. */
+  rates_scope?: string | null;
   /** Derived server-side by lib/transfer-service-progress.ts. */
   progress?: ServiceProgress;
   matterTitle?: string | null;
@@ -153,6 +173,8 @@ export default function TransferServices({
   canManage = false,
   canMark = false,
   matterHrefBase = "/admin/matters",
+  municipality = null,
+  linkableMatters = [],
 }: {
   transferId: string;
   rows: ServiceRow[];
@@ -178,6 +200,24 @@ export default function TransferServices({
    * see); the link would only lead somewhere they cannot go.
    */
   matterHrefBase?: string | null;
+  /**
+   * The transfer's council. Decides whether the rates-vs-utilities choice is
+   * shown at all — COT asks it, CoE does not (§11.17), and which councils ask
+   * is config in lib/councils rather than a conditional here.
+   */
+  municipality?: string | null;
+  /**
+   * §5.2 — matters on this transfer that no line is tracking, so a line can
+   * adopt one from the line itself.
+   *
+   * Zewn: "we need to revisit how and why the matters link to the prop trfs.
+   * currently its a bit all over the place and messy." It was: a matter could
+   * be attached to the TRANSFER from one control and to a LINE only by opening
+   * it as a matter from that line — and `PATCH /api/transfer-services
+   * { matterId }` has existed the whole time with nothing calling it. The
+   * "Other matters" card exists precisely to catch what fell through.
+   */
+  linkableMatters?: { id: string; title: string | null; serviceName?: string | null }[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -251,6 +291,65 @@ export default function TransferServices({
       id
     );
     if (ok) toast.success(STATUS_LABEL[status]);
+  }
+
+  /**
+   * Set the rates-clearance stage, or the rates scope, on a PRC line.
+   *
+   * Staff only, and refused three ways over: this component hides the control,
+   * the route rejects a non-staff caller, and 071's guard — extended by 072 and
+   * 075 — refuses the column change in the database however it is reached.
+   *
+   * ▶ Whether the ATTORNEY should choose the stage is still open. Zewn (§5.9):
+   *   "they must select one of the 3 when prc is selected", and "they" is
+   *   ambiguous between staff and the firm. Answered conservatively for now,
+   *   because being wrong the other way widens what a firm may write.
+   */
+  async function setPrcField(
+    id: string,
+    field: "prcSubtype" | "ratesScope",
+    value: string
+  ) {
+    const ok = await call(
+      {
+        url: "/api/transfer-services",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, [field]: value || null }),
+      },
+      id
+    );
+    if (ok) {
+      toast.success(
+        field === "prcSubtype"
+          ? value
+            ? `Rates clearance stage: ${value}`
+            : "Stage cleared"
+          : "Scope updated"
+      );
+    }
+  }
+
+  /**
+   * Point a service line at a matter that already exists (§5.2).
+   *
+   * Staff only, like every other column on the line but `status` (071). Passing
+   * null clears the line's link — which does NOT detach the matter from the
+   * transfer, because `matters.transfer_id` is a separate fact. The matter
+   * simply moves back to "Other matters on this transaction", where it is still
+   * visible rather than lost.
+   */
+  async function setLineMatter(id: string, matterId: string) {
+    const ok = await call(
+      {
+        url: "/api/transfer-services",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, matterId: matterId || null }),
+      },
+      id
+    );
+    if (ok) toast.success(matterId ? "Matter tracked on this line" : "Line cleared");
   }
 
   async function addSub(parentId: string, label: string) {
@@ -462,6 +561,106 @@ export default function TransferServices({
 
             {r.third_party && (
               <p className="mt-1 pl-6 text-xs text-ink-3">Rendered by {r.third_party}</p>
+            )}
+
+            {/* §5.2 — adopt an existing matter, from the line that should be
+                tracking it. Only where there is something to adopt: an empty
+                dropdown is a control that cannot do anything, and the "Open as
+                matter" link beside it already covers the ordinary case of
+                starting fresh. */}
+            {canManage && !r.parent_id && !r.matter_id && linkableMatters.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 pl-6">
+                <label className="text-xs text-ink-3" htmlFor={`adopt-${r.id}`}>
+                  Track an existing matter
+                </label>
+                <select
+                  id={`adopt-${r.id}`}
+                  value=""
+                  disabled={busy === r.id}
+                  onChange={(e) => setLineMatter(r.id, e.target.value)}
+                  className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink"
+                >
+                  <option value="">— Choose —</option>
+                  {linkableMatters.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title || "Untitled"}
+                      {m.serviceName ? ` · ${m.serviceName}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* PRC splits three ways (§5.9). The stage is not decoration: a
+                pipeline is resolved by (service, council, stage), so a PRC line
+                with no stage draws no phases at all — which is exactly the bug
+                found on 08-27, where a seeded RCF with a NULL subtype showed no
+                circles. Forcing the choice here is the fix for that whole class,
+                rather than patching the data again. */}
+            {code === "PRC" && !r.parent_id && (
+              <div className="mt-2 pl-6 space-y-2">
+                {canManage ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="text-xs text-ink-3" htmlFor={`stage-${r.id}`}>
+                      Stage
+                    </label>
+                    <select
+                      id={`stage-${r.id}`}
+                      value={r.prc_subtype ?? ""}
+                      disabled={busy === r.id}
+                      onChange={(e) => setPrcField(r.id, "prcSubtype", e.target.value)}
+                      className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink"
+                    >
+                      <option value="">— Not chosen —</option>
+                      {PRC_SUBTYPES.map((st) => (
+                        <option key={st.code} value={st.code}>
+                          {st.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {councilAsksRatesScope(municipality) && (
+                      <>
+                        <label className="text-xs text-ink-3" htmlFor={`scope-${r.id}`}>
+                          Covers
+                        </label>
+                        <select
+                          id={`scope-${r.id}`}
+                          value={r.rates_scope ?? ""}
+                          disabled={busy === r.id}
+                          onChange={(e) => setPrcField(r.id, "ratesScope", e.target.value)}
+                          className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink"
+                        >
+                          <option value="">— Not chosen —</option>
+                          {RATES_SCOPES.map((sc) => (
+                            <option key={sc} value={sc}>
+                              {RATES_SCOPE_LABELS[sc]}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  r.prc_subtype && (
+                    <p className="text-xs text-ink-3">
+                      {prcStageLabel(r.prc_subtype)}
+                      {r.rates_scope
+                        ? ` · ${RATES_SCOPE_LABELS[r.rates_scope as RatesScope] ?? r.rates_scope}`
+                        : ""}
+                    </p>
+                  )
+                )}
+
+                {/* Says what is missing and why it matters, rather than simply
+                    looking empty. PRODUCT.md principle 5. */}
+                {!r.prc_subtype && r.status === "needed" && (
+                  <p className="text-xs text-required">
+                    Rates clearance needs a stage — an application, figures or a
+                    certificate. Until one is chosen this line has no pipeline.
+                  </p>
+                )}
+              </div>
             )}
 
             {/* §110 — progress per service, for staff, attorneys and clients

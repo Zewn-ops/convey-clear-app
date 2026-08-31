@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import TransferCard from "@/components/transfers/TransferCard";
 import EmptyState from "@/components/ui/EmptyState";
 import { TRANSFER_STATUS_LABELS, type PropertyTransfer } from "@/types";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, FileEdit, Inbox } from "lucide-react";
 import FilterBar from "@/components/ui/FilterBar";
 import { type Facet } from "@/components/ui/FilterRail";
 import {
@@ -50,6 +50,20 @@ export default async function PartnerTransfersPage({
     new Set(((muniRows as { municipality: string | null }[] | null) ?? []).map((r) => r.municipality!))
   ).sort();
   const muni = municipalities.includes(get("municipality") ?? "") ? get("municipality")! : "";
+
+  // 078 — this firm's unfinished requests. RLS scopes it: a draft is readable
+  // only by the firm that owns it, and is invisible to ConveyClear entirely
+  // until it is sent. Unfiltered by the facets below on purpose — a draft is
+  // not a transfer and does not belong in that count.
+  const { data: draftRows } = await supabase
+    .from("transfer_requests")
+    .select("id, property_description, suggested_reference, updated_at")
+    .eq("status", "draft")
+    .order("updated_at", { ascending: false });
+  const drafts =
+    (draftRows as
+      | { id: string; property_description: string | null; suggested_reference: string | null; updated_at: string }[]
+      | null) ?? [];
 
   let query = supabase
     .from("property_transfers")
@@ -123,13 +137,70 @@ export default async function PartnerTransfersPage({
             {total} transfer{total === 1 ? "" : "s"} · every matter in one transaction, together
           </p>
         </div>
-        <Link
-          href="/partner/transfers/new"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-        >
-          <Plus className="h-4 w-4" /> Request a transfer
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* §5.10 — where a request went, and why one was declined. Its own
+              page rather than a section here: this list is transfers that
+              EXIST, and a declined request is precisely one that does not. */}
+          <Link
+            href="/partner/transfers/requests"
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3.5 py-2 text-sm font-semibold text-ink-2 transition-colors duration-150 ease-out hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          >
+            <Inbox className="h-4 w-4" /> Requests
+          </Link>
+          <Link
+            href="/partner/transfers/new"
+            className="inline-flex items-center gap-1.5 rounded bg-action-fill px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 ease-out hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+          >
+            <Plus className="h-4 w-4" /> Request a transfer
+          </Link>
+        </div>
       </div>
+
+      {/* Unfinished requests, above the transfers they will become. Zewn,
+          2026-08-31: "if they get halfway with a request and want to return
+          later they can draft it and finish it later on" — which only works if
+          a draft is findable again, so it sits on the page they land on rather
+          than behind the request form. */}
+      {drafts.length > 0 && (
+        <div className="rounded-lg border border-line bg-raised/60 p-4">
+          <p className="mono text-[10px] font-bold uppercase tracking-[0.11em] text-ink-3">
+            Unfinished requests
+          </p>
+          <p className="mt-0.5 text-xs text-ink-3">
+            Only your firm can see these. ConveyClear is not told about a draft
+            until you send it.{" "}
+            <Link href="/partner/transfers/requests" className="font-medium text-action hover:underline">
+              See all requests
+            </Link>
+            .
+          </p>
+          <ul className="mt-3 space-y-2">
+            {drafts.map((d) => (
+              <li key={d.id}>
+                <Link
+                  href={`/partner/transfers/new?draft=${d.id}`}
+                  className="flex items-center justify-between gap-3 rounded border border-line bg-surface px-3 py-2 hover:bg-raised"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <FileEdit className="h-4 w-4 shrink-0 text-ink-3" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-ink">
+                        {d.property_description?.trim() ||
+                          d.suggested_reference?.trim() ||
+                          "Untitled request"}
+                      </span>
+                      <span className="block text-xs text-ink-3">
+                        Saved {new Date(d.updated_at).toLocaleDateString("en-ZA")}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-action">Finish</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Filters sit FIRST in the DOM so keyboard and screen-reader order reaches
           them before the rows they filter, but render to the right of the list.

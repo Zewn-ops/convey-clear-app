@@ -5,7 +5,7 @@ import DocRemoveButton from "@/components/matters/DocRemoveButton";
 import ReuseVaultDoc from "@/components/matters/ReuseVaultDoc";
 import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
 import { cooSharedDocs, cooPartyDocs, partyRoleOrder, type CooEntity, type CooDocRule } from "@/lib/coo-docs";
-import { prcRcfDocs, docLabel } from "@/lib/prc-docs";
+import { prcStageDocs, prcStageLabel, docLabel } from "@/lib/prc-docs";
 import { toggleDocUnavailable } from "@/lib/actions/intake";
 import {
   composeFullName,
@@ -49,11 +49,14 @@ interface Group {
   vaultDocs: ClientDocument[]; // this group's client's reusable vault docs
   /** A side of the transaction with no party row captured yet (COO). */
   missingParty?: boolean;
+  /** A PRC matter with no stage recorded — the list below is a guess (§5.8). */
+  stageMissing?: boolean;
 }
 
 export default function InPlaceIntake({
   matterId,
   serviceCode,
+  serviceSubtype = null,
   parties,
   documents,
   municipality,
@@ -65,6 +68,16 @@ export default function InPlaceIntake({
 }: {
   matterId: string;
   serviceCode: string | null;
+  /**
+   * For a PRC matter, which stage it is: RCA opens the rates clearance
+   * account, RCF gets the figures from it, RCC gets the certificate
+   * (`matters.service_subtype`, 021).
+   *
+   * The stage decides what has to be collected, so a PRC matter without one
+   * has no honest checklist to show — see the prompt below rather than a list
+   * that quietly assumes RCF.
+   */
+  serviceSubtype?: string | null;
   parties: MatterParty[];
   documents: MatterDocument[];
   municipality: string | null;
@@ -119,15 +132,26 @@ export default function InPlaceIntake({
         missingParty: true,
       });
     }
-  } else if (code === "RCF") {
+  } else if (code === "PRC") {
     const seller = sorted[0] ?? null;
+    const stage = (serviceSubtype ?? "").toUpperCase() || null;
     groups.push({
       key: seller?.id ?? "seller",
       title: seller ? partyLabel(seller) : "Seller",
-      subtitle: seller ? ROLE_LABELS[seller.role] ?? seller.role : "Seller / applicant",
+      // The stage leads the subtitle because it is what decides the list
+      // below it. §5.8 — an RCA, an RCF and an RCC were all being shown the
+      // RCF's documents, at every council.
+      subtitle: [
+        stage ? prcStageLabel(stage) : "Stage not chosen",
+        seller ? ROLE_LABELS[seller.role] ?? seller.role : "Seller / applicant",
+      ].join(" · "),
       partyId: seller?.id ?? null,
-      slots: prcRcfDocs(seller?.entity_type ?? "natural_person"),
+      slots: prcStageDocs(stage, seller?.entity_type ?? "natural_person", municipality),
       vaultDocs: vaultFor(seller?.client_id ?? matterClientId),
+      // Rendered as a prompt rather than silently falling back: the fallback
+      // IS the RCF list, and showing it unlabelled is how a rates clearance
+      // application came to be collected as though it were a figures request.
+      stageMissing: !stage,
     });
   } else if (transferDocs.length === 0) {
     // The slot matrix covers COO + PRC (RCF) only; other services fall back to the
@@ -227,6 +251,18 @@ export default function InPlaceIntake({
               details in <span className="font-medium text-ink-2">Parties</span> above
               (or send the client the onboarding link) and this side&apos;s document
               slots appear here.
+            </p>
+          )}
+          {/* §5.8 — a rates clearance without a stage. Said plainly, because
+              the list below is the RCF's and an RCA needs different things
+              entirely. The alternative, which is what shipped until now, is a
+              checklist that looks authoritative and quietly assumes. */}
+          {g.stageMissing && (
+            <p className="border-b border-line bg-required-tint px-4 py-3 text-sm text-ink-2">
+              This rates clearance has no stage recorded, so the documents below
+              are the <span className="font-medium">figures</span> list by
+              default. Set it to an application, figures or a certificate on the
+              matter, and the council&apos;s own requirements replace this.
             </p>
           )}
           <ul className="divide-y divide-line">

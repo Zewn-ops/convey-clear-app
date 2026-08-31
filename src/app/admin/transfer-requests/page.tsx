@@ -77,6 +77,11 @@ export default async function TransferRequestsPage() {
     .select(
       "id, status, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, decline_reason, transfer_id, created_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email)"
     )
+    // 078 — a firm's unfinished draft is not a request. RLS already hides it
+    // from staff entirely; this is defence in depth alongside it, and it says
+    // out loud what the split below assumes. Without either, a draft would land
+    // in "decided" — that filter is `status !== 'pending'`.
+    .neq("status", "draft")
     .order("created_at", { ascending: false })
     .limit(100);
 

@@ -10,6 +10,9 @@ import {
 } from "@/lib/transfer-doc-types";
 import { buildDocumentName } from "@/lib/doc-naming";
 import { docLabel } from "@/lib/prc-docs";
+import SearchSelect from "@/components/ui/SearchSelect";
+import { resolveDocClass } from "@/lib/doc-classes";
+import { DOC_CLASS_LABELS } from "@/lib/councils";
 
 /**
  * Adding a supporting document to a property transfer.
@@ -59,6 +62,7 @@ export default function TransferUploadPanel({
   busy,
   partyNames,
   nameSubject,
+  municipality = null,
 }: {
   /** Uploads and records. Resolves when done; rejects on failure. */
   onUpload: (file: File, type: string, role: string, displayName: string | null) => Promise<void>;
@@ -66,6 +70,12 @@ export default function TransferUploadPanel({
   partyNames?: { seller?: string | null; buyer?: string | null };
   /** What the document is ABOUT — the property, or the firm's reference. */
   nameSubject?: string | null;
+  /**
+   * The transfer's council (076). Decides which of input / supporting / output
+   * this document lands under, because the answer is per council and per party
+   * rather than a property of the type.
+   */
+  municipality?: string | null;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -183,25 +193,31 @@ export default function TransferUploadPanel({
               either party's, and an offer to purchase is neither — so folding
               them together would either lose an answer or triple the options. */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+            {/* Zewn, 2026-08-31: "the document uploads should have a dropdown
+                where you can choose what document it is, also a search bar for
+                ease of use." SearchSelect is that dropdown — it types-to-filter
+                and keeps the group name as a hint on each row, so the four
+                groups still do their sorting work without an optgroup a search
+                box cannot see into. */}
+            <div className="text-xs font-semibold uppercase tracking-wide text-ink-3">
               What is it?
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                disabled={busy}
-                className="mt-1.5 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink focus:outline-none focus:ring-2 focus:ring-action disabled:opacity-50"
-              >
-                {SUPPORTING_DOC_GROUPS.map((g) => (
-                  <optgroup key={g.label} label={g.label}>
-                    {g.types.map((t) => (
-                      <option key={t} value={t}>
-                        {docLabel(t)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
+              <div className="mt-1.5 font-normal normal-case tracking-normal">
+                <SearchSelect
+                  value={type}
+                  onChange={setType}
+                  disabled={busy}
+                  emptyLabel={null}
+                  placeholder="Search documents…"
+                  options={SUPPORTING_DOC_GROUPS.flatMap((g) =>
+                    g.types.map((t) => ({
+                      value: t,
+                      label: docLabel(t),
+                      hint: g.label,
+                    }))
+                  )}
+                />
+              </div>
+            </div>
 
             <div className="text-xs font-semibold uppercase tracking-wide text-ink-3">
               Whose is it?
@@ -269,6 +285,26 @@ export default function TransferUploadPanel({
               />
             )}
           </div>
+
+          {/* ── Where it will file (076). Shown rather than asked, for the same
+              reason the name is: it is derived from the two answers above, and
+              seeing it move when they change is what makes those answers feel
+              consequential. */}
+          <p className="text-xs text-ink-3">
+            Files under{" "}
+            <span className="font-medium text-ink-2">
+              {
+              DOC_CLASS_LABELS[
+                resolveDocClass(
+                  municipality,
+                  type,
+                  role === "seller" || role === "buyer" ? role : null
+                )
+              ]
+            }
+            </span>
+            .
+          </p>
 
           {error && <p className="text-xs font-medium text-danger">{error}</p>}
 

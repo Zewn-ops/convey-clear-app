@@ -895,18 +895,29 @@ export default async function AdminMatterDetailPage({
         matterId={id}
         ficaSubjects={ficaSubjects}
         isStaff
+        municipality={matter.municipality}
+        serviceCode={svc?.code ?? null}
+        prcStage={(matter as { service_subtype?: string | null }).service_subtype ?? null}
       />
 
       {/* In-place FICA — client details + consent. Together with the document
           checklist below, this is what makes /onboard optional rather than the
           only way to actually finish a matter (migration 033). */}
-      <InPlaceFica matterId={id} subjects={ficaSubjects} isStaff />
+      <InPlaceFica
+        matterId={id}
+        subjects={ficaSubjects}
+        isStaff
+        municipality={matter.municipality}
+        serviceCode={svc?.code ?? null}
+        prcStage={(matter as { service_subtype?: string | null }).service_subtype ?? null}
+      />
 
       {/* In-place intake — service-aware required-document checklist + upload
           (the primary capture method; renders null for non-COO/PRC services) */}
       <InPlaceIntake
         matterId={id}
         serviceCode={svc?.code ?? null}
+        serviceSubtype={(matter as { service_subtype?: string | null }).service_subtype ?? null}
         parties={parties}
         documents={documents}
         municipality={matter.municipality}
