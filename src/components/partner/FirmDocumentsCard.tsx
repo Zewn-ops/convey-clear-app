@@ -37,7 +37,16 @@ export default function FirmDocumentsCard({
   const [docType, setDocType] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const held = new Map(documents.map((d) => [d.document_type, d]));
+  // 🔴 FIRST match per type, not last. `documents` arrives created_at DESC, and
+  // `new Map(entries)` keeps the LAST entry for a repeated key — which is the
+  // OLDEST row. 073 gives firms INSERT only, so re-uploading is the documented
+  // way to replace an expiring FFC; taking the last would have kept showing the
+  // superseded file's name and date, and the firm would believe a stale
+  // certificate was current. Caught in review 2026-08-31.
+  const held = new Map<string, FirmDocumentRow>();
+  for (const d of documents) {
+    if (!held.has(d.document_type)) held.set(d.document_type, d);
+  }
 
   const upload = async (file: File) => {
     if (!docType) return toast.error("Choose which document this is first.");

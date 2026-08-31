@@ -323,10 +323,23 @@ export default function TransferParties({
 
   const taken = new Set(parties.map((p) => p.role));
 
-  // Anyone not in the headline three. Estate agents, bond and cancellation
-  // attorneys, and anything captured as "other" — still reachable, no longer
-  // competing with the four for the top of the section.
-  const otherParties = parties.filter((p) => !HEADLINE_ROLE_VALUES.includes(p.role));
+  // Anyone the four blocks do not already show. Estate agents, bond and
+  // cancellation attorneys, anything captured as "other" — still reachable,
+  // just no longer competing with the four for the top of the section.
+  //
+  // 🔴 Keyed on the ROW, not the role. A headline slot renders `find()`, i.e.
+  // the first party in that role — and only seller and buyer carry a
+  // one-per-transfer index (050), so two `conveyancing_attorney` rows are legal
+  // in both the schema and the add form. Filtering by role alone dropped the
+  // second one out of BOTH lists: invisible on the page and impossible to
+  // delete, since its bin button lives on the row that never rendered. Caught
+  // in review 2026-08-31.
+  const shownInHeadline = new Set(
+    HEADLINE_ROLES.map((r) => parties.find((p) => p.role === r.value)?.id).filter(
+      (id): id is string => Boolean(id)
+    )
+  );
+  const otherParties = parties.filter((p) => !shownInHeadline.has(p.id));
 
   // Estate agents come from agencies, attorneys from law firms. Both used to be
   // drawn from one unfiltered list, which is how "Sterling & Hayes Attorneys"

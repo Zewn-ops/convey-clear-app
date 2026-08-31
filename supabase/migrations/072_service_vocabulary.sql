@@ -79,6 +79,31 @@
 BEGIN;
 
 -- ---------------------------------------------------------------------------
+-- 0. 071's guard has to stand down for the data migration
+-- ---------------------------------------------------------------------------
+-- 🔴 WITHOUT THIS, THIS MIGRATION ABORTS ON ANY NON-EMPTY DATABASE.
+--
+--   071 installs a BEFORE UPDATE trigger on transfer_services whose partner
+--   branch raises 'Only the service marker can be changed here.' whenever a
+--   non-staff caller changes anything while `status` stays put.
+--
+--   In a migration session auth.uid() is NULL, so app_is_staff() returns false
+--   -- 013 defines it as COALESCE(..., false) -- and every rename below changes
+--   service_code WITHOUT touching status. So the guard fires on the first row,
+--   and because the file is one BEGIN…COMMIT, the entire migration rolls back.
+--
+--   066 did the same renames safely because it ran BEFORE 071 existed. It does
+--   not any more.
+--
+-- The trigger is disabled for the data migration only and re-enabled in the
+-- same transaction, so it is never off outside this file. DISABLE TRIGGER
+-- takes an ACCESS EXCLUSIVE lock on the table; that is correct here, since a
+-- concurrent write during a code rename is exactly what should be blocked.
+
+ALTER TABLE public.transfer_services
+  DISABLE TRIGGER trg_transfer_services_partner_marking;
+
+-- ---------------------------------------------------------------------------
 -- 1. services.code -- the canonical vocabulary
 -- ---------------------------------------------------------------------------
 -- ON CONFLICT is impossible here: none of EBP/COC/PRC/REF exists as a
@@ -180,6 +205,22 @@ COMMENT ON COLUMN public.transfer_services.prc_subtype IS
 CREATE OR REPLACE FUNCTION public.enforce_prc_subtype()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  -- 🔴 Only when one of the two fields actually MOVES.
+  --
+  -- Without this the rule reads "no PRC row with a matter may ever be written
+  -- while its stage is null" rather than "you cannot attach a matter without a
+  -- stage" -- and those are very different. Existing PRC lines are left with a
+  -- NULL stage on purpose (see the header), and they already carry a matter_id,
+  -- so an unguarded check would raise on:
+  --   · this migration's own position UPDATE in section 5, and
+  --   · every later edit to those rows -- a partner marking the line
+  --     "already done", staff editing notes -- locking them permanently.
+  IF TG_OP = 'UPDATE'
+     AND NEW.matter_id   IS NOT DISTINCT FROM OLD.matter_id
+     AND NEW.prc_subtype IS NOT DISTINCT FROM OLD.prc_subtype THEN
+    RETURN NEW;
+  END IF;
+
   IF NEW.service_code = 'PRC'
      AND NEW.matter_id IS NOT NULL
      AND NEW.prc_subtype IS NULL THEN
@@ -321,6 +362,14 @@ UPDATE public.transfer_services ts
    AND ts.service_code = v.code
    AND ts.position IS DISTINCT FROM v.pos;
 
+-- ---------------------------------------------------------------------------
+-- 6. 071's guard comes back on
+-- ---------------------------------------------------------------------------
+-- Same transaction as the DISABLE, so the guard is never off to anyone else.
+
+ALTER TABLE public.transfer_services
+  ENABLE TRIGGER trg_transfer_services_partner_marking;
+
 COMMIT;
 
 -- ============================================================================
@@ -348,7 +397,19 @@ COMMIT;
 --                      'trg_transfer_services_partner_marking');
 --    -- expect: 2 rows
 --
--- 4. 071's guard knows about the new column (else a partner could set the
+-- 4. 🔴 071's guard is ENABLED again. If this says 'D', partners can edit
+--    columns the guard exists to protect:
+--    SELECT tgenabled FROM pg_trigger
+--     WHERE tgname = 'trg_transfer_services_partner_marking';
+--    -- expect: 'O'  (enabled).  'D' = disabled, and something went wrong.
+--
+-- 5. Existing PRC lines with a matter are still writable (finding from the
+--    2026-08-31 review -- they must not be locked by the stage trigger):
+--    UPDATE transfer_services SET notes = notes
+--     WHERE service_code = 'PRC' AND matter_id IS NOT NULL;
+--    -- expect: succeeds. An exception here means the WHEN guard is missing.
+--
+-- 6. 071's guard knows about the new column (else a partner could set the
 --    stage in the same UPDATE as the marker):
 --    SELECT prosrc LIKE '%prc_subtype%' AS guard_covers_prc_subtype
 --      FROM pg_proc

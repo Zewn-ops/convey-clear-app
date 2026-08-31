@@ -72,23 +72,43 @@ type MemberRef = {
  *
  * The firm sees who at ConveyClear is on this — the question an attorney asks
  * before picking up the phone, and one the portal could not answer at all.
- * Email is the last resort rather than a display choice, so a member with no
- * name recorded still reads as somebody.
+ *
+ * 🔒 Read with the SERVICE ROLE, and it has to be. `users` carries one SELECT
+ * policy, 006's `users_self_read` (`auth_user_id = auth.uid() OR
+ * app_is_staff()`), so a PostgREST embed off property_transfers comes back null
+ * for every partner — the block read "Nobody assigned yet" on every transfer,
+ * forever, which is the exact opposite of the point. Caught in review
+ * 2026-08-31.
+ *
+ * Scoped to the one id already on a transfer this firm can see, and returns a
+ * NAME and nothing else. Email is the last resort rather than a display choice,
+ * so a member with no name recorded still reads as somebody.
  */
-function memberOf(m?: MemberRef | null): { id: string; name: string } | null {
+async function designatedMemberOf(
+  memberId: string | null
+): Promise<{ id: string; name: string } | null> {
+  if (!memberId) return null;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("users")
+    .select("id, full_name, first_name, last_name, email")
+    .eq("id", memberId)
+    .maybeSingle();
+  const m = data as MemberRef | null;
   if (!m) return null;
-  const name =
-    m.full_name ||
-    [m.first_name, m.last_name].filter(Boolean).join(" ") ||
-    m.email ||
-    "ConveyClear member";
-  return { id: m.id, name };
+  return {
+    id: m.id,
+    name:
+      m.full_name ||
+      [m.first_name, m.last_name].filter(Boolean).join(" ") ||
+      m.email ||
+      "ConveyClear member",
+  };
 }
 
 type TransferDetail = PropertyTransfer & {
   seller?: ClientRef;
   buyer?: ClientRef;
-  designated_member?: MemberRef | null;
   // The owning firm — i.e. the viewer's own firm here, used to name their
   // side of the transfer conversation.
   attorney?: { name: string | null } | null;
@@ -110,13 +130,16 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   const { data: transferData } = await supabase
     .from("property_transfers")
     .select(
-      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name), designated_member:users!property_transfers_designated_member_id_fkey(id, full_name, first_name, last_name, email)"
+      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
     )
     .eq("id", id)
     .maybeSingle();
 
   const transfer = transferData as TransferDetail | null;
   if (!transfer) notFound();
+
+  // Resolved separately rather than embedded — see designatedMemberOf().
+  const designatedMember = await designatedMemberOf(transfer.designated_member_id);
 
   // §112 — only attorney firms author transfer documents; an estate agency on the
   // same transfer reads them. Mirrors DOC_UPLOADING_FIRM_TYPES in
@@ -296,7 +319,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           entities={entityOptions}
           firms={firmOptions}
           canEdit
-          designatedMember={memberOf(transfer.designated_member)}
+          designatedMember={designatedMember}
         />
       </Card>
 

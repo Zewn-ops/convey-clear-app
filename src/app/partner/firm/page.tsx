@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireFirmAdmin } from "@/lib/partner";
 import FirmDetailsForm, {
   type FirmBanking,
@@ -34,11 +35,24 @@ export default async function PartnerFirmPage() {
   // under the firm-admin RLS policy (037) — a regular partner would get
   // nothing here, which is why the page is gated too.
   //
-  // 🔒 The council-logins query deliberately selects METADATA ONLY. The
-  // ciphertext columns are not requested: `firm_council_credentials` grants
-  // SELECT to the admin tier alone (074), so a partner session would get
-  // nothing back anyway — and asking for them would suggest to the next reader
-  // that this page is allowed to hold them.
+  // 🔒 Two of the reads below MUST use the service role, and the reason is the
+  // same for both: RLS would return nothing, so the feature would render empty
+  // forever. Caught in review 2026-08-31, where both were doing exactly that.
+  //
+  //   · the firm's own people — `users` has one SELECT policy, 006's
+  //     `users_self_read` (`auth_user_id = auth.uid() OR app_is_staff()`), so a
+  //     firm admin can read their OWN row and no colleague's. The councils ask
+  //     for every staff member's login, so a picker that can only ever offer
+  //     the person using it is not the feature.
+  //   · the stored logins — 074 grants SELECT to the admin tier alone, on
+  //     purpose. The firm may not read the VALUES; it must still be able to see
+  //     that a colleague's login is captured, and to remove one.
+  //
+  // Both are pinned to `auth.partnerId`, which comes from requireFirmAdmin()
+  // and never from the request, so the service role cannot reach another firm.
+  // The credentials query takes METADATA ONLY — no ciphertext column is even
+  // named, so this page cannot hold a credential it is not allowed to read.
+  const admin = createAdminClient();
   const [
     { data: firmRow },
     { data: bankingRow },
@@ -58,12 +72,15 @@ export default async function PartnerFirmPage() {
       .select("municipality, bp_number, attorney_code")
       .eq("business_partner_id", auth.partnerId)
       .order("municipality", { ascending: true }),
-    supabase
+    // `users` has no `name` column — 001 defines full_name, 023 adds
+    // first_name / last_name. Selecting one silently 42703'd the whole query.
+    admin
       .from("users")
-      .select("id, name, email")
+      .select("id, full_name, first_name, last_name, email")
       .eq("business_partner_id", auth.partnerId)
-      .order("name", { ascending: true }),
-    supabase
+      .eq("active", true)
+      .order("full_name", { ascending: true }),
+    admin
       .from("firm_council_credentials")
       .select("user_id, municipality, updated_at")
       .eq("firm_id", auth.partnerId)
@@ -78,7 +95,21 @@ export default async function PartnerFirmPage() {
   const firm = (firmRow as unknown as (FirmCouncilFields & { name: string }) | null) ?? null;
   const banking = (bankingRow as FirmBanking | null) ?? null;
   const bpNumbers = (bpRows as BpNumber[] | null) ?? [];
-  const members = (memberRows as FirmMember[] | null) ?? [];
+  const members = (
+    (memberRows as
+      | { id: string; full_name: string | null; first_name: string | null; last_name: string | null; email: string | null }[]
+      | null) ?? []
+  ).map((u) => ({
+    id: u.id,
+    // Email last rather than as a display choice: a colleague with no name
+    // recorded still has to be selectable.
+    name:
+      u.full_name ||
+      [u.first_name, u.last_name].filter(Boolean).join(" ") ||
+      u.email ||
+      "Unnamed",
+    email: u.email,
+  }));
   const stored = (loginRows as StoredLogin[] | null) ?? [];
   const documents = (documentRows as FirmDocumentRow[] | null) ?? [];
   const firmName = firm?.name ?? "Your firm";
