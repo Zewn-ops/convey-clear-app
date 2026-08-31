@@ -11,7 +11,7 @@ import {
   transferProgressById,
   type TransferProgress,
 } from "@/lib/transfer-service-progress";
-import { Plus } from "lucide-react";
+import { Plus, Building2 } from "lucide-react";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   isStaffRole,
@@ -29,6 +29,7 @@ import {
   applyPaging,
 } from "@/lib/list-filters";
 import Pagination from "@/components/ui/Pagination";
+import EmptyState from "@/components/ui/EmptyState";
 
 export const metadata = { title: "Property Transfers — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
@@ -209,16 +210,30 @@ export default async function AdminTransfersPage({
           ))}
         </ol>
       ) : (
-        <Card className="py-12 text-center">
-          <p className="font-medium text-ink">
-            {filtering ? "Nothing matches these filters" : "No property transfers yet"}
-          </p>
-          <p className="mt-1 text-sm text-ink-3">
-            {filtering
-              ? "Clear them to see the rest."
-              : "Create one to group the matters of a single transaction."}
-          </p>
-        </Card>
+        // §5.13 — the shared primitive, and an ACTION on the empty case.
+        // PRODUCT.md principle 5: "Never dead-end. Every empty state explains
+        // why it is empty and offers the action that fills it." This one
+        // explained and then stopped, while the partner list next to it has
+        // offered its action all along — the same page, two portals, two
+        // answers.
+        <EmptyState
+          title={filtering ? "Nothing matches these filters" : "No property transfers yet"}
+          icon={<Building2 className="h-6 w-6" />}
+          action={
+            filtering ? undefined : (
+              <Link
+                href="/admin/property-transfers/new"
+                className="text-[12.5px] font-bold text-action hover:underline"
+              >
+                Create the first one
+              </Link>
+            )
+          }
+        >
+          {filtering
+            ? "Clear them to see the rest."
+            : "Group the matters of a single transaction under one reference."}
+        </EmptyState>
       )}
 
           <div className="mt-6">
