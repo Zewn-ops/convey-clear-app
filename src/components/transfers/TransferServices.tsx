@@ -210,6 +210,9 @@ export default function TransferServices({
   linkableMatters?: { id: string; title: string | null; serviceName?: string | null }[];
 }) {
   const router = useRouter();
+  // Clients pass matterHrefBase={null} (see the prop doc). The admin page omits
+  // it, so this must stay a strict null check rather than a falsy one.
+  const isClientView = matterHrefBase === null;
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<string | null>(null);
@@ -643,11 +646,23 @@ export default function TransferServices({
                 )}
 
                 {/* Says what is missing and why it matters, rather than simply
-                    looking empty. PRODUCT.md principle 5. */}
-                {!r.prc_subtype && r.status === "needed" && (
+                    looking empty. PRODUCT.md principle 5.
+
+                    🔴 NOT SHOWN TO CLIENTS. A buyer cannot choose the stage,
+                    does not know what a pipeline is, and can do nothing with
+                    this sentence -- it was reaching the client portal as raw
+                    internal vocabulary, found as the buyer 2026-08-31. The
+                    line already reads "Not started" for them, which is the
+                    true and useful version of the same fact.
+
+                    `matterHrefBase === null` is this component's existing
+                    client test (see the prop's own doc, and the "Open matter"
+                    link below). Strict, because the admin page omits the prop
+                    entirely and must not be caught by it. */}
+                {!isClientView && !r.prc_subtype && r.status === "needed" && (
                   <p className="text-xs text-required">
                     Rates clearance needs a stage — an application, figures or a
-                    certificate. Until one is chosen this line has no pipeline.
+                    certificate. Until one is chosen, this line shows no progress.
                   </p>
                 )}
               </div>
