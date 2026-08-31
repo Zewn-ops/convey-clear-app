@@ -58,6 +58,23 @@ type Status = (typeof STATUSES)[number];
  */
 const PARTNER_STATUSES = ["needed", "already_done", "not_applicable"] as const;
 
+/**
+ * The three rates-clearance stages (072). Zewn, 2026-08-31: "RCF, RCC and RCA
+ * are all PRC matters, just at different levels. RCA is an application to open
+ * a rates clearance account, RCF is to get rates clearance figures from the
+ * account and RCC is to get a certificate."
+ *
+ * ⚠️ Must stay in step with transfer_services_prc_subtype_check (072) and with
+ * PRC_SUBTYPES in lib/prc-docs.ts.
+ */
+const PRC_SUBTYPES = ["RCA", "RCF", "RCC"] as const;
+
+/**
+ * Rates, utilities, or both (075) — the COT sheet's "R+U / U only / R only".
+ * Decides which account number and statement the council requires.
+ */
+const RATES_SCOPES = ["rates", "rates_and_utilities", "utilities"] as const;
+
 async function callerIsStaff(supabase: Awaited<ReturnType<typeof createClient>>, authId: string) {
   const { data } = await supabase
     .from("users")
@@ -157,6 +174,8 @@ export async function PATCH(req: Request) {
     thirdParty?: string | null;
     notes?: string | null;
     matterId?: string | null;
+    prcSubtype?: string | null;
+    ratesScope?: string | null;
   };
   try {
     body = await req.json();
@@ -195,7 +214,13 @@ export async function PATCH(req: Request) {
   // rather than having them quietly dropped — silently ignoring half a request
   // is how a caller comes to believe it worked.
   if (!isStaff) {
-    if (body.thirdParty !== undefined || body.notes !== undefined || body.matterId !== undefined) {
+    if (
+      body.thirdParty !== undefined ||
+      body.notes !== undefined ||
+      body.matterId !== undefined ||
+      body.prcSubtype !== undefined ||
+      body.ratesScope !== undefined
+    ) {
       return NextResponse.json(
         { error: "A firm may only change the service marker." },
         { status: 403 }
@@ -205,6 +230,31 @@ export async function PATCH(req: Request) {
     if (body.thirdParty !== undefined) patch.third_party = clean(body.thirdParty, 120);
     if (body.notes !== undefined) patch.notes = clean(body.notes, 2000);
     if (body.matterId !== undefined) patch.matter_id = clean(body.matterId, 64);
+
+    // 072 — which rates-clearance stage this PRC line is. null clears it,
+    // which is why undefined and null are distinguished here.
+    if (body.prcSubtype !== undefined) {
+      const v = clean(body.prcSubtype, 8)?.toUpperCase() ?? null;
+      if (v !== null && !(PRC_SUBTYPES as readonly string[]).includes(v)) {
+        return NextResponse.json(
+          { error: `A rates clearance stage must be one of: ${PRC_SUBTYPES.join(", ")}.` },
+          { status: 400 }
+        );
+      }
+      patch.prc_subtype = v;
+    }
+
+    // 075 — rates, utilities, or both.
+    if (body.ratesScope !== undefined) {
+      const v = clean(body.ratesScope, 32)?.toLowerCase() ?? null;
+      if (v !== null && !(RATES_SCOPES as readonly string[]).includes(v)) {
+        return NextResponse.json(
+          { error: `A rates scope must be one of: ${RATES_SCOPES.join(", ")}.` },
+          { status: 400 }
+        );
+      }
+      patch.rates_scope = v;
+    }
   }
 
   if (!Object.keys(patch).length) {

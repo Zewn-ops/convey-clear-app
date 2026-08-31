@@ -13,18 +13,73 @@ export interface PrcSubtype {
   label: string;
   inPortal: boolean; // false → show a "contact ConveyClear" notice, block submit
   notice?: string;
+  /** One line on what this stage is for, shown beside the choice. */
+  hint?: string;
 }
 
+/**
+ * The three stages, in the order they actually happen.
+ *
+ * Zewn, 2026-08-31: "RCA is an application to open a rates clearance account,
+ * RCF is to get rates clearance figures from the account and RCC is to get a
+ * certificate." They are SEQUENTIAL STAGES of one job, not three alternatives
+ * — which is why RCA leads, and why the CoE sheet lists an RCF as a
+ * requirement OF an RCC.
+ *
+ * 🟢 RCA IS NOW IN THE PORTAL. It shipped as `inPortal: false` with a "contact
+ * ConveyClear" notice because the pipeline was undocumented; the handwritten
+ * notes are that documentation arriving, and the per-council requirements now
+ * live in lib/councils. Flipping this flag was the finish line for §5.8, §5.9
+ * and §5.12 together.
+ */
 export const PRC_SUBTYPES: PrcSubtype[] = [
-  { code: "RCF", label: "RCF — Rates Clearance Figures", inPortal: true },
-  { code: "RCC", label: "RCC — Rates Clearance Certificate", inPortal: true },
   {
     code: "RCA",
     label: "RCA — Rates Clearance Application",
-    inPortal: false,
-    notice: "Rates Clearance Applications (RCA) are handled directly by ConveyClear due to the complexity of the pipeline. Please contact ConveyClear to proceed.",
+    inPortal: true,
+    hint: "Opens the rates clearance account.",
+  },
+  {
+    code: "RCF",
+    label: "RCF — Rates Clearance Figures",
+    inPortal: true,
+    hint: "Gets the figures from an open account.",
+  },
+  {
+    code: "RCC",
+    label: "RCC — Rates Clearance Certificate",
+    inPortal: true,
+    hint: "Gets the certificate, once the figures are settled.",
   },
 ];
+
+/** The stage a PRC job is at, or null before anyone has chosen. */
+export type PrcStageCode = PrcSubtype["code"];
+
+export function prcSubtype(code?: string | null): PrcSubtype | null {
+  if (!code) return null;
+  const up = code.toUpperCase();
+  return PRC_SUBTYPES.find((s) => s.code === up) ?? null;
+}
+
+export function prcStageLabel(code?: string | null): string {
+  return prcSubtype(code)?.label ?? "Stage not chosen";
+}
+
+/**
+ * Which stages can sensibly follow the one given.
+ *
+ * Advisory, not enforced — the same call `TransferServices` makes for the COO
+ * prerequisite rule, which §114 displays and deliberately does not block. A
+ * firm may genuinely arrive with an account already open, so refusing an RCF
+ * because no RCA exists in OUR records would be asserting something we do not
+ * know.
+ */
+export function prcStagesAfter(code?: string | null): PrcStageCode[] {
+  const order: PrcStageCode[] = ["RCA", "RCF", "RCC"];
+  const i = order.indexOf((code ?? "").toUpperCase() as PrcStageCode);
+  return i < 0 ? order : order.slice(i + 1);
+}
 
 export interface PrcDocRule {
   docType: string;

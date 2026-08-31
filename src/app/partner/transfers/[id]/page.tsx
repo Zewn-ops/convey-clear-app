@@ -133,6 +133,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   const { data: serviceItems } = await supabase
     .from("transfer_services")
     .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + "prc_subtype, rates_scope, "
         + LINKED_MATTER_SELECT)
     .eq("transfer_id", id)
     .order("position", { ascending: true });
@@ -314,6 +315,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           rows={serviceRows}
           canMark={firmMayMarkServices}
           matterHrefBase="/partner/matters"
+          municipality={transfer.municipality}
         />
       </Card>
 

@@ -200,6 +200,81 @@ CREATE TRIGGER trg_transfer_services_prc_subtype
   FOR EACH ROW EXECUTE FUNCTION public.enforce_prc_subtype();
 
 -- ---------------------------------------------------------------------------
+-- 4b. 071's partner guard must learn about the new column
+-- ---------------------------------------------------------------------------
+-- 071's guard enumerates every column a non-staff caller may not touch, one by
+-- one, and its own comment says "ADD NEW COLUMNS HERE". It is written that way
+-- deliberately: a to_jsonb() diff would silently start permitting any column
+-- added later, which is the exact failure it exists to prevent.
+--
+-- Adding prc_subtype above without adding it here would have done precisely
+-- that. The guard's first partner check requires the status to have MOVED, so
+-- a partner could not change the subtype alone -- but a single UPDATE setting
+-- status AND prc_subtype together would have passed, because prc_subtype was
+-- not in the list.
+--
+-- 🔴 WHO PICKS THE STAGE IS AN OPEN QUESTION, deliberately answered the
+-- conservative way here. Zewn (§5.9): "they must select one of the 3 when prc
+-- is selected as they are all very different pipelines" -- and "they" is
+-- ambiguous between staff and the attorney. 071 exists because §122 was
+-- reversed to let attorneys mark services, so the attorney reading is
+-- plausible. But being wrong in that direction WIDENS what a firm may write to
+-- the database, while being wrong this way only means staff set the stage.
+-- Staff can set it today and nothing is blocked.
+-- ▶ If Zewn says attorneys pick, the change is to move prc_subtype out of this
+--   list and validate the three values for partners, as 071 does for status.
+
+CREATE OR REPLACE FUNCTION public.transfer_services_partner_marking_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    NEW.status_set_by := public.app_current_user_id();
+    NEW.status_set_at := now();
+  ELSE
+    NEW.status_set_by := OLD.status_set_by;
+    NEW.status_set_at := OLD.status_set_at;
+  END IF;
+
+  IF public.app_is_staff() THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
+    RAISE EXCEPTION 'Only the service marker can be changed here.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF NEW.status NOT IN ('needed', 'already_done', 'not_applicable') THEN
+    RAISE EXCEPTION
+      'A firm may mark a service needed, already done, or not applicable.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- Every other column must be untouched. ADD NEW COLUMNS HERE.
+  IF NEW.id           IS DISTINCT FROM OLD.id
+  OR NEW.transfer_id  IS DISTINCT FROM OLD.transfer_id
+  OR NEW.parent_id    IS DISTINCT FROM OLD.parent_id
+  OR NEW.service_code IS DISTINCT FROM OLD.service_code
+  OR NEW.label        IS DISTINCT FROM OLD.label
+  OR NEW.matter_id    IS DISTINCT FROM OLD.matter_id
+  OR NEW.third_party  IS DISTINCT FROM OLD.third_party
+  OR NEW.position     IS DISTINCT FROM OLD.position
+  OR NEW.notes        IS DISTINCT FROM OLD.notes
+  OR NEW.prc_subtype  IS DISTINCT FROM OLD.prc_subtype   -- 072
+  OR NEW.created_by   IS DISTINCT FROM OLD.created_by
+  OR NEW.created_at   IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'A firm may only change the service marker.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  RETURN NEW;
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- 5. New checklists use the new vocabulary and the canonical order
 -- ---------------------------------------------------------------------------
 -- Without this, every transfer opened from here would reintroduce the old
@@ -267,10 +342,18 @@ COMMIT;
 --    BEFORE the migration -- they must be equal:
 --    SELECT count(*) FROM transfer_services WHERE matter_id IS NOT NULL;
 --
--- 3. The trigger is live:
+-- 3. The triggers are live:
 --    SELECT tgname FROM pg_trigger
---     WHERE tgname = 'trg_transfer_services_prc_subtype';
---    -- expect: 1 row
+--     WHERE tgname IN ('trg_transfer_services_prc_subtype',
+--                      'trg_transfer_services_partner_marking');
+--    -- expect: 2 rows
+--
+-- 4. 071's guard knows about the new column (else a partner could set the
+--    stage in the same UPDATE as the marker):
+--    SELECT prosrc LIKE '%prc_subtype%' AS guard_covers_prc_subtype
+--      FROM pg_proc
+--     WHERE proname = 'transfer_services_partner_marking_guard';
+--    -- expect: true
 --
 -- ============================================================================
 -- DOWN (reversible; nothing here was dropped)

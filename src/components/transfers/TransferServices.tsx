@@ -8,6 +8,13 @@ import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import PhaseProgress from "@/components/ui/PhaseProgress";
 import ServiceSteps from "@/components/ui/ServiceSteps";
 import type { ServiceProgress } from "@/lib/transfer-service-progress";
+import { PRC_SUBTYPES, prcStageLabel } from "@/lib/prc-docs";
+import {
+  councilAsksRatesScope,
+  RATES_SCOPES,
+  RATES_SCOPE_LABELS,
+  type RatesScope,
+} from "@/lib/councils";
 import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-react";
 
 /**
@@ -151,6 +158,10 @@ export interface ServiceRow {
   notes: string | null;
   matter_id: string | null;
   position: number;
+  /** 072 — which rates-clearance stage a PRC line is. Null until chosen. */
+  prc_subtype?: string | null;
+  /** 075 — rates only, utilities only, or both. Null where unasked. */
+  rates_scope?: string | null;
   /** Derived server-side by lib/transfer-service-progress.ts. */
   progress?: ServiceProgress;
   matterTitle?: string | null;
@@ -162,6 +173,7 @@ export default function TransferServices({
   canManage = false,
   canMark = false,
   matterHrefBase = "/admin/matters",
+  municipality = null,
 }: {
   transferId: string;
   rows: ServiceRow[];
@@ -187,6 +199,12 @@ export default function TransferServices({
    * see); the link would only lead somewhere they cannot go.
    */
   matterHrefBase?: string | null;
+  /**
+   * The transfer's council. Decides whether the rates-vs-utilities choice is
+   * shown at all — COT asks it, CoE does not (§11.17), and which councils ask
+   * is config in lib/councils rather than a conditional here.
+   */
+  municipality?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -260,6 +278,43 @@ export default function TransferServices({
       id
     );
     if (ok) toast.success(STATUS_LABEL[status]);
+  }
+
+  /**
+   * Set the rates-clearance stage, or the rates scope, on a PRC line.
+   *
+   * Staff only, and refused three ways over: this component hides the control,
+   * the route rejects a non-staff caller, and 071's guard — extended by 072 and
+   * 075 — refuses the column change in the database however it is reached.
+   *
+   * ▶ Whether the ATTORNEY should choose the stage is still open. Zewn (§5.9):
+   *   "they must select one of the 3 when prc is selected", and "they" is
+   *   ambiguous between staff and the firm. Answered conservatively for now,
+   *   because being wrong the other way widens what a firm may write.
+   */
+  async function setPrcField(
+    id: string,
+    field: "prcSubtype" | "ratesScope",
+    value: string
+  ) {
+    const ok = await call(
+      {
+        url: "/api/transfer-services",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, [field]: value || null }),
+      },
+      id
+    );
+    if (ok) {
+      toast.success(
+        field === "prcSubtype"
+          ? value
+            ? `Rates clearance stage: ${value}`
+            : "Stage cleared"
+          : "Scope updated"
+      );
+    }
   }
 
   async function addSub(parentId: string, label: string) {
@@ -471,6 +526,78 @@ export default function TransferServices({
 
             {r.third_party && (
               <p className="mt-1 pl-6 text-xs text-ink-3">Rendered by {r.third_party}</p>
+            )}
+
+            {/* PRC splits three ways (§5.9). The stage is not decoration: a
+                pipeline is resolved by (service, council, stage), so a PRC line
+                with no stage draws no phases at all — which is exactly the bug
+                found on 08-27, where a seeded RCF with a NULL subtype showed no
+                circles. Forcing the choice here is the fix for that whole class,
+                rather than patching the data again. */}
+            {code === "PRC" && !r.parent_id && (
+              <div className="mt-2 pl-6 space-y-2">
+                {canManage ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="text-xs text-ink-3" htmlFor={`stage-${r.id}`}>
+                      Stage
+                    </label>
+                    <select
+                      id={`stage-${r.id}`}
+                      value={r.prc_subtype ?? ""}
+                      disabled={busy === r.id}
+                      onChange={(e) => setPrcField(r.id, "prcSubtype", e.target.value)}
+                      className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink"
+                    >
+                      <option value="">— Not chosen —</option>
+                      {PRC_SUBTYPES.map((st) => (
+                        <option key={st.code} value={st.code}>
+                          {st.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {councilAsksRatesScope(municipality) && (
+                      <>
+                        <label className="text-xs text-ink-3" htmlFor={`scope-${r.id}`}>
+                          Covers
+                        </label>
+                        <select
+                          id={`scope-${r.id}`}
+                          value={r.rates_scope ?? ""}
+                          disabled={busy === r.id}
+                          onChange={(e) => setPrcField(r.id, "ratesScope", e.target.value)}
+                          className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink"
+                        >
+                          <option value="">— Not chosen —</option>
+                          {RATES_SCOPES.map((sc) => (
+                            <option key={sc} value={sc}>
+                              {RATES_SCOPE_LABELS[sc]}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  r.prc_subtype && (
+                    <p className="text-xs text-ink-3">
+                      {prcStageLabel(r.prc_subtype)}
+                      {r.rates_scope
+                        ? ` · ${RATES_SCOPE_LABELS[r.rates_scope as RatesScope] ?? r.rates_scope}`
+                        : ""}
+                    </p>
+                  )
+                )}
+
+                {/* Says what is missing and why it matters, rather than simply
+                    looking empty. PRODUCT.md principle 5. */}
+                {!r.prc_subtype && r.status === "needed" && (
+                  <p className="text-xs text-required">
+                    Rates clearance needs a stage — an application, figures or a
+                    certificate. Until one is chosen this line has no pipeline.
+                  </p>
+                )}
+              </div>
             )}
 
             {/* §110 — progress per service, for staff, attorneys and clients

@@ -96,6 +96,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
   const { data: serviceItems } = await supabase
     .from("transfer_services")
     .select("id, parent_id, service_code, label, status, third_party, notes, matter_id, position, "
+        + "prc_subtype, rates_scope, "
         + LINKED_MATTER_SELECT)
     .eq("transfer_id", id)
     .order("position", { ascending: true });
@@ -191,6 +192,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
             transferId={id}
             rows={serviceRows}
             matterHrefBase={null}
+            municipality={transfer.municipality}
           />
         </Card>
       )}
