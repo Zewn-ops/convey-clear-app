@@ -422,6 +422,13 @@ export interface PropertyTransfer {
   // opened before anyone has built the property profile.
   property_id: string | null;
   notes: string | null;
+  // The headline figure from the firm's own cover sheet (077). Visible to
+  // everyone who can see the transfer — staff, the firm and the client alike.
+  purchase_price: number | null;
+  // The ConveyClear member responsible (077), mirroring matters.current_owner_id.
+  // ⚠️ An assignment, never a permission: no policy reads it, and naming
+  // someone must not shut their colleagues out.
+  designated_member_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

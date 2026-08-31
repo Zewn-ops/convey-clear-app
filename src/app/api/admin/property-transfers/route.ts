@@ -26,6 +26,10 @@ type TransferFields = {
   seller_client_id?: string;
   buyer_client_id?: string;
   notes?: string;
+  /** 077 — the headline figure from the Bert Smith cover sheet. */
+  purchase_price?: string | number | null;
+  /** 077 — the ConveyClear member responsible for this transfer. */
+  designated_member_id?: string | null;
 };
 
 const STATUSES = ["open", "registered", "cancelled", "on_hold"];
@@ -33,6 +37,25 @@ const STATUSES = ["open", "registered", "cancelled", "on_hold"];
 function clean(v?: string | null): string | null {
   const s = (v ?? "").trim();
   return s.length ? s : null;
+}
+
+/**
+ * The purchase price, or null.
+ *
+ * Accepts what people actually type into a money field — "R 1 250 000",
+ * "1,250,000.00" — because rejecting a formatted number is a pointless fight
+ * with the person who has the figure in front of them. Anything that is not a
+ * finite non-negative number becomes null rather than 0: a zero price would
+ * read as a free transfer, which is a claim, while an empty one reads as
+ * "not captured", which is the truth.
+ */
+function cleanPrice(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n =
+    typeof v === "number"
+      ? v
+      : Number(String(v).replace(/[Rr\s,]/g, ""));
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 function transferPayload(body: TransferFields) {
@@ -44,6 +67,11 @@ function transferPayload(body: TransferFields) {
     seller_client_id: clean(body.seller_client_id),
     buyer_client_id: clean(body.buyer_client_id),
     notes: clean(body.notes),
+    purchase_price: cleanPrice(body.purchase_price),
+    // ⚠️ Assignment, not permission. No policy reads this column (077), and
+    // naming someone must not shut their colleagues out — the same warning 059
+    // gives about naming a contact at a firm.
+    designated_member_id: clean(body.designated_member_id),
   };
 }
 

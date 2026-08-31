@@ -33,10 +33,13 @@ export interface TransferFormOption {
 export default function TransferForm({
   firms,
   clients,
+  staff = [],
   existing,
 }: {
   firms: TransferFormOption[];
   clients: TransferFormOption[];
+  /** ConveyClear staff, for the designated member (077). */
+  staff?: TransferFormOption[];
   existing?: PropertyTransfer;
 }) {
   const router = useRouter();
@@ -49,6 +52,12 @@ export default function TransferForm({
   const [sellerId, setSellerId] = useState(existing?.seller_client_id ?? "");
   const [buyerId, setBuyerId] = useState(existing?.buyer_client_id ?? "");
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  // 077 — the two things the Bert Smith cover sheet puts up front that the
+  // portal could not hold at all.
+  const [price, setPrice] = useState(
+    existing?.purchase_price != null ? String(existing.purchase_price) : ""
+  );
+  const [memberId, setMemberId] = useState(existing?.designated_member_id ?? "");
   const [loading, setLoading] = useState(false);
 
   // Searchable, not raw <select>: these carry every firm and every client in the
@@ -75,6 +84,8 @@ export default function TransferForm({
         seller_client_id: sellerId,
         buyer_client_id: buyerId,
         notes,
+        purchase_price: price,
+        designated_member_id: memberId,
       }),
     });
     const json = await res.json();
@@ -109,6 +120,25 @@ export default function TransferForm({
           value={status}
           onChange={(e) => setStatus(e.target.value as TransferStatus)}
           options={STATUSES.map((s) => ({ value: s, label: TRANSFER_STATUS_LABELS[s] }))}
+        />
+        {/* 077 — the headline figure. A text input rather than type="number":
+            people paste "R 1 250 000" out of an offer to purchase, and the
+            server strips the formatting rather than refusing the paste. */}
+        <Input
+          label="Purchase price"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="R 1 250 000"
+          inputMode="decimal"
+          hint="Visible to the firm and the client as well as to staff."
+        />
+        <SearchSelect
+          label="ConveyClear member"
+          value={memberId}
+          onChange={setMemberId}
+          options={staff.map((m) => ({ value: m.id, label: m.label }))}
+          placeholder="Search staff…"
+          hint="Who is responsible. Colleagues can still act on this transfer."
         />
       </div>
 

@@ -13,7 +13,7 @@ import {
 import DetailFields from "@/components/ui/DetailFields";
 import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
-import { formatDate, municipalityLabel } from "@/lib/utils";
+import { formatDate, municipalityLabel, formatRands } from "@/lib/utils";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
@@ -59,9 +59,36 @@ type ClientRef = {
   business_name: string | null;
 } | null;
 
+type MemberRef = {
+  id: string;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+};
+
+/**
+ * The designated ConveyClear member (077), as a name for the fourth block.
+ *
+ * The firm sees who at ConveyClear is on this — the question an attorney asks
+ * before picking up the phone, and one the portal could not answer at all.
+ * Email is the last resort rather than a display choice, so a member with no
+ * name recorded still reads as somebody.
+ */
+function memberOf(m?: MemberRef | null): { id: string; name: string } | null {
+  if (!m) return null;
+  const name =
+    m.full_name ||
+    [m.first_name, m.last_name].filter(Boolean).join(" ") ||
+    m.email ||
+    "ConveyClear member";
+  return { id: m.id, name };
+}
+
 type TransferDetail = PropertyTransfer & {
   seller?: ClientRef;
   buyer?: ClientRef;
+  designated_member?: MemberRef | null;
   // The owning firm — i.e. the viewer's own firm here, used to name their
   // side of the transfer conversation.
   attorney?: { name: string | null } | null;
@@ -83,7 +110,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   const { data: transferData } = await supabase
     .from("property_transfers")
     .select(
-      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name)"
+      "*, attorney:firms!property_transfers_business_partner_id_fkey(name), seller:clients!property_transfers_seller_client_id_fkey(id, full_name, first_name, last_name, business_name), buyer:clients!property_transfers_buyer_client_id_fkey(id, full_name, first_name, last_name, business_name), designated_member:users!property_transfers_designated_member_id_fkey(id, full_name, first_name, last_name, email)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -269,6 +296,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           entities={entityOptions}
           firms={firmOptions}
           canEdit
+          designatedMember={memberOf(transfer.designated_member)}
         />
       </Card>
 
@@ -282,6 +310,10 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
             { label: "Reference", value: transfer.reference },
             { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
             { label: "Council", value: municipalityLabel(transfer.municipality) },
+            // 077 — visible to the firm as well as staff. Zewn: "the sale price
+            // can be available to all, its just one number which is purchase
+            // price."
+            { label: "Purchase price", value: formatRands(transfer.purchase_price) },
             { label: "Property", value: transfer.property_description, wide: true },
           ]}
           extra={[

@@ -19,6 +19,7 @@ import {
   Hash,
   ArrowUpRight,
   Pencil,
+  Users,
 } from "lucide-react";
 import StatusPill from "@/components/ui/StatusPill";
 import EmptyState from "@/components/ui/EmptyState";
@@ -76,13 +77,28 @@ export type PartyOption = { id: string; name: string; kind: string };
 /** A person who works at a firm — for "who there is handling this" (059). */
 export type FirmContact = { id: string; firmId: string; name: string };
 
-/** The four roles a transaction is expected to fill, shown as slots. */
-const EXPECTED_ROLES = [
-  { value: "seller", label: "Seller", icon: User },
+/**
+ * The three party roles that lead the section, in Zewn's order (§11.7):
+ * BUYER · SELLER · CONVEYANCING ATTORNEY. The fourth block is the ConveyClear
+ * member, which is not a party row at all — see the render below.
+ *
+ * 🔴 The estate agent is deliberately NOT here any more. Zewn, 2026-08-31:
+ * "the estate agent can fall into a sub field later on but they are not
+ * important as parties, i think parties should only be targeted toward people
+ * making accounts and estate agents are on the bottom of that list."
+ *
+ * That is a membership RULE, not a one-off removal: a party is someone who
+ * makes an account. Estate agencies have no portal role (026:44), so their
+ * agents are not users. The role still exists and still renders — under "Other
+ * parties" — because demoting is not deleting.
+ */
+const HEADLINE_ROLES = [
   { value: "buyer", label: "Buyer", icon: User },
-  { value: "estate_agent", label: "Estate agent", icon: Building2 },
-  { value: "conveyancing_attorney", label: "Attorney", icon: Scale },
+  { value: "seller", label: "Seller", icon: User },
+  { value: "conveyancing_attorney", label: "Conveyancing attorney", icon: Scale },
 ] as const;
+
+const HEADLINE_ROLE_VALUES: string[] = HEADLINE_ROLES.map((r) => r.value);
 
 const roleLabel = (r: string) =>
   PARTY_ROLES.find((x) => x.value === r)?.label ?? r.replace(/_/g, " ");
@@ -254,6 +270,7 @@ export default function TransferParties({
   canEdit,
   clientHrefBase,
   showIdNumbers = false,
+  designatedMember = null,
 }: {
   transferId: string;
   parties: PartyRow[];
@@ -270,6 +287,13 @@ export default function TransferParties({
   clientHrefBase?: string;
   /** FICA ID numbers are staff-only. Off unless a caller opts in. */
   showIdNumbers?: boolean;
+  /**
+   * The ConveyClear member responsible for this transfer (077) — the fourth
+   * block. Not a party row: `transfer_parties` identifies every row as exactly
+   * one of a client, a firm or an inline capture (050), and a member is none
+   * of those. The column owns the fact; this block shows it.
+   */
+  designatedMember?: { id: string; name: string } | null;
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
@@ -298,6 +322,11 @@ export default function TransferParties({
   const [contactName, setContactName] = useState("");
 
   const taken = new Set(parties.map((p) => p.role));
+
+  // Anyone not in the headline three. Estate agents, bond and cancellation
+  // attorneys, and anything captured as "other" — still reachable, no longer
+  // competing with the four for the top of the section.
+  const otherParties = parties.filter((p) => !HEADLINE_ROLE_VALUES.includes(p.role));
 
   // Estate agents come from agencies, attorneys from law firms. Both used to be
   // drawn from one unfiltered list, which is how "Sterling & Hayes Attorneys"
@@ -415,6 +444,149 @@ export default function TransferParties({
   }
 
   const options = mode === "firm" ? firmsForRole : entities;
+
+  /**
+   * One party, as an expandable row. Lifted out of the list it used to live
+   * in so the headline blocks and the other-parties list render through the
+   * SAME code — two copies of this markup is how the admin and partner
+   * matters blocks ended up different shapes one commit apart.
+   */
+  const renderPartyRow = (p: PartyRow) => {
+            const open = openId === p.id;
+            const c = p.contact;
+            const clientHref = p.clientId && clientHrefBase ? `${clientHrefBase}/${p.clientId}` : null;
+
+            return (
+              <li
+                key={p.id}
+                className="overflow-hidden rounded-lg bg-surface shadow-sm dark:ring-1 dark:ring-line"
+              >
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                  {/* The whole name block is the toggle. The delete button and
+                      the client link are siblings, never descendants — a button
+                      inside a button is invalid and the inner one stops working. */}
+                  <button
+                    type="button"
+                    onClick={() => { setOpenId(open ? null : p.id); setEditingId(null); }}
+                    aria-expanded={open}
+                    aria-controls={`party-${p.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    {viaIcon(p.via, p.detail ?? undefined)}
+                    <div className="min-w-0">
+                      <p className="truncate text-[14.5px] font-semibold text-ink">{p.who}</p>
+                      <p className="truncate text-[12.5px] text-ink-3">
+                        {roleLabel(p.role)}
+                        {p.handledBy && ` · ${p.handledBy}`}
+                        {p.via === "inline" && " · captured, not a client record"}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-ink-3 transition-transform",
+                        open && "rotate-180"
+                      )}
+                    />
+                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusPill tone={p.via === "inline" ? "waiting" : "neutral"}>
+                      {p.via === "entity" ? "Client" : p.via === "firm" ? "Firm" : "Captured"}
+                    </StatusPill>
+                    {canEdit && (
+                      <button
+                        title="Remove this party"
+                        disabled={busy === p.id}
+                        onClick={() => remove(p.id)}
+                        className="rounded p-1.5 text-ink-3 transition-colors hover:bg-danger-tint hover:text-danger disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {open && (
+                  <div id={`party-${p.id}`} className="border-t border-line bg-surface px-4 py-3.5">
+                    {editingId === p.id ? (
+                      <PartyEditor
+                        party={p}
+                        showIdNumbers={showIdNumbers}
+                        busy={busy === `edit-${p.id}`}
+                        onCancel={() => setEditingId(null)}
+                        onSave={(patch) => saveParty(p.id, patch)}
+                      />
+                    ) : (
+                      <>
+                        {/* Every field renders, blank or not — see ContactLine. A card
+                            that hides what it does not have cannot be read as a
+                            checklist, and this one is used as exactly that. */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <ContactLine
+                            icon={Mail}
+                            label="Email"
+                            value={c?.email ?? null}
+                            href={c?.email ? `mailto:${c.email}` : undefined}
+                          />
+                          <ContactLine
+                            icon={Phone}
+                            label="Cell"
+                            value={c?.cell ?? null}
+                            // Spaces are display formatting, not part of the number.
+                            href={c?.cell ? `tel:${c.cell.replace(/\s+/g, "")}` : undefined}
+                          />
+                          <ContactLine icon={MapPin} label="Address" value={c?.address ?? null} />
+                          {p.via !== "firm" && (
+                            <ContactLine
+                              icon={Hash}
+                              label="Registration no."
+                              value={c?.registrationNo ?? null}
+                            />
+                          )}
+                          {showIdNumbers && p.via !== "firm" && (
+                            <ContactLine
+                              icon={Fingerprint}
+                              label="ID number"
+                              value={c?.idNumber ?? null}
+                            />
+                          )}
+                        </div>
+
+                        <div className="mt-3.5 flex flex-wrap items-center gap-4 border-t border-line pt-3">
+                          {/* Where "edit" lives depends on what the party IS. An inline
+                              capture is edited here because there is nowhere else; a
+                              linked party is edited on its own record, so that one
+                              copy stays the truth. */}
+                          {p.via === "inline" && canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingId(p.id)}
+                              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-action hover:underline"
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Edit details
+                            </button>
+                          )}
+                          {clientHref && (
+                            <Link
+                              href={clientHref}
+                              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-action hover:underline"
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Edit on client record
+                              <ArrowUpRight className="h-3.5 w-3.5" />
+                            </Link>
+                          )}
+                          {p.via === "firm" && (
+                            <span className="text-[13px] text-ink-3">
+                              Firm details are edited on the firm&apos;s own page.
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+  };
 
   return (
     <div className="space-y-4">
@@ -696,203 +868,97 @@ export default function TransferParties({
         </div>
       )}
 
-      {/* The four roles a transaction is expected to have, as slots.
-          A list of who IS here cannot show who ISN'T, and "no estate agent yet"
-          and "this deal has no estate agent" look identical when both render as
-          nothing. The slots make the gap legible at a glance; anyone in another
-          role still appears in the list below. */}
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {EXPECTED_ROLES.map((r) => {
+      {/* ── The four blocks (§11.7) ─────────────────────────────────────────
+          Zewn, 2026-08-31: "we want to make the parties section smaller on
+          prop trf aswell and i think if we just have the 4 blocks, each with
+          an arrow button then that will drop down the contact details and info
+          for each party."
+
+          So the four expected roles ARE the rows now, rather than a summary
+          grid sitting above a second list of the same people. Empty ones still
+          render — a list of who IS here cannot show who is missing, and "no
+          attorney yet" and "this deal has no attorney" look identical when
+          both render as nothing.
+
+          🔴 The membership rule is Zewn's, and it is what demotes the estate
+          agent: "parties should only be targeted toward people making
+          accounts". Estate agencies have no portal role at all (026:44), so
+          their agents are not users and never will be under that rule. The
+          role is NOT deleted — it moves to the list below. */}
+      <ul className="space-y-2.5">
+        {HEADLINE_ROLES.map((r) => {
           const p = parties.find((x) => x.role === r.value);
+          if (p) return renderPartyRow(p);
           const Icon = r.icon;
-          // Filled slots go green, empty ones keep the neutral outline. The
-          // point of the slots is to make the GAP legible, and one colour for
-          // both states throws that away — you have to read all four cards to
-          // see what is missing. Emerald matches the `client` accent in
-          // ui/Card, so this is the palette already in use, not a new colour.
-          //
-          // ⚠️ Colour is the second signal, never the only one: the cards keep
-          // saying "Client record" / "Firm" / "Not linked" in words.
           return (
-            <div
+            <li
               key={r.value}
-              className={cn(
-                "rounded-lg px-3 py-2.5 shadow-sm dark:ring-1",
-                p
-                  ? "bg-emerald-500/[0.05] ring-1 ring-emerald-500/25 dark:bg-surface dark:ring-emerald-400/40"
-                  : "bg-raised/60 dark:ring-line/60"
-              )}
+              className="rounded-lg bg-raised/60 px-4 py-3.5 dark:ring-1 dark:ring-line/60"
             >
-              <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">
-                <Icon className="h-3 w-3" /> {r.label}
-              </p>
-              {p ? (
-                <>
-                  <p className="mt-1 truncate text-[13.5px] font-semibold text-ink" title={p.who}>
-                    {p.who}
+              <div className="flex items-center gap-3">
+                <Icon className="h-4 w-4 shrink-0 text-ink-3" />
+                <div className="min-w-0">
+                  <p className="text-[14.5px] font-semibold text-ink-3">{r.label}</p>
+                  <p className="text-[12.5px] text-ink-3">
+                    {canEdit ? "Not linked yet — add them above." : "Not linked yet."}
                   </p>
-                  <p className="text-[11px] text-ink-3">
-                    {p.handledBy
-                      ? p.handledBy
-                      : p.via === "entity"
-                        ? "Client record"
-                        : p.via === "firm"
-                          ? "Firm"
-                          : "Captured"}
-                  </p>
-                </>
-              ) : (
-                <p className="mt-1 text-[13px] text-ink-3">Not linked</p>
-              )}
-            </div>
+                </div>
+              </div>
+            </li>
           );
         })}
-      </div>
 
-      {parties.length === 0 ? (
+        {/* The ConveyClear member is the fourth block and is NOT a
+            transfer_parties row: that table models parties to the transaction,
+            each identified as exactly one of a client, a firm or an inline
+            capture (050), and a member is none of those. 077 gives the transfer
+            a designated_member_id column instead — the block displays it, the
+            column owns it.
+
+            ⚠️ Designation is responsibility, not permission. Colleagues can
+            still act, and nothing reads this column for access. */}
+        <li className={cn(
+          "rounded-lg px-4 py-3.5 dark:ring-1",
+          designatedMember
+            ? "bg-surface shadow-sm dark:ring-line"
+            : "bg-raised/60 dark:ring-line/60"
+        )}>
+          <div className="flex items-center gap-3">
+            <Users className="h-4 w-4 shrink-0 text-ink-3" />
+            <div className="min-w-0">
+              <p className={cn(
+                "text-[14.5px] font-semibold",
+                designatedMember ? "text-ink" : "text-ink-3"
+              )}>
+                {designatedMember?.name ?? "ConveyClear member"}
+              </p>
+              <p className="truncate text-[12.5px] text-ink-3">
+                {designatedMember
+                  ? "ConveyClear member · colleagues can still assist"
+                  : "Nobody assigned yet"}
+              </p>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      {/* Everyone else — estate agents, bond and cancellation attorneys —
+          still reachable, just no longer competing with the four for the top
+          of the section. */}
+      {otherParties.length > 0 && (
+        <div className="space-y-2.5">
+          <p className="mono text-[10px] font-bold uppercase tracking-[0.11em] text-ink-3">
+            Other parties
+          </p>
+          <ul className="space-y-2.5">{otherParties.map(renderPartyRow)}</ul>
+        </div>
+      )}
+
+      {parties.length === 0 && !designatedMember && (
         <EmptyState title="No parties captured yet">
           Add the seller and buyer to make the two sides of this transaction visible. The council pack
           needs both before it can be generated.
         </EmptyState>
-      ) : (
-        <ul className="space-y-2.5">
-          {parties.map((p) => {
-            const open = openId === p.id;
-            const c = p.contact;
-            const clientHref = p.clientId && clientHrefBase ? `${clientHrefBase}/${p.clientId}` : null;
-
-            return (
-              <li
-                key={p.id}
-                className="overflow-hidden rounded-lg bg-surface shadow-sm dark:ring-1 dark:ring-line"
-              >
-                <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-                  {/* The whole name block is the toggle. The delete button and
-                      the client link are siblings, never descendants — a button
-                      inside a button is invalid and the inner one stops working. */}
-                  <button
-                    type="button"
-                    onClick={() => { setOpenId(open ? null : p.id); setEditingId(null); }}
-                    aria-expanded={open}
-                    aria-controls={`party-${p.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                  >
-                    {viaIcon(p.via, p.detail ?? undefined)}
-                    <div className="min-w-0">
-                      <p className="truncate text-[14.5px] font-semibold text-ink">{p.who}</p>
-                      <p className="truncate text-[12.5px] text-ink-3">
-                        {roleLabel(p.role)}
-                        {p.handledBy && ` · ${p.handledBy}`}
-                        {p.via === "inline" && " · captured, not a client record"}
-                      </p>
-                    </div>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 shrink-0 text-ink-3 transition-transform",
-                        open && "rotate-180"
-                      )}
-                    />
-                  </button>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <StatusPill tone={p.via === "inline" ? "waiting" : "neutral"}>
-                      {p.via === "entity" ? "Client" : p.via === "firm" ? "Firm" : "Captured"}
-                    </StatusPill>
-                    {canEdit && (
-                      <button
-                        title="Remove this party"
-                        disabled={busy === p.id}
-                        onClick={() => remove(p.id)}
-                        className="rounded p-1.5 text-ink-3 transition-colors hover:bg-danger-tint hover:text-danger disabled:opacity-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {open && (
-                  <div id={`party-${p.id}`} className="border-t border-line bg-surface px-4 py-3.5">
-                    {editingId === p.id ? (
-                      <PartyEditor
-                        party={p}
-                        showIdNumbers={showIdNumbers}
-                        busy={busy === `edit-${p.id}`}
-                        onCancel={() => setEditingId(null)}
-                        onSave={(patch) => saveParty(p.id, patch)}
-                      />
-                    ) : (
-                      <>
-                        {/* Every field renders, blank or not — see ContactLine. A card
-                            that hides what it does not have cannot be read as a
-                            checklist, and this one is used as exactly that. */}
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <ContactLine
-                            icon={Mail}
-                            label="Email"
-                            value={c?.email ?? null}
-                            href={c?.email ? `mailto:${c.email}` : undefined}
-                          />
-                          <ContactLine
-                            icon={Phone}
-                            label="Cell"
-                            value={c?.cell ?? null}
-                            // Spaces are display formatting, not part of the number.
-                            href={c?.cell ? `tel:${c.cell.replace(/\s+/g, "")}` : undefined}
-                          />
-                          <ContactLine icon={MapPin} label="Address" value={c?.address ?? null} />
-                          {p.via !== "firm" && (
-                            <ContactLine
-                              icon={Hash}
-                              label="Registration no."
-                              value={c?.registrationNo ?? null}
-                            />
-                          )}
-                          {showIdNumbers && p.via !== "firm" && (
-                            <ContactLine
-                              icon={Fingerprint}
-                              label="ID number"
-                              value={c?.idNumber ?? null}
-                            />
-                          )}
-                        </div>
-
-                        <div className="mt-3.5 flex flex-wrap items-center gap-4 border-t border-line pt-3">
-                          {/* Where "edit" lives depends on what the party IS. An inline
-                              capture is edited here because there is nowhere else; a
-                              linked party is edited on its own record, so that one
-                              copy stays the truth. */}
-                          {p.via === "inline" && canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(p.id)}
-                              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-action hover:underline"
-                            >
-                              <Pencil className="h-3.5 w-3.5" /> Edit details
-                            </button>
-                          )}
-                          {clientHref && (
-                            <Link
-                              href={clientHref}
-                              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-action hover:underline"
-                            >
-                              <Pencil className="h-3.5 w-3.5" /> Edit on client record
-                              <ArrowUpRight className="h-3.5 w-3.5" />
-                            </Link>
-                          )}
-                          {p.via === "firm" && (
-                            <span className="text-[13px] text-ink-3">
-                              Firm details are edited on the firm&apos;s own page.
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
       )}
     </div>
   );

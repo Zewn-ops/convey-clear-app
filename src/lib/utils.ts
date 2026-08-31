@@ -50,3 +50,24 @@ export function getInitials(name: string): string {
     .toUpperCase()
     .slice(0, 2);
 }
+
+/**
+ * Rands, for display. Returns null when there is no figure, so a caller can
+ * tell "not captured" from "zero" — DetailFields renders a missing value as an
+ * em dash, and a price of R 0.00 would be a claim rather than a gap (077).
+ *
+ * en-ZA gives "R 1 250 000,00": a space as the thousands separator and a comma
+ * as the decimal mark, which is what a South African conveyancer reads. Cents
+ * are dropped, because property prices are quoted whole and two trailing zeroes
+ * on every line is noise.
+ */
+export function formatRands(value?: number | string | null): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
