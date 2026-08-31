@@ -7,13 +7,10 @@ import { entityKind } from "@/lib/entity-display";
 import { getSessionProfile } from "@/lib/auth";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
-  clientDisplayName,
   TRANSFER_STATUS_LABELS,
-  type Matter,
   type MatterDocument,
   type TransferStatus,
 } from "@/types";
-import MatterCard, { type MatterCardRow } from "@/components/matters/MatterCard";
 import Badge from "@/components/ui/Badge";
 
 /** The 062 view: a client's own transfer, column-limited by design. */
@@ -24,7 +21,7 @@ interface ClientTransferRow {
   municipality: string | null;
   status: string;
 }
-import { Briefcase, Clock, CheckCircle, FolderOpen, FileText, PlusCircle, Home } from "lucide-react";
+import { Clock, CheckCircle, FolderOpen, FileText, PlusCircle, Home } from "lucide-react";
 
 export const metadata = { title: "Dashboard — ConveyClear" };
 
@@ -35,25 +32,7 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  const { activeId, active } = await getEntityContext();
-
-  // RLS scopes these automatically: client→own entities, partner→their clients,
-  // staff→all.
-  let mattersQuery = supabase
-    .from("matters")
-    .select(
-      "id, title, current_phase, current_stage, status, priority, deadline, created_at, updated_at, municipality, service_subtype, clients(id, entity_type, full_name, business_name), services(code, name)"
-    )
-    .order("created_at", { ascending: false })
-    .limit(8);
-
-  // Narrow to the selected entity. RLS already limits this to entities the user
-  // is a member of, so this is a view preference and not the boundary: dropping
-  // it would show the union of their own entities, never anyone else's.
-  if (activeId) mattersQuery = mattersQuery.eq("client_id", activeId);
-
-  const { data: mattersData } = await mattersQuery;
-  const matters = (mattersData as Matter[] | null) ?? [];
+  const { active, hasChoice } = await getEntityContext();
 
   // The client's property transfers. Reaches them through client_can_view_transfer()
   // (062), the party-based function, so this is their own transaction and carries
@@ -72,8 +51,31 @@ export default async function DashboardPage() {
     .limit(5);
   const documents = (documentsData as MatterDocument[] | null) ?? [];
 
-  const activeCount = matters.filter((m) => m.status === "open").length;
-  const completedCount = matters.filter((m) => m.status === "won").length;
+  // 🔴 THESE COUNT TRANSFERS, AND USED TO COUNT MATTERS. Two bugs in one row,
+  // found as the buyer on production 2026-08-31:
+  //
+  //   1. SCOPE. The matters query was narrowed to the active entity; the
+  //      transfer view cannot be (it has no client column, deliberately -- see
+  //      077). So "Transfers 1 / Active 1 / Completed 1" put a figure spanning
+  //      every entity beside two figures for one entity, and no reader could
+  //      reconcile them.
+  //   2. OBJECT. Zewn, 2026-08-26: clients "dont see matters but only see
+  //      property transfers". There is no Matters link in the client nav, so
+  //      these counted something the reader cannot reach or verify.
+  //
+  // Counted with head:true rather than from the list above, which is limit(5):
+  // the old counts silently capped at the page size.
+  const countTransfers = async (status?: string) => {
+    let q = supabase.from("client_transfers").select("id", { count: "exact", head: true });
+    if (status) q = q.eq("status", status);
+    const { count } = await q;
+    return count ?? 0;
+  };
+  const [totalCount, activeCount, completedCount] = await Promise.all([
+    countTransfers(),
+    countTransfers("open"),
+    countTransfers("registered"),
+  ]);
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
   const isClient = profile?.role === "client";
 
@@ -83,9 +85,17 @@ export default async function DashboardPage() {
   // for it. A personal entity is still the person, so the greeting stays there.
   const onBusinessEntity = Boolean(active && active.entityType !== "natural_person");
   const heading = onBusinessEntity ? `${active!.name}` : `Welcome back, ${firstName}`;
-  const subheading = onBusinessEntity
-    ? `${entityKind(active!)} entity · here's where its property transfers stand.`
-    : "Here's where your property transfers stand.";
+  // ⚠️ "its property transfers" is only true for someone with ONE entity. The
+  // switcher scopes this entity's details and FICA vault; it does NOT scope the
+  // transfer list, because client_transfers reaches every transfer the caller
+  // is a party to through ANY of their entities (062's can_access_client, which
+  // is multi-entity aware on purpose). Naledi Dlamini, acting for a company and
+  // a trust, was shown the company's transfer under the trust's name.
+  const subheading = hasChoice
+    ? "Every transfer you act on, across all your entities."
+    : onBusinessEntity
+      ? `${entityKind(active!)} entity · here's where its property transfers stand.`
+      : "Here's where your property transfers stand.";
 
   // Zewn, 2026-08-26: clients "dont see matters but only see property transfers".
   // A matter is one service inside a transaction; the transaction is the thing a
@@ -93,7 +103,7 @@ export default async function DashboardPage() {
   // Completed counts, because those are the honest measure of progress — they are
   // just no longer the thing being counted first or linked to.
   const stats = [
-    { label: "Transfers", value: transfers.length, icon: Home, tone: "text-action bg-action-fill/10" },
+    { label: "Transfers", value: totalCount, icon: Home, tone: "text-action bg-action-fill/10" },
     { label: "Active", value: activeCount, icon: Clock, tone: "text-amber-600 bg-amber-100" },
     { label: "Completed", value: completedCount, icon: CheckCircle, tone: "text-green-600 bg-green-100" },
     { label: "Documents", value: documents.length, icon: FolderOpen, tone: "text-action bg-action-fill/10" },

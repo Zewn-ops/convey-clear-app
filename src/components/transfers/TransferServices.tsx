@@ -32,19 +32,9 @@ import { ChevronRight, ChevronDown, Plus, Trash2, ListChecks } from "lucide-reac
  * prevents anyone doing anything.
  */
 
-// Keys are `services.code`. 072 renamed four of them to the vocabulary the
-// councils actually use (BP→EBP, CERT→COC, RCF→PRC, REFUND→REF); both sides of
-// the checklist/services convention moved together in that one migration,
-// because 066 is the record of what happens when they drift apart.
-export const SERVICE_LABELS: Record<string, string> = {
-  EBP: "Existing Building Plans",
-  COC: "Certificates",
-  MAD: "Municipal Account Dispute",
-  PRC: "Property Rates Clearance",
-  COO: "Change of Ownership",
-  REF: "Refund",
-  OTHER: "Other",
-};
+import { SERVICE_LABELS, serviceLabel } from "@/lib/councils/types";
+// Re-exported so the modules that already import it from here keep working.
+export { SERVICE_LABELS };
 
 /**
  * The default line items, in the canonical order — mirrors
@@ -220,6 +210,9 @@ export default function TransferServices({
   linkableMatters?: { id: string; title: string | null; serviceName?: string | null }[];
 }) {
   const router = useRouter();
+  // Clients pass matterHrefBase={null} (see the prop doc). The admin page omits
+  // it, so this must stay a strict null check rather than a falsy one.
+  const isClientView = matterHrefBase === null;
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<string | null>(null);
@@ -261,7 +254,7 @@ export default function TransferServices({
   // Outstanding prerequisites, for the advisory note on Change of Ownership.
   const outstanding = top
     .filter((r) => COO_PREREQUISITES.includes(r.service_code as never) && r.status === "needed")
-    .map((r) => SERVICE_LABELS[r.service_code ?? ""] ?? r.service_code);
+    .map((r) => serviceLabel(r.service_code));
 
   async function call(init: RequestInit & { url: string }, key: string) {
     setBusy(key);
@@ -464,7 +457,7 @@ export default function TransferServices({
                   }`}
                 />
                 <span className="truncate text-[15px] font-medium text-ink">
-                  {SERVICE_LABELS[code] ?? code}
+                  {serviceLabel(code)}
                 </span>
                 {kids.length > 0 && (
                   <span className="shrink-0 text-xs tabular-nums text-ink-3">{kids.length}</span>
@@ -653,11 +646,23 @@ export default function TransferServices({
                 )}
 
                 {/* Says what is missing and why it matters, rather than simply
-                    looking empty. PRODUCT.md principle 5. */}
-                {!r.prc_subtype && r.status === "needed" && (
+                    looking empty. PRODUCT.md principle 5.
+
+                    🔴 NOT SHOWN TO CLIENTS. A buyer cannot choose the stage,
+                    does not know what a pipeline is, and can do nothing with
+                    this sentence -- it was reaching the client portal as raw
+                    internal vocabulary, found as the buyer 2026-08-31. The
+                    line already reads "Not started" for them, which is the
+                    true and useful version of the same fact.
+
+                    `matterHrefBase === null` is this component's existing
+                    client test (see the prop's own doc, and the "Open matter"
+                    link below). Strict, because the admin page omits the prop
+                    entirely and must not be caught by it. */}
+                {!isClientView && !r.prc_subtype && r.status === "needed" && (
                   <p className="text-xs text-required">
                     Rates clearance needs a stage — an application, figures or a
-                    certificate. Until one is chosen this line has no pipeline.
+                    certificate. Until one is chosen, this line shows no progress.
                   </p>
                 )}
               </div>

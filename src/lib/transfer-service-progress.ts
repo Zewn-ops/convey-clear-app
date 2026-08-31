@@ -1,4 +1,5 @@
 import { getPipeline, phaseOrder, phaseSteps, phaseLabel } from "@/lib/pipelines";
+import { serviceLabel } from "@/lib/councils/types";
 
 /**
  * Progress for one line on a transfer's service checklist.
@@ -258,23 +259,6 @@ export interface TransferProgressRow {
   position?: number | null;
 }
 
-/**
- * Service display names for the dots.
- *
- * Duplicated from SERVICE_LABELS in components/transfers/TransferServices.tsx
- * deliberately: that file is a "use client" component, and importing it here
- * would drag the whole component into every server page that computes progress.
- * Keep the two in step — they are the same seven codes from 063/066.
- */
-const SERVICE_NAMES: Record<string, string> = {
-  BP: "Existing Building Plans",
-  CERT: "Certificates",
-  RCF: "Property Rates Clearance",
-  MAD: "Municipal Account Dispute",
-  COO: "Change of Ownership",
-  REFUND: "Refund",
-  OTHER: "Other",
-};
 
 /** A matter in one of these states has nothing further to run. */
 const MATTER_DONE = new Set(["won", "archived"]);
@@ -311,7 +295,7 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
   const dots: TransferServiceDot[] = top.map((r) => {
     const settled = isSettled(r);
     return {
-      name: r.label?.trim() || SERVICE_NAMES[r.serviceCode ?? ""] || r.serviceCode || "Service",
+      name: r.label?.trim() || serviceLabel(r.serviceCode),
       settled,
       // Work is under way: a matter exists and has not finished. A viewer who
       // cannot see the matter still gets this from matter_id, which is on the
