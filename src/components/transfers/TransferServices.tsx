@@ -404,7 +404,7 @@ export default function TransferServices({
         <ListChecks className="mx-auto h-8 w-8 text-ink-3" />
         <p className="mt-3 font-medium text-ink">No service list yet</p>
         <p className="mx-auto mt-1 max-w-sm text-sm text-ink-3">
-          A transfer is an umbrella over six services. Create the standard list and mark each one as
+          A transfer is an umbrella over seven services. Create the standard list and mark each one as
           needed, already done, or not applicable.
         </p>
         {canManage && (

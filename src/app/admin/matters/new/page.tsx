@@ -14,7 +14,7 @@ export default async function NewMatterPage({
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
   // Arriving from a transfer's service checklist: "open this as a matter" knows
-  // both the transaction and which of the six services it means.
+  // both the transaction and which of the seven services it means.
   const sp = (k: string) => {
     const v = searchParams?.[k];
     return Array.isArray(v) ? v[0] : v;

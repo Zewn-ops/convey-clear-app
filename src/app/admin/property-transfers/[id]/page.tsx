@@ -453,7 +453,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       {originRequest && <RequestHandover request={originRequest as unknown as HandoverRequest} />}
 
       {/* The umbrella (063). Sits ABOVE the matters table on purpose: this is
-          the plan for the transaction — which of the six services this property
+          the plan for the transaction — which of the seven services this property
           needs — and the table below is the work that has actually been opened
           against it. Plan first, then progress. */}
       <Card accent="service" padding="none">
