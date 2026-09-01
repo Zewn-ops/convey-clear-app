@@ -495,7 +495,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
                 { label: "Property", value: transfer.property_description, wide: true },
               ]}
               extra={[
-                { label: "Estate agency", value: transfer.estate_agent?.name ?? null },
                 { label: "Matters linked", value: String(linked.length) },
                 { label: "Opened", value: formatDate(transfer.created_at) },
                 { label: "Last updated", value: formatDate(transfer.updated_at) },

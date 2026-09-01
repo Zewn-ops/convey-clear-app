@@ -48,7 +48,18 @@ export default function TransferForm({
   const [municipality, setMunicipality] = useState(existing?.municipality ?? "");
   const [status, setStatus] = useState<TransferStatus>(existing?.status ?? "open");
   const [attorneyId, setAttorneyId] = useState(existing?.business_partner_id ?? "");
-  const [agentId, setAgentId] = useState(existing?.estate_agent_partner_id ?? "");
+  // Estate agent — NO LONGER A FIELD. Zewn, 2026-09-01: "please remove estate
+  // agent firm from the prop trf creation list", which follows §13.4 ("ignore
+  // these") on the three roles the Bert Smith cover sheet carries and the portal
+  // does not model. A party is someone who makes an account (§11.7), and estate
+  // agencies have no portal role at all.
+  //
+  // The stored value is still SENT, unchanged. The API rebuilds the whole row on
+  // update, so dropping the key would null the column on the next unrelated edit
+  // of a transfer that has an agent recorded — deleting real data as a side
+  // effect of removing a control. The column and its data stay; only the input
+  // is gone.
+  const agentId = existing?.estate_agent_partner_id ?? "";
   const [sellerId, setSellerId] = useState(existing?.seller_client_id ?? "");
   const [buyerId, setBuyerId] = useState(existing?.buyer_client_id ?? "");
   const [notes, setNotes] = useState(existing?.notes ?? "");
@@ -149,13 +160,6 @@ export default function TransferForm({
             label="Conveyancing attorney (firm)"
             value={attorneyId}
             onChange={setAttorneyId}
-            options={firmOptions}
-            placeholder="Search firms…"
-          />
-          <SearchSelect
-            label="Estate agent (firm)"
-            value={agentId}
-            onChange={setAgentId}
             options={firmOptions}
             placeholder="Search firms…"
           />
