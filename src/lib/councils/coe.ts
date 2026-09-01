@@ -190,7 +190,11 @@ export const COE: Council = {
           owner: "seller",
           optional: true,
         },
-        { type: "meter_readings", docClass: "input", owner: "seller" },
+        // Split and optional — the same rule as COT (2026-09-01). A prepaid
+        // meter has nothing to photograph, and a property can be prepaid on one
+        // utility and metered on the other.
+        { type: "meter_reading_water", docClass: "input", owner: "seller", optional: true },
+        { type: "meter_reading_electricity", docClass: "input", owner: "seller", optional: true },
 
         // The ATTACHMENTS column, written vertically in orange on the sheet.
         { type: "deed_search", docClass: "input", owner: "seller" },
@@ -235,7 +239,11 @@ export const COE: Council = {
 
     RCF: {
       documents: [
-        { type: "meter_readings", docClass: "input", owner: "seller" },
+        // Split and optional — the same rule as COT (2026-09-01). A prepaid
+        // meter has nothing to photograph, and a property can be prepaid on one
+        // utility and metered on the other.
+        { type: "meter_reading_water", docClass: "input", owner: "seller", optional: true },
+        { type: "meter_reading_electricity", docClass: "input", owner: "seller", optional: true },
         {
           type: "municipal_account",
           docClass: "input",

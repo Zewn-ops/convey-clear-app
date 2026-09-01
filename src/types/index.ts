@@ -417,9 +417,15 @@ export interface Firm {
 // refund → …). Firm-scoped: business_partner_id is the owning attorney firm and
 // the partner RLS predicate. Not visible to clients (it spans both sides of the
 // deal, so a client would see their counterparty).
-export type TransferStatus = "open" | "registered" | "cancelled" | "on_hold";
+/**
+ * `draft` (083) = requested by a firm, not yet approved by ConveyClear. The firm
+ * can read it and upload to it; a CLIENT cannot see it at all, and it is not
+ * live work. Approval moves it to `open`.
+ */
+export type TransferStatus = "draft" | "open" | "registered" | "cancelled" | "on_hold";
 
 export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
+  draft: "Draft — awaiting approval",
   open: "Open",
   registered: "Registered",
   cancelled: "Cancelled",

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { notifyStaff } from "@/lib/notify";
+import { createTransferFromRequest } from "@/lib/transfer-from-request";
 
 export const runtime = "nodejs";
 
@@ -172,6 +173,59 @@ export async function POST(request: Request) {
   // 🔒 Staff are told about a REQUEST, never about a draft. A draft is the
   // firm's private working copy — 078 hides it from staff reads entirely, and
   // notifying them about one would announce what the policy conceals.
+  // ── The transfer now exists from the moment the request is sent ────────────
+  //
+  // Jukka call, 2026-09-01. Zewn: "an attorney sends through a request which
+  // creates the property transfer box … and then instead of us approving it
+  // before it gets created, it gets created in a draft state and then we approve
+  // it." Jukka: "That's fine."
+  //
+  // The reason is the waiting: "they can send through the request, create the
+  // draft transfer as an attorney, and then maybe they're waiting on one or two
+  // documents to still come through … before ConveyClear has been able to
+  // approve that transfer, they can still go in and upload to that transfer
+  // while it's in draft state."
+  //
+  // 🔒 A DRAFT IS NOT LIVE WORK AND IS NOT THE CLIENT'S. 083 excludes drafts
+  // from `client_transfers`, so a seller cannot see an instruction ConveyClear
+  // has not accepted. The firm's own access is the ordinary grant (052), written
+  // by the builder — no second access path.
+  //
+  // Only on SUBMISSION. A 078 draft REQUEST is the firm's private working copy;
+  // building a transfer from one would publish a half-typed form to staff.
+  //
+  // Best-effort by design: the request is lodged and that is what the attorney
+  // asked for. If the build fails, approval still creates the transfer the old
+  // way — createTransferFromRequest is the same function on both paths.
+  let draftTransferId: string | null = null;
+  if (!isDraft && suggestedReference) {
+    const built = await createTransferFromRequest(
+      createAdminClient(),
+      {
+        id: data.id,
+        firm_id: auth.partnerId,
+        requested_by: auth.userId,
+        property_description: propertyDescription,
+        municipality: str("municipality"),
+        notes: str("notes"),
+      },
+      suggestedReference,
+      auth.userId,
+      "draft"
+    );
+    if (built.ok) {
+      draftTransferId = built.transferId;
+      await supabase
+        .from("transfer_requests")
+        .update({ transfer_id: built.transferId })
+        .eq("id", data.id);
+    } else {
+      console.error(
+        `[transfer-requests] request ${data.id} lodged but its draft transfer was not created: ${built.message}`
+      );
+    }
+  }
+
   if (!isDraft) {
     await notifyStaff({
       type: "transfer_request",
@@ -181,5 +235,10 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, id: data.id, status: fields.status });
+  return NextResponse.json({
+    ok: true,
+    id: data.id,
+    status: fields.status,
+    transfer_id: draftTransferId,
+  });
 }

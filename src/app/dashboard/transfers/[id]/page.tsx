@@ -69,7 +69,7 @@ interface DocRow {
 }
 
 function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s] ?? "info";
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s] ?? "info";
 }
 
 export default async function ClientTransferDetail({ params }: { params: Promise<{ id: string }> }) {

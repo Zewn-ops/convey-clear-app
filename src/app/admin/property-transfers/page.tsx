@@ -35,7 +35,7 @@ export const metadata = { title: "Property Transfers — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
 
 function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
 }
 
 type TransferRow = PropertyTransfer & {

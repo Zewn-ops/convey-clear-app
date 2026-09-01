@@ -19,7 +19,7 @@ export function cooSharedDocs(): CooDocRule[] {
     { docType: "transfer_letter" }, // TRF Confirmation Letter
     { docType: "deed_search" },
     { docType: "clearance_figures" }, // Clearance figures / existing account
-    { docType: "proof_of_payment_figures", optional: true }, // POP for figures — not required
+    { docType: "proof_of_payment_figures", optional: true }, // the application fee — not required
   ];
 }
 
@@ -47,7 +47,7 @@ export const COO_DOC_LABELS: Record<string, string> = {
   transfer_letter: "Transfer Confirmation Letter",
   deed_search: "Deed Search",
   clearance_figures: "Clearance Figures",
-  proof_of_payment_figures: "Proof of Payment (Figures)",
+  proof_of_payment_figures: "Proof of Payment (Application Fee)",
   id_certified: "Certified ID",
   cor_14_3: "COR 14.3 Certificate",
   letter_of_authority: "Letter of Authority",

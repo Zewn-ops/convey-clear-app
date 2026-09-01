@@ -114,7 +114,21 @@ export default function TransferRequestForm({
       toast.success(
         asDraft ? "Draft saved — finish it whenever." : "Request sent to ConveyClear."
       );
-      router.push("/partner/transfers");
+      // 🔴 STRAIGHT TO THE TRANSFER, not back to the list.
+      //
+      // Since 083 a submitted request creates its transfer immediately, in
+      // draft, and that page is where documents are uploaded. Jukka call,
+      // 2026-09-01 — Zewn: "I'll add the document upload option to the request,
+      // but we're not going to make any of it required", and the reason a firm
+      // wants it: "maybe they're waiting on one or two documents to still come
+      // through … they can still go in and upload to that transfer while it's in
+      // draft state."
+      //
+      // A second upload pipeline on this form would have had nowhere to put the
+      // files until the transfer existed, and then would have had to move them.
+      // Landing the attorney on the transfer they just created is the same
+      // outcome with one place that owns documents.
+      router.push(j.transfer_id ? `/partner/transfers/${j.transfer_id}` : "/partner/transfers");
       router.refresh();
     } catch {
       toast.error("Could not save that.");

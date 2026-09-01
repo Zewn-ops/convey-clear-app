@@ -24,6 +24,7 @@ import {
   type TransferDocument,
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
+import ExpectedDocuments from "@/components/transfers/ExpectedDocuments";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import {
@@ -41,7 +42,7 @@ import { ArrowLeft } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
 }
 function matterStatusVariant(s: string): "info" | "success" | "danger" | "warning" | "gray" {
   return ({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[
@@ -298,7 +299,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           </div>
           <StatusPill
             tone={
-              ({ open: "action", registered: "ok", cancelled: "danger", on_hold: "waiting" } as Record<string, StatusTone>)[
+              ({ draft: "waiting", open: "action", registered: "ok", cancelled: "danger", on_hold: "waiting" } as Record<string, StatusTone>)[
                 transfer.status
               ] ?? "neutral"
             }
@@ -374,6 +375,12 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               this only decides whether to draw the control.
               nameSubject mirrors resolveTransferSubject() exactly, so the name
               previewed in the upload panel is the name the server stores. */}
+          {/* "If you want X, these are the documents we normally need" — beside
+              the upload, where an attorney is deciding what to attach. Generated
+              from the council registry, so it cannot drift from what the matter
+              then asks for. */}
+          <ExpectedDocuments municipality={transfer.municipality} />
+
           <TransferDocuments
             transferId={id}
             docs={transferDocsWithUrls}

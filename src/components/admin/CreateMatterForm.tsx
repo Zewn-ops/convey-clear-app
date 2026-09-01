@@ -230,7 +230,15 @@ export default function CreateMatterForm({
           const c = clients.find((x) => x.id === clientId);
           return c?.business_name || c?.full_name || "";
         })();
-  const previewTitle = buildMatterTitle({ municipality, serviceCode: svcCode, serviceSubtype: prcStage, clientName, property });
+  const previewTitle = buildMatterTitle({
+    municipality,
+    serviceCode: svcCode,
+    serviceSubtype: prcStage,
+    // The transfer's reference replaces the client name where there is one.
+    transferReference: linkedTransfer?.reference ?? null,
+    clientName,
+    property,
+  });
 
   const submit = async () => {
     if (mode === "new" && !clientName.trim()) return toast.error("Client name required");
