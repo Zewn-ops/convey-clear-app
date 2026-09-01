@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import SearchSelect from "@/components/ui/SearchSelect";
 import { buildMatterTitle } from "@/lib/matter-naming";
+import { PRC_SUBTYPES } from "@/lib/prc-docs";
 import { PRIORITY_LABELS, type MatterPriority } from "@/types";
 import { CheckCircle2, ExternalLink, Home } from "lucide-react";
 
@@ -180,6 +181,14 @@ export default function CreateMatterForm({
       ""
   );
   const [municipality, setMunicipality] = useState(transfer?.municipality || "COT");
+  /**
+   * PRC only — which rates clearance stage this matter is (RCA | RCF | RCC).
+   *
+   * A matter opened inside a transfer inherits the stage from its checklist line
+   * server-side, so this is left blank there and the API fills it. Set here for
+   * a standalone PRC matter, which has no line to inherit from.
+   */
+  const [prcStage, setPrcStage] = useState("");
   const [property, setProperty] = useState(transfer?.property_description || "");
   const [priority, setPriority] = useState<MatterPriority>("standard");
   const [seller, setSeller] = useState<PartyDraft>(emptyParty());
@@ -221,7 +230,7 @@ export default function CreateMatterForm({
           const c = clients.find((x) => x.id === clientId);
           return c?.business_name || c?.full_name || "";
         })();
-  const previewTitle = buildMatterTitle({ municipality, serviceCode: svcCode, clientName, property });
+  const previewTitle = buildMatterTitle({ municipality, serviceCode: svcCode, serviceSubtype: prcStage, clientName, property });
 
   const submit = async () => {
     if (mode === "new" && !clientName.trim()) return toast.error("Client name required");
@@ -237,6 +246,8 @@ export default function CreateMatterForm({
         last_name: entityType === "natural_person" ? lastName : undefined,
         business_name: entityType !== "natural_person" ? name : undefined,
         email, cell, service_id: serviceId, municipality, property_description: property, priority,
+        // Blank inside a transfer: the API prefers the checklist line's stage.
+        service_subtype: prcStage || undefined,
         transfer_id: linkedTransfer?.id,
         // Only sent for COO — the API seeds both sides regardless, but an
         // untouched side is left undefined so it gets a placeholder rather than
@@ -426,6 +437,21 @@ export default function CreateMatterForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Select label="Municipality" value={municipality} onChange={(e) => setMunicipality(e.target.value)} options={MUNI} />
+        {/* The stage decides the pipeline, the document list AND the title, so
+            it is asked for at creation rather than left to be corrected later.
+            Inside a transfer it can be left blank — the checklist line's stage
+            wins server-side. */}
+        {svcCode.toUpperCase() === "PRC" && (
+          <Select
+            label="Rates clearance stage"
+            value={prcStage}
+            onChange={(e) => setPrcStage(e.target.value)}
+            options={[
+              { value: "", label: linkedTransfer ? "— Take it from the transfer —" : "— Not chosen —" },
+              ...PRC_SUBTYPES.map((x) => ({ value: x.code, label: x.label })),
+            ]}
+          />
+        )}
         <Input label="Property description" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="ERF 123 VALHALLA" />
         <Select label="Priority" value={priority} onChange={(e) => setPriority(e.target.value as MatterPriority)} options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))} />
       </div>

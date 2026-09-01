@@ -52,6 +52,16 @@ import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
 import SubmitButton from "@/components/ui/SubmitButton";
 import { buildFicaSubjects } from "@/lib/fica";
+import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
+import {
+  councilServiceSpec,
+  documentsOfClass,
+  DOC_CLASSES,
+  DOC_CLASS_LABELS,
+  DOC_CLASS_HINTS,
+  type DocClass,
+  type PrcStage,
+} from "@/lib/councils";
 import { logMatterActivity } from "@/lib/activity";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
@@ -100,7 +110,7 @@ function ActivityIcon({ type }: { type: string }) {
 async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, matterId: string) {
   const { data } = await supabase
     .from("matters")
-    .select("status, current_phase, current_stage, municipality, service_subtype, transfer_id, services(code)")
+    .select("title, status, current_phase, current_stage, municipality, service_subtype, transfer_id, services(code)")
     .eq("id", matterId)
     .maybeSingle();
   const code = (data as { services?: { code?: string } | null } | null)?.services?.code ?? null;
@@ -357,9 +367,22 @@ export default async function AdminMatterDetailPage({
         ? { current_phase: pipeline.prePhase.key, current_stage: null }
         : {};
 
+    // The stage is in the TITLE (COT_RCA_…, not COT_PRC_…), so setting or
+    // changing it renames the matter. Only when the title still carries the old
+    // token in the service slot — a hand-edited or partner-referenced title is
+    // somebody's decision and is left alone.
+    const titlePatch = (() => {
+      const current = (row as { title?: string | null } | null)?.title ?? "";
+      const from = prev || "PRC";
+      const to = stage || "PRC";
+      if (!current || from === to) return {};
+      const renamed = current.replace(new RegExp(`(^|_)${from}(_|$)`), `$1${to}$2`);
+      return renamed === current ? {} : { title: renamed };
+    })();
+
     await supabase
       .from("matters")
-      .update({ service_subtype: stage, ...phasePatch })
+      .update({ service_subtype: stage, ...phasePatch, ...titlePatch })
       .eq("id", matterId);
     await logMatterActivity(supabase, {
       matterId,
@@ -574,11 +597,28 @@ export default async function AdminMatterDetailPage({
   const clientName = matter.clients ? clientDisplayName(matter.clients) : null;
   const displayName = clientName || matter.title || "Matter";
 
-  // Documents split: client/business-partner uploads vs ConveyClear uploads (note 29).
-  const isClientUpload = (d: MatterDocument) =>
-    ["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "");
-  const clientPartnerDocs = documents.filter(isClientUpload);
-  const ccDocs = documents.filter((d) => !isClientUpload(d));
+
+  // Documents grouped by CLASS rather than by who uploaded them (2026-09-01).
+  //
+  // matter_documents has no stored class — 076 added one to transfer_documents
+  // only — so it is resolved from the council registry for this (council,
+  // service, stage). A type the registry does not name goes to `other` rather
+  // than being guessed into a class.
+  const docSpec = councilServiceSpec(
+    matter.municipality,
+    svc?.code ?? "",
+    (matter as { service_subtype?: string | null }).service_subtype as PrcStage | null
+  );
+  const classOfType = new Map<string, DocClass>();
+  for (const cls of DOC_CLASSES) {
+    for (const req of documentsOfClass(docSpec, cls)) classOfType.set(req.type, cls);
+  }
+  const docsByClass: Record<DocClass | "other", MatterDocument[]> = {
+    input: [], supporting: [], output: [], other: [],
+  };
+  for (const d of documents) {
+    docsByClass[classOfType.get(d.document_type ?? "") ?? "other"].push(d);
+  }
 
   const docRow = (doc: MatterDocument) => {
     // Approval gate state (042/043/044). approved_at set = released; disapproved_at
@@ -638,16 +678,6 @@ export default async function AdminMatterDetailPage({
     );
   };
 
-  const docGroup = (title: string, list: MatterDocument[]) => (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">{title} ({list.length})</p>
-      {list.length > 0 ? (
-        <Card padding="none" className="overflow-hidden"><ul className="divide-y divide-line">{list.map(docRow)}</ul></Card>
-      ) : (
-        <Card className="text-center py-5"><p className="text-sm text-ink-3">None</p></Card>
-      )}
-    </div>
-  );
 
   return (
     // Width + order, 2026-09-01. Same change as the property-transfer page and
@@ -750,7 +780,7 @@ export default async function AdminMatterDetailPage({
                 <select
                   name="prc_stage"
                   defaultValue={(matter as { service_subtype?: string | null }).service_subtype ?? ""}
-                  className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                  className="bg-surface text-ink mt-1 w-full rounded-lg border border-line py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
                 >
                   <option value="">— Stage not chosen —</option>
                   {PRC_SUBTYPES.map((s) => (
@@ -831,7 +861,7 @@ export default async function AdminMatterDetailPage({
                 <input type="hidden" name="author_id" value={authorId ?? ""} />
                 <label className="flex-1 text-xs font-medium text-ink-3">
                   Phase
-                  <select name="phase" defaultValue={matter.current_phase ?? ""} disabled={transferGated} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
+                  <select name="phase" defaultValue={matter.current_phase ?? ""} disabled={transferGated} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
                     {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
                   </select>
                 </label>
@@ -842,7 +872,7 @@ export default async function AdminMatterDetailPage({
                 <input type="hidden" name="author_id" value={authorId ?? ""} />
                 <label className="flex-1 text-xs font-medium text-ink-3">
                   Stage{curPhaseDef ? ` · ${curPhaseDef.internalName}` : ""}
-                  <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={transferGated || curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
+                  <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={transferGated || curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
                     <option value="">— Select stage —</option>
                     {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
                   </select>
@@ -862,7 +892,7 @@ export default async function AdminMatterDetailPage({
                   <input type="hidden" name="author_id" value={authorId ?? ""} />
                   <label className="flex-1 text-xs font-medium text-ink-3">
                     {decisionStage?.name} outcome
-                    <select name="outcomeReason" defaultValue={currentOutcomeValue} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                    <select name="outcomeReason" defaultValue={currentOutcomeValue} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
                       <option value="">— Select outcome —</option>
                       {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
                     </select>
@@ -913,18 +943,111 @@ export default async function AdminMatterDetailPage({
           matterClientId={matterClientId}
           transferDocs={transferDocs}
         />
-        {/* Documents — split client/partner uploads vs ConveyClear uploads (note 29) */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+        {/* ── Documents ────────────────────────────────────────────────────────
+            Zewn, 2026-09-01: "make the document uploads section match the
+            architecture of the prop trf document uploads. so it must have input,
+            functional and output documents. also all matters should be able to
+            derive documents from the parent prop trf. make sure that is contained
+            in the same box as the document uploads box."
+
+            WAS: two groups, "Client / business-partner uploads" and "ConveyClear
+            uploads" — a split by WHO SENT IT, which is not a question anyone asks
+            of a file. The transfer page had already moved to the three classes
+            (076) and the matter had not, so the same deed search was filed one
+            way on the transfer and another on the matter.
+
+            The three classes are input · supporting · output (§11.20, the
+            established vocabulary — "functional" in Zewn's note is this middle
+            one). Unlike transfer_documents, matter documents carry NO stored
+            class, so it is resolved here from the council registry for this
+            (council, service, stage). A document type the registry does not name
+            falls to "Other documents" rather than being guessed into a class.
+
+            One box, and the transfer's documents are in it: a matter under a
+            transfer can pull the deed search that was obtained once for the
+            property, instead of it being uploaded again per matter (034). */}
+        <Card padding="none">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
             <h2 className="font-semibold text-ink flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
             <div className="flex flex-wrap items-center gap-3">
               {documents.length > 0 && <CouncilPackButton matterId={id} />}
               <StorageUpload matterId={id} />
             </div>
           </div>
-          {docGroup("Client / business-partner uploads", clientPartnerDocs)}
-          {docGroup("ConveyClear uploads", ccDocs)}
-        </div>
+
+          <div className="space-y-5 px-5 py-4">
+            {DOC_CLASSES.map((cls) => (
+              <div key={cls}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+                  {DOC_CLASS_LABELS[cls]} ({docsByClass[cls].length})
+                </p>
+                <p className="mt-0.5 text-xs text-ink-3">{DOC_CLASS_HINTS[cls]}</p>
+                {docsByClass[cls].length > 0 ? (
+                  <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
+                    {docsByClass[cls].map(docRow)}
+                  </ul>
+                ) : (
+                  <p className="mt-2 rounded-lg border border-dashed border-line px-3 py-3 text-sm text-ink-3">None yet</p>
+                )}
+              </div>
+            ))}
+
+            {/* Anything the council registry does not name — including every
+                document uploaded before the classes existed. Its own heading
+                rather than a silent home in "supporting": guessing where an
+                existing file belongs is wrong in a way nobody would see. */}
+            {docsByClass.other.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+                  Other documents ({docsByClass.other.length})
+                </p>
+                <p className="mt-0.5 text-xs text-ink-3">
+                  Not named in {municipalityLabel(matter.municipality)}&apos;s requirements for this service, or filed
+                  before documents were split into classes.
+                </p>
+                <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
+                  {docsByClass.other.map(docRow)}
+                </ul>
+              </div>
+            )}
+
+            {/* From the parent transfer — in this box, per Zewn's note. */}
+            {matter.transfer_id && (
+              <div className="border-t border-line pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+                  From this property transfer
+                </p>
+                <p className="mt-0.5 text-xs text-ink-3">
+                  Obtained once for the property and reusable on every matter under it — the deed search,
+                  the transfer letter, the clearance figures.
+                </p>
+                {transferDocs.length > 0 ? (
+                  <div className="mt-2">
+                    <ReuseTransferDoc
+                      matterId={id}
+                      matterPartyId={null}
+                      options={transferDocs.map((d) => ({ id: d.id, file_name: d.file_name }))}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-ink-3">
+                    Nothing filed on{" "}
+                    <Link href={`/admin/property-transfers/${matter.transfer_id}`} className="text-action hover:underline">
+                      {matter.property_transfers?.reference ?? "the transfer"}
+                    </Link>{" "}
+                    yet.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G).
+            LEFT column from 2026-09-01: a council contact is something staff act
+            on while working the matter, not reference detail. Zewn: "move
+            council POC to the left". */}
+        <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -1019,8 +1142,6 @@ export default async function AdminMatterDetailPage({
             <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Save</SubmitButton>
           </form>
         </Card>
-        {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
-        <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
         {/* ConveyClear internal — staff-only container (note 2026-06-22). */}
         <Card accent="internal" className="bg-action-fill/5">
           <div className="flex items-center gap-1.5 mb-3">
@@ -1051,27 +1172,27 @@ export default async function AdminMatterDetailPage({
             )}
           </dl>
         </Card>
+        {/* Conversation + Activity, in the property-transfer page's shape.
+            Zewn, 2026-09-01: "remove the matter enquiries and copy the prop trfs
+            chat and activity feed section to matters."
+
+            Replaces two stacked sections — the MatterEnquiries ticket list and the
+            Internal Activity Feed. The tabs read DIFFERENT tables on purpose: the
+            conversation is the shared enquiry thread (client + firm + us), the
+            activity is staff-only. See the note in MatterFeed for why the smaller
+            version of this change would have sent messages nobody could read. */}
+        <MatterFeed
+          matterId={id}
+          threads={enquiryThreads}
+          activities={activities}
+          audience="staff"
+          firmName={firm?.name ?? null}
+        />
         </div>
       </div>
 
       {/* Celebration when the matter is won/closed (H2) */}
       <Celebrate active={matter.status === "won"} matterId={matter.id} />
-      {/* Conversation + Activity, in the property-transfer page's shape.
-          Zewn, 2026-09-01: "remove the matter enquiries and copy the prop trfs
-          chat and activity feed section to matters."
-
-          Replaces two stacked sections — the MatterEnquiries ticket list and the
-          Internal Activity Feed. The tabs read DIFFERENT tables on purpose: the
-          conversation is the shared enquiry thread (client + firm + us), the
-          activity is staff-only. See the note in MatterFeed for why the smaller
-          version of this change would have sent messages nobody could read. */}
-      <MatterFeed
-        matterId={id}
-        threads={enquiryThreads}
-        activities={activities}
-        audience="staff"
-        firmName={firm?.name ?? null}
-      />
     </div>
   );
 }
