@@ -60,6 +60,17 @@ export interface PipelinePhase {
 export interface Pipeline {
   serviceCode: string;        // "COO" | "PRC"
   municipality: string;       // "COT"
+  /**
+   * True for the GENERIC fallback (see buildDefaultPipeline). A matter running
+   * one of these is not on a mapped process — it is on a four-step placeholder
+   * so that staff can still move it, report on it and show a client where it is.
+   *
+   * 🔒 Staff-only signal. Zewn, 2026-09-01: "make a note saying its a default
+   * pipeline so that only conveyclear members can see the note and not attorneys
+   * or clients." A client being told their matter is on a default pipeline
+   * learns only that we have not built theirs yet.
+   */
+  isDefault?: boolean;
   subtype?: string;           // "RCA" | "RCF" | "RCC" (PRC stages, 072)
   label: string;              // human label e.g. "City of Tshwane — Change of Ownership"
   prePhase: { key: string; name: string };               // "New Instruction"
