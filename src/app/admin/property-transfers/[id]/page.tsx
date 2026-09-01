@@ -25,6 +25,7 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
+import TransferCloseControl from "@/components/transfers/TransferCloseControl";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 import TransferProgressBar from "@/components/transfers/TransferProgressBar";
@@ -41,8 +42,8 @@ import { ArrowLeft, Pencil, Scale } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
+function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s];
 }
 
 type FirmRef = { name: string | null } | null;
@@ -512,6 +513,22 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           {/* What this transfer is about (056). Always rendered, linked or not —
               a card that only appears when populated cannot say it is empty. */}
           <TransferPropertyCard transferId={id} linked={linkedProperty} options={propertyOptions} />
+
+          {/* Cancel / archive / reopen (084). Here rather than on the Edit
+              screen's status dropdown: closing a transaction is a deliberate
+              act with a reason, not a field you happen to change while
+              correcting a property description. */}
+          <Card accent="internal">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">
+              Close this transfer
+            </p>
+            <TransferCloseControl
+              transferId={id}
+              status={transfer.status}
+              reason={(transfer as { status_reason?: string | null }).status_reason ?? null}
+              matterCount={linked.length}
+            />
+          </Card>
 
           {/* The transaction's history + conversation, shared with the owning
               firm. Zewn, 2026-09-01, looking at the merged layout: "can we move

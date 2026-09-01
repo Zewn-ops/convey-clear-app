@@ -69,6 +69,19 @@ export default async function PartnerTransfersPage({
     .from("property_transfers")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
+  // 🔒 084 — the firm does not see an ARCHIVED transfer. It means the transfer
+  // should never have existed, so showing the attorney a transaction we have
+  // written off as a mistake invites them to work it.
+  //
+  // Filtered here rather than in RLS, deliberately: the firm's access grant
+  // (052) is not revoked, because revoking it would erase the fact that they
+  // once had access. A firm holding the URL can still open it, exactly as with
+  // a cancelled one. If that ever needs to be a real boundary it belongs in
+  // RLS, not in a list filter — recorded in 084's header too.
+  //
+  // CANCELLED stays visible: it is their transaction and their client's, and a
+  // sale that collapsed is something they need to see, with our reason on it.
+  query = query.neq("status", "archived");
   if (filters.type) query = query.eq("status", filters.type);
   if (muni) query = query.eq("municipality", muni);
   if (filters.scope === "month") query = query.gte("created_at", startOfMonthISO());
