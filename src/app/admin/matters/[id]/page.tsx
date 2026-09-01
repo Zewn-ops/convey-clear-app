@@ -52,17 +52,14 @@ import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
 import SubmitButton from "@/components/ui/SubmitButton";
 import { buildFicaSubjects } from "@/lib/fica";
-import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
 import CouncilPortalDetails from "@/components/matters/CouncilPortalDetails";
+import { resolveDocClass, type PartyRole } from "@/lib/doc-classes";
 import {
-  councilServiceSpec,
   councilPartyFieldKeys,
-  documentsOfClass,
   DOC_CLASSES,
   DOC_CLASS_LABELS,
   DOC_CLASS_HINTS,
   type DocClass,
-  type PrcStage,
 } from "@/lib/councils";
 import { logMatterActivity } from "@/lib/activity";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -634,20 +631,25 @@ export default async function AdminMatterDetailPage({
   // only — so it is resolved from the council registry for this (council,
   // service, stage). A type the registry does not name goes to `other` rather
   // than being guessed into a class.
-  const docSpec = councilServiceSpec(
-    matter.municipality,
-    svc?.code ?? "",
-    (matter as { service_subtype?: string | null }).service_subtype as PrcStage | null
-  );
-  const classOfType = new Map<string, DocClass>();
-  for (const cls of DOC_CLASSES) {
-    for (const req of documentsOfClass(docSpec, cls)) classOfType.set(req.type, cls);
-  }
+  // 🔴 resolveDocClass, NOT the service spec alone.
+  //
+  // The first cut built the map from THIS service's requirements only, so a
+  // certified ID reused onto an RCF — a document the RCF list deliberately no
+  // longer names — fell to "Other documents". Found on production 2026-09-01.
+  //
+  // resolveDocClass is the resolution the council pack already uses: this
+  // council's rules first, then any council that names the type, then the
+  // default map. So a certified ID is supporting everywhere, and "other" goes
+  // back to meaning "nobody has ever classed this", which is what its heading
+  // claims. Two resolvers for one question is the 066 mistake.
+  const partyRoleById = new Map<string, string>();
+  for (const p of parties) partyRoleById.set(p.id, p.role);
   const docsByClass: Record<DocClass | "other", MatterDocument[]> = {
     input: [], supporting: [], output: [], other: [],
   };
   for (const d of documents) {
-    docsByClass[classOfType.get(d.document_type ?? "") ?? "other"].push(d);
+    const role = d.matter_party_id ? partyRoleById.get(d.matter_party_id) ?? null : null;
+    docsByClass[resolveDocClass(matter.municipality, d.document_type ?? "", role as PartyRole)].push(d);
   }
 
   const docRow = (doc: MatterDocument) => {
@@ -1080,35 +1082,6 @@ export default async function AdminMatterDetailPage({
               </div>
             )}
 
-            {/* From the parent transfer — in this box, per Zewn's note. */}
-            {matter.transfer_id && (
-              <div className="border-t border-line pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
-                  From this property transfer
-                </p>
-                <p className="mt-0.5 text-xs text-ink-3">
-                  Obtained once for the property and reusable on every matter under it — the deed search,
-                  the transfer letter, the clearance figures.
-                </p>
-                {transferDocs.length > 0 ? (
-                  <div className="mt-2">
-                    <ReuseTransferDoc
-                      matterId={id}
-                      matterPartyId={null}
-                      options={transferDocs.map((d) => ({ id: d.id, file_name: d.file_name }))}
-                    />
-                  </div>
-                ) : (
-                  <p className="mt-2 text-sm text-ink-3">
-                    Nothing filed on{" "}
-                    <Link href={`/admin/property-transfers/${matter.transfer_id}`} className="text-action hover:underline">
-                      {matter.property_transfers?.reference ?? "the transfer"}
-                    </Link>{" "}
-                    yet.
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         </Card>
 
