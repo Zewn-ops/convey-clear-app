@@ -103,6 +103,28 @@ export async function POST(request: Request) {
   // the same object either way.
   let transferId = (req as { transfer_id?: string | null }).transfer_id ?? null;
 
+  // 🔴 THE DRAFT MAY EXIST WITHOUT BEING LINKED. Recovery, not belt-and-braces:
+  // the first version of the draft flow wrote transfer_id through the caller's
+  // client, which 078's policy refused once the request left 'draft' — so every
+  // request submitted in that window has a real draft transfer and a null link,
+  // and approving one tried to build a duplicate and died on the unique
+  // reference index with a 409.
+  //
+  // Adopting by reference repairs those rows on the next approval instead of
+  // needing a migration. Scoped to this firm's own draft: another firm's
+  // transfer with a colliding reference must still be a 409, which is the
+  // message the reference field on this screen exists to let staff resolve.
+  if (!transferId) {
+    const { data: existing } = await admin
+      .from("property_transfers")
+      .select("id")
+      .ilike("reference", reference)
+      .eq("business_partner_id", req.firm_id)
+      .eq("status", "draft")
+      .maybeSingle();
+    if (existing) transferId = existing.id as string;
+  }
+
   if (transferId) {
     const { error: openError } = await admin
       .from("property_transfers")

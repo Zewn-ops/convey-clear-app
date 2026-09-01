@@ -96,8 +96,12 @@ export default async function TransferRequestsPage() {
           Transfer requests
         </h1>
         <p className="text-sm text-ink-3 mt-1">
-          Attorney firms asking us to open a property transfer. Approving creates the transfer and
-          gives the firm access to it.
+          {/* 083: the transfer already exists, in draft, from the moment the firm
+              sent the request — so approving accepts the work rather than
+              creating anything. The old wording said the opposite. */}
+          Attorney firms asking us to open a property transfer. The transfer already exists in
+          draft and the firm can upload to it; approving opens it and makes it visible to the
+          buyer and seller.
         </p>
       </div>
 

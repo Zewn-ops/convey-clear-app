@@ -215,10 +215,26 @@ export async function POST(request: Request) {
     );
     if (built.ok) {
       draftTransferId = built.transferId;
-      await supabase
+      // 🔴 THE ADMIN CLIENT, NOT THE CALLER'S.
+      //
+      // 078's firm policy is USING (firm_id = … AND status = 'draft'), and by
+      // this point the row is 'pending'. Writing through the caller matched zero
+      // rows and was refused SILENTLY — no error, just no update — so
+      // transfer_id stayed null and approval went on to build a SECOND transfer
+      // with the same reference, which the unique index then rejected with a
+      // 409. Found by approving a request on production, 2026-09-01.
+      //
+      // This is a system linkage, not a firm edit: the row's own status must not
+      // gate it, and the policy is correct to refuse a user doing this.
+      const { error: linkError } = await createAdminClient()
         .from("transfer_requests")
         .update({ transfer_id: built.transferId })
         .eq("id", data.id);
+      if (linkError) {
+        console.error(
+          `[transfer-requests] request ${data.id} could not be linked to transfer ${built.transferId}: ${linkError.message}`
+        );
+      }
     } else {
       console.error(
         `[transfer-requests] request ${data.id} lodged but its draft transfer was not created: ${built.message}`
