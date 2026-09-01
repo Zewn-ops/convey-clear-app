@@ -388,7 +388,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
 
           One column below `xl`. The split earns its keep on a wide screen; on a
           laptop it just makes two narrow ones. */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
           {/* 1 · Parties to the transaction — transfer_parties (050) */}
           <Card>
@@ -513,19 +513,23 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           {/* What this transfer is about (056). Always rendered, linked or not —
               a card that only appears when populated cannot say it is empty. */}
           <TransferPropertyCard transferId={id} linked={linkedProperty} options={propertyOptions} />
+
+          {/* The transaction's history + conversation, shared with the owning
+              firm. Zewn, 2026-09-01, looking at the merged layout: "can we move
+              the chat to the right side to fill up that space?" — the documents
+              panel is tall and the reference cards are short, so the right
+              column ran out before the left did. The thread is the one section
+              that grows without limit, which makes it the right thing to put
+              there. */}
+          <TransferFeed
+            transferId={id}
+            activities={feed}
+            canPost
+            viewerSide="conveyclear"
+            firmName={transfer.attorney?.name ?? null}
+          />
         </div>
       </div>
-
-      {/* The transaction's history + conversation, shared with the owning firm.
-          Full width: it is a thread, and a thread in a third of the page wraps
-          every line to nothing. */}
-      <TransferFeed
-        transferId={id}
-        activities={feed}
-        canPost
-        viewerSide="conveyclear"
-        firmName={transfer.attorney?.name ?? null}
-      />
     </div>
   );
 }

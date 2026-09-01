@@ -10,7 +10,7 @@ import { workdaysSince } from "@/lib/elapsed";
 import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
-import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
+import MatterFeed from "@/components/matters/MatterFeed";
 import { getMatterEnquiries } from "@/lib/enquiries";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
@@ -346,8 +346,11 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         )}
       </Card>
 
-      {/* Enquiries — the shared thread with ConveyClear and the client (#3). */}
-      <MatterEnquiries matterId={params.id} threads={enquiryThreads} audience="partner" />
+      {/* The shared thread with ConveyClear and the client (#3), in the same
+          shape as the admin matter page and the transfer pages. No Activity tab
+          here: matter_activity is ConveyClear-internal, so the firm has nothing
+          to show on it. §5.13 — the two matter pages change together. */}
+      <MatterFeed matterId={params.id} threads={enquiryThreads} audience="partner" />
     </div>
   );
 }
