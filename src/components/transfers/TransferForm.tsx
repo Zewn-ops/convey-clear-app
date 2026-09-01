@@ -21,7 +21,19 @@ const MUNI = [
   { value: "COE", label: "City of Ekurhuleni (COE)" },
   { value: "Other", label: "Other" },
 ];
-const STATUSES: TransferStatus[] = ["open", "registered", "cancelled", "on_hold"];
+/**
+ * 🔴 `cancelled` and `archived` are NOT here, on purpose.
+ *
+ * Closing a transaction is a deliberate act with a reason attached — see
+ * TransferCloseControl and 084. Leaving cancellation on this dropdown kept the
+ * old path alive beside the new one: no reason captured, nobody recorded, and
+ * the transfer stays in every working list. Two ways to do the same thing, one
+ * of which quietly does it worse.
+ *
+ * `draft` is absent for a different reason: a draft becomes open by being
+ * approved, never by someone picking it from a list.
+ */
+const STATUSES: TransferStatus[] = ["open", "registered", "on_hold"];
 
 export interface TransferFormOption {
   id: string;
