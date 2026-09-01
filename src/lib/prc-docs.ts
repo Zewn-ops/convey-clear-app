@@ -93,6 +93,20 @@ export interface PrcDocRule {
 // figures yet) and/or Proof of Payment for the figures (paid but no certificate).
 // Property description + municipal account number are captured as referral FIELDS,
 // not uploads. FICA varies by the seller's entity type.
+/**
+ * The identity documents, whichever of them applies to an entity. One list so
+ * that removing identity from a stage (see prcStageDocs) removes all of it,
+ * rather than the entity-driven half and not the council's line.
+ */
+export const PRC_FICA_TYPES: string[] = [
+  "id_certified",
+  "id_certified_representative",
+  "id_certified_trustee",
+  "cipc_docs",
+  "letter_of_authority",
+  "letter_of_authority_council",
+];
+
 export function prcRcfDocs(sellerEntityType?: string | null): PrcDocRule[] {
   const et = (sellerEntityType ?? "natural_person").toLowerCase();
   const ficaDocs: PrcDocRule[] =
@@ -146,8 +160,24 @@ export function prcStageDocs(
   sellerEntityType?: string | null,
   municipality?: string | null
 ): PrcDocRule[] {
-  const fica = prcRcfDocs(sellerEntityType);
-  const spec = councilServiceSpec(municipality, "PRC", normalisePrcStage(stage));
+  const st = normalisePrcStage(stage);
+
+  // 🔴 AN RCF DOES NOT NEED IDENTITY DOCUMENTS. Jukka, 2026-09-01 meeting:
+  //   Zewn — "you won't require it in order to complete the RCF."
+  //   Jukka — "No. Take that out."
+  //
+  // A figures request is made against an account that is already open, and the
+  // account was opened by the RCA, which is where identity was proved. Asking
+  // again is the friction the meeting was about. RCA and RCC keep their FICA:
+  // an RCA opens the account and an RCC transfers a clearance certificate, and
+  // both are identity-bearing acts.
+  //
+  // The proof-of-payment and proof-of-application extras stay on the RCF —
+  // those are about the request, not the person.
+  const fica = st === "RCF"
+    ? prcRcfDocs(sellerEntityType).filter((d) => !PRC_FICA_TYPES.includes(d.docType))
+    : prcRcfDocs(sellerEntityType);
+  const spec = councilServiceSpec(municipality, "PRC", st);
   if (!spec) return fica;
 
   const seen = new Set(fica.map((d) => d.docType));
@@ -159,15 +189,10 @@ export function prcStageDocs(
   // must be skipped rather than offered as an optional extra. Without this a
   // natural person was shown empty CIPC and letter-of-authority slots, and a
   // business was shown a plain certified ID beside the representative's.
-  const ficaFamily = [
-    "id_certified",
-    "id_certified_representative",
-    "id_certified_trustee",
-    "cipc_docs",
-    "letter_of_authority",
-    "letter_of_authority_council",
-  ];
-  const ficaAnswered = fica.some((d) => ficaFamily.includes(d.docType));
+  const ficaFamily = PRC_FICA_TYPES;
+  // An RCF has had its identity documents removed deliberately (above), so the
+  // council's own "ID / CIPC / LoA" line must not put them back.
+  const ficaAnswered = st === "RCF" || fica.some((d) => ficaFamily.includes(d.docType));
 
   for (const req of spec.documents) {
     if (req.owner === "firm") continue;      // autofills from the firm record
@@ -216,7 +241,13 @@ export const PRC_DOC_LABELS: Record<string, string> = {
   letter_of_authority: "Letter of Authority",
   id_certified_trustee: "Trustee's Certified ID",
   proof_of_application: "Proof of Application",
-  proof_of_payment_figures: "Proof of Payment (Figures)",
+  // Jukka, 2026-09-01 meeting: "what you need for RCF is proof of payment for
+  // APPLICATION FEE … keep the proof of payment in, just change your bracket
+  // context." The council charges to process the request; the figures
+  // themselves are paid later and are a different document. The code stays
+  // `proof_of_payment_figures` because it is on real rows — renaming it is a
+  // 066-class migration for a label nobody sees.
+  proof_of_payment_figures: "Proof of Payment (Application Fee)",
 };
 
 // One label lookup across the COO, PRC and transfer-supporting doc types, with a

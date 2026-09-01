@@ -237,6 +237,17 @@ export interface Council {
 export const COUNCIL_DOC_LABELS: Record<string, string> = {
   rates_account_invoice: "Rates Account Invoice / Statement",
   utilities_account_invoice: "Utilities Account Invoice / Statement",
+  // 🔴 SPLIT 2026-09-01, and both are OPTIONAL. Jukka: "meter readings you must
+  // split … water and electricity meter", and separately "it's not a
+  // requirement because sometimes the electricity is prepaid. So you can't take
+  // pictures of that because there's no meter." Zewn: "even water you can get
+  // prepaid water" — Jukka: "exactly, so you have to make it optional." One
+  // combined slot could not express a property with prepaid electricity and a
+  // real water meter, which is the ordinary case they were describing.
+  meter_reading_water: "Water Meter Reading",
+  meter_reading_electricity: "Electricity Meter Reading",
+  // Kept for rows filed before the split. Nothing is backfilled: which meter a
+  // historic photograph shows is not knowable from the row.
   meter_readings: "Meter Readings (water and electricity)",
   consumer_agreement: "Consumer Agreement",
   building_plans: "Approved Building Plans",

@@ -3,8 +3,11 @@
 //   Used for partner-referred matters (the partner supplies an internal file ref).
 //   Seller / Buyer / Council are NOT in the title — they render as grey subtext
 //   on the matters dashboard instead.
-// FALLBACK (no internal ref — staff/client-created matters): the legacy
-//   {MUNICIPALITY}_{SERVICE}_{CLIENT}_{PROPERTY} convention.
+// FALLBACK (no internal ref — staff/client-created matters):
+//   {MUNICIPALITY}_{SERVICE OR PRC STAGE}_{TRANSFER REF}_{PROPERTY}[_{RATES ACC}]
+//   Revised 2026-09-01 (Jukka meeting): the TRANSFER REFERENCE replaces the
+//   client name, and a rates clearance appends the council's account number.
+//   The client name is still used when a matter belongs to no transfer.
 // Segments join with "_"; spaces WITHIN a segment are kept.
 
 export function buildMatterTitle(opts: {
@@ -14,6 +17,35 @@ export function buildMatterTitle(opts: {
   municipality?: string | null;
   serviceCode?: string | null;
   clientName?: string | null;
+  /**
+   * The parent property transfer's reference, which REPLACES the client name.
+   *
+   * Jukka, 2026-09-01 meeting: *"you can actually take out the owner's name
+   * completely"*. His reasoning was that a change-of-ownership matter cannot go
+   * on being named after the seller once the property has changed hands — and
+   * Zewn's follow-up made it universal: *"would it not be better to have that
+   * instead of Jukka completely under any circumstances, whether it's before or
+   * after change of ownership"* — *"Correct."*
+   *
+   * The transfer reference also does what the client name never did: it ties
+   * every matter of one transaction together in a list. The seller is still on
+   * the matter — Jukka: *"you guys details are still there, so I can see who's
+   * the seller"* — it is simply not what the title is for.
+   *
+   * A matter with no transfer keeps the client name; there is nothing else to
+   * identify it by.
+   */
+  transferReference?: string | null;
+  /**
+   * PRC only — the council's rates account number, appended when captured.
+   *
+   * Jukka: *"when they put down the rates account number, because that thing is
+   * so crucial, that also should form part of the property rates clearance file
+   * reference."* It is the council's own primary key for the account; a
+   * clearance matter without it in the name cannot be matched to a council
+   * email by eye.
+   */
+  ratesAccountNo?: string | null;
   /**
    * PRC only — the rates clearance stage (RCA | RCF | RCC), which REPLACES the
    * service code in the title.
@@ -38,8 +70,12 @@ export function buildMatterTitle(opts: {
   // COT_PRC_RCA_…. A PRC with no stage yet keeps reading PRC, which is honest —
   // nobody has said which job it is.
   const svc = code === "PRC" && sub ? sub : code;
-  const client = (opts.clientName || "").trim().toUpperCase();
-  return [muni || "NA", svc || "SVC", client, prop]
+  // The transfer reference stands in for the client name when there is one.
+  const who =
+    (opts.transferReference || "").trim().toUpperCase() ||
+    (opts.clientName || "").trim().toUpperCase();
+  const rates = (opts.ratesAccountNo || "").trim().toUpperCase();
+  return [muni || "NA", svc || "SVC", who, prop, rates]
     .filter((s) => s && s.length)
     .join("_");
 }

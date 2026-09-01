@@ -322,9 +322,37 @@ export default async function AdminMatterDetailPage({
     const matterId = formData.get("matter_id") as string;
     const value = ((formData.get("rates_account_no") as string) ?? "").trim();
     if (!matterId) return;
-    const { data: cur } = await supabase.from("matters").select("service_data").eq("id", matterId).maybeSingle();
+    const { data: cur } = await supabase
+      .from("matters")
+      .select("service_data, title")
+      .eq("id", matterId)
+      .maybeSingle();
     const sd = ((cur as { service_data?: Record<string, unknown> } | null)?.service_data) ?? {};
-    await supabase.from("matters").update({ service_data: { ...sd, rates_account_no: value || null } }).eq("id", matterId);
+    const previous = typeof sd.rates_account_no === "string" ? sd.rates_account_no.trim() : "";
+
+    // The account number joins the file reference. Jukka, 2026-09-01: "when they
+    // put down the rates account number, because that thing is so crucial, that
+    // also should form part of the property rates clearance file reference."
+    //
+    // Appended as the last segment, and REPLACED rather than stacked when it
+    // changes — a matter whose account number was corrected twice would
+    // otherwise carry all three. A title that does not already end in the old
+    // number is left alone: it has been edited by hand, and that is a decision.
+    const titlePatch = (() => {
+      const current = ((cur as { title?: string | null } | null)?.title ?? "").trim();
+      if (!current || previous === value) return {};
+      const stripped = previous && current.endsWith(`_${previous.toUpperCase()}`)
+        ? current.slice(0, -(previous.length + 1))
+        : current;
+      if (previous && stripped === current) return {}; // hand-edited — leave it
+      const next = value ? `${stripped}_${value.toUpperCase()}` : stripped;
+      return next === current ? {} : { title: next };
+    })();
+
+    await supabase
+      .from("matters")
+      .update({ service_data: { ...sd, rates_account_no: value || null }, ...titlePatch })
+      .eq("id", matterId);
     await logMatterActivity(supabase, {
       matterId, authorId: authorId || null, activityType: "system",
       body: value ? `Rates account number set: ${value}` : "Rates account number cleared",
@@ -959,21 +987,6 @@ export default async function AdminMatterDetailPage({
           );
         })}
 
-        {/* In-place intake — service-aware required-document checklist + upload
-            (the primary capture method; renders null for non-COO/PRC services) */}
-        <InPlaceIntake
-          matterId={id}
-          serviceCode={svc?.code ?? null}
-          serviceSubtype={(matter as { service_subtype?: string | null }).service_subtype ?? null}
-          parties={parties}
-          documents={documents}
-          municipality={matter.municipality}
-          unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
-          canManage
-          vaultByClient={vaultByClient}
-          matterClientId={matterClientId}
-          transferDocs={transferDocs}
-        />
         {/* ── Documents ────────────────────────────────────────────────────────
             Zewn, 2026-09-01: "make the document uploads section match the
             architecture of the prop trf document uploads. so it must have input,
@@ -1013,6 +1026,31 @@ export default async function AdminMatterDetailPage({
                   {DOC_CLASS_LABELS[cls]} ({docsByClass[cls].length})
                 </p>
                 <p className="mt-0.5 text-xs text-ink-3">{DOC_CLASS_HINTS[cls]}</p>
+
+                {/* The capture checklist lives HERE, inside Input documents,
+                    rather than in a card of its own. Zewn to Jukka, 2026-09-01:
+                    "these capture docs needs to move into input docs … we'll
+                    remove this box because we don't need it." What a service
+                    requires and what has been filed against it are one subject;
+                    two boxes listed the same file twice. */}
+                {cls === "input" && (
+                  <div className="mt-3">
+                    <InPlaceIntake
+                      bare
+                      matterId={id}
+                      serviceCode={svc?.code ?? null}
+                      serviceSubtype={(matter as { service_subtype?: string | null }).service_subtype ?? null}
+                      parties={parties}
+                      documents={documents}
+                      municipality={matter.municipality}
+                      unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
+                      canManage
+                      vaultByClient={vaultByClient}
+                      matterClientId={matterClientId}
+                      transferDocs={transferDocs}
+                    />
+                  </div>
+                )}
                 {docsByClass[cls].length > 0 ? (
                   <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
                     {docsByClass[cls].map(docRow)}

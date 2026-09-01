@@ -57,6 +57,7 @@ export default function InPlaceIntake({
   matterId,
   serviceCode,
   serviceSubtype = null,
+  bare = false,
   parties,
   documents,
   municipality,
@@ -78,6 +79,8 @@ export default function InPlaceIntake({
    * that quietly assumes RCF.
    */
   serviceSubtype?: string | null;
+  /** Render without the card and heading — see the note by `Shell` below. */
+  bare?: boolean;
   parties: MatterParty[];
   documents: MatterDocument[];
   municipality: string | null;
@@ -178,25 +181,52 @@ export default function InPlaceIntake({
   }
   const complete = required > 0 && done === required;
 
+  /**
+   * `bare` drops the card and the "Capture documents" heading, so this renders
+   * INSIDE the Documents card's input group instead of as a box of its own.
+   *
+   * Zewn to Jukka, 2026-09-01 meeting: "these capture docs needs to move into
+   * input docs … this whole section here will move to input documents. So it'll
+   * keep the same structure. It's just we'll remove this box because we don't
+   * need it." Two boxes were asking for the same files — the checklist above and
+   * the documents list below — and a required document that had been uploaded
+   * appeared in both.
+   */
+  const Shell = bare
+    ? ({ children }: { children: React.ReactNode }) => <div className="space-y-5">{children}</div>
+    : ({ children }: { children: React.ReactNode }) => (
+        <Card accent="service" className="space-y-5">{children}</Card>
+      );
+
   return (
-    <Card accent="service" className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-semibold text-ink flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /> Capture documents</h2>
-          <p className="text-xs text-ink-3 mt-0.5">
-            Upload each required document straight onto the matter — no need to send a link first.
-          </p>
+    <Shell>
+      {!bare && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-ink flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /> Capture documents</h2>
+            <p className="text-xs text-ink-3 mt-0.5">
+              Upload each required document straight onto the matter — no need to send a link first.
+            </p>
+          </div>
+          {required > 0 && (
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                complete ? "bg-green-50 text-green-700" : "bg-raised text-ink-2"
+              }`}
+            >
+              {done}/{required} required
+            </span>
+          )}
         </div>
-        {required > 0 && (
-          <span
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-              complete ? "bg-green-50 text-green-700" : "bg-raised text-ink-2"
-            }`}
-          >
+      )}
+      {bare && required > 0 && (
+        <p className="text-xs text-ink-3">
+          <span className={complete ? "font-medium text-ok" : "font-medium text-ink-2"}>
             {done}/{required} required
-          </span>
-        )}
-      </div>
+          </span>{" "}
+          — upload each one straight onto the matter, no link needed.
+        </p>
+      )}
 
       {/* Everything held at the property-transfer level, reusable on this matter.
           This panel exists because matching transfer docs to slots is NOT enough:
@@ -369,6 +399,6 @@ export default function InPlaceIntake({
           </ul>
         </div>
       ))}
-    </Card>
+    </Shell>
   );
 }

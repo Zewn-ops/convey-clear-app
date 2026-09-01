@@ -74,6 +74,7 @@ export async function POST(request: Request) {
   // Staff can see all of them, so this is belt-and-braces today — but this route
   // is the one place a transfer_id arrives from a browser.
   let transferId: string | null = null;
+  let transferReference: string | null = null;
   let transferFirm: string | null = null;
   if (body.transfer_id) {
     const { data: t } = await supabase
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!t) return NextResponse.json({ message: "Transfer not found or access denied" }, { status: 403 });
     transferId = t.id;
+    transferReference = (t.reference as string | null) ?? null;
     transferFirm = (t.business_partner_id as string | null) ?? null;
   }
 
@@ -182,10 +184,14 @@ export async function POST(request: Request) {
 
   // Built AFTER the stage is resolved, because the stage replaces the service
   // code in the title (COT_RCA_…, not COT_PRC_…). Zewn, 2026-09-01.
+  // The transfer's reference replaces the client name (2026-09-01). Resolved
+  // from the transfer we already loaded, so a matter created outside one still
+  // falls back to the client.
   const title = buildMatterTitle({
     municipality: body.municipality,
     serviceCode,
     serviceSubtype: subtype,
+    transferReference,
     clientName,
     property: body.property_description,
   });

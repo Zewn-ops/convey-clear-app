@@ -146,10 +146,18 @@ export const COT: Council = {
             "§5.14 representative flag showing up as a council requirement.",
         },
         {
-          type: "meter_readings",
+          type: "meter_reading_water",
           docClass: "input",
           owner: "buyer",
-          note: 'Sheet: buyer is "SAME. + READINGS".',
+          optional: true,
+          note: 'Sheet: buyer is "SAME. + READINGS". Optional since 2026-09-01 — a prepaid meter has no reading to photograph.',
+        },
+        {
+          type: "meter_reading_electricity",
+          docClass: "input",
+          owner: "buyer",
+          optional: true,
+          note: "Optional — prepaid electricity is common and has no meter to read.",
         },
       ],
     },
@@ -226,7 +234,8 @@ export const COT: Council = {
           owner: "firm",
           note: 'Sheet marks this "ATTORNEY\'S?" — autofills from the firm PoA.',
         },
-        { type: "meter_readings", docClass: "input", owner: "seller" },
+        { type: "meter_reading_water", docClass: "input", owner: "seller", optional: true },
+        { type: "meter_reading_electricity", docClass: "input", owner: "seller", optional: true },
       ],
       fields: [
         {
@@ -267,13 +276,15 @@ export const COT: Council = {
 
     RCF: {
       documents: [
-        { type: "meter_readings", docClass: "input", owner: "seller" },
+        // Statement first: Jukka asked for this order explicitly.
         {
           type: "municipal_account",
           docClass: "input",
           owner: "seller",
           label: "Statement",
         },
+        { type: "meter_reading_water", docClass: "input", owner: "seller", optional: true },
+        { type: "meter_reading_electricity", docClass: "input", owner: "seller", optional: true },
       ],
       issues: [
         "Journals outstanding",
@@ -302,7 +313,8 @@ export const COT: Council = {
           docClass: "input",
           owner: "matter",
         },
-        { type: "meter_readings", docClass: "input", owner: "seller" },
+        { type: "meter_reading_water", docClass: "input", owner: "seller", optional: true },
+        { type: "meter_reading_electricity", docClass: "input", owner: "seller", optional: true },
       ],
       issues: ["Wrong account", "Credit short", "Estimated"],
       notes: [

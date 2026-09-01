@@ -66,6 +66,8 @@ const DEFAULT_BY_TYPE: Record<string, DocClass> = {
   utilities_account_invoice: "input",
   clearance_figures: "input",
   meter_readings: "input",
+  meter_reading_water: "input",
+  meter_reading_electricity: "input",
   transfer_letter: "input",
   proof_of_application: "input",
   proof_of_payment_figures: "input",
