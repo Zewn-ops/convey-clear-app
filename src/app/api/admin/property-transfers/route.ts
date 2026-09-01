@@ -32,7 +32,19 @@ type TransferFields = {
   designated_member_id?: string | null;
 };
 
-const STATUSES = ["open", "registered", "cancelled", "on_hold"];
+/**
+ * What this route may set. `cancelled`, `archived` and `draft` are deliberately
+ * absent — they are reached through the paths that own them:
+ *   · cancelled / archived → POST /api/admin/property-transfers/close, which
+ *     requires a reason and records who did it (084);
+ *   · draft → set once when a firm's request creates the transfer (083), and
+ *     left by approval.
+ *
+ * Keeping them out here is the half that matters: the dropdown was only the
+ * visible way in, and an allowlist that still admits `cancelled` would let a
+ * hand-rolled PATCH close a transaction with no reason and no audit line.
+ */
+const STATUSES = ["open", "registered", "on_hold"];
 
 function clean(v?: string | null): string | null {
   const s = (v ?? "").trim();
