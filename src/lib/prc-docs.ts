@@ -180,8 +180,18 @@ export function prcStageDocs(
   const spec = councilServiceSpec(municipality, "PRC", st);
   if (!spec) return fica;
 
-  const seen = new Set(fica.map((d) => d.docType));
-  const out: PrcDocRule[] = [...fica];
+  // 🔴 THE COUNCIL'S OWN LIST LEADS. Jukka, 2026-09-01: "you can make the order
+  // of the documents … is statement" — and on production the statement was
+  // third, behind proof of application and proof of payment, because those come
+  // from prcRcfDocs() and that array was concatenated first.
+  //
+  // The council's documents are what it will actually look for, so they go
+  // first and the generic extras follow. Order is not cosmetic here: Jukka's
+  // rule for the council pack is that if it is not near the top, they do not
+  // scroll.
+  const seen = new Set<string>();
+  const councilFirst: PrcDocRule[] = [];
+  const out: PrcDocRule[] = councilFirst;
 
   // The councils write identity as ONE line — "ID / CIPC / LoA" — meaning
   // whichever applies to this entity. prcRcfDocs() has already made that
@@ -209,6 +219,14 @@ export function prcStageDocs(
 
     seen.add(req.type);
     out.push({ docType: req.type, optional: req.optional });
+  }
+
+  // Then whatever the council did not name — the entity's identity documents and
+  // the request-level extras.
+  for (const d of fica) {
+    if (seen.has(d.docType)) continue;
+    seen.add(d.docType);
+    out.push(d);
   }
 
   return out;
