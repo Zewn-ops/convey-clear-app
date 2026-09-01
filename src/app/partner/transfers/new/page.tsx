@@ -56,7 +56,15 @@ export default async function RequestTransferPage({
         <p className="text-sm text-ink-3 mt-1">
           {draft
             ? "Picking up where you left off. Nothing here has reached ConveyClear yet."
-            : "Send us the transaction and ConveyClear will open it. You will be notified as soon as it is set up, and it will appear in your transfers."}
+            : // 083 changed what happens when this is sent, and the copy still
+              // described the old behaviour: nothing existed until ConveyClear
+              // approved it. The transfer is now created immediately, in draft,
+              // and the firm can start uploading to it straight away — which is
+              // the half Jukka signed off on ("they can still go in and upload
+              // to that transfer while it's in draft state"). Saying so here is
+              // the difference between a form you send and wait on, and one that
+              // opens the file you were about to work.
+              "Sending this opens the transfer straight away, in draft, so you can start uploading documents while you wait. ConveyClear reviews it and confirms — you will be notified then."}
         </p>
       </div>
       <TransferRequestForm draft={draft} />
