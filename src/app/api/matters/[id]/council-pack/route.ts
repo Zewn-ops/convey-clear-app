@@ -6,6 +6,7 @@ import { STAFF_ROLES, type UserRole } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { orderForCouncil, type PackDoc } from "@/lib/council-pack";
 import { docLabel } from "@/lib/prc-docs";
+import { resolveDocClass, type PartyRole } from "@/lib/doc-classes";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,9 @@ export const runtime = "nodejs";
 // OWN documents: a reused transfer document (deed search etc.) is already a
 // matter `documents` row once "From transfer" has been clicked, so staff reuse
 // what they need onto the matter first, then merge.
+
+/** The classes a caller may ask for — the matter page's four groups. */
+const PACK_CLASSES = ["input", "supporting", "output", "other"];
 
 const MAX_DOCS = 40; // a sane ceiling; a real pack is ~5–10 documents
 
@@ -38,8 +42,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ message: "Staff only" }, { status: 403 });
   }
 
+  /**
+   * Which document classes to include.
+   *
+   * Zewn to Jukka, 2026-09-01 meeting: "what I'm going to do for the council
+   * pack is I'm going to say you can select whether you want input, supporting,
+   * output, and other. And you can select multiple as well — like if you need
+   * all the input documents and all the supporting documents, you can tick
+   * those two and it'll pack those."
+   *
+   * Omitted (or empty) means EVERYTHING, which is what the button did before
+   * this and what an older client calling this route still gets. A council pack
+   * that silently narrowed itself would be worse than one page too many —
+   * Jukka's own rule is that if it is not in the file, they do not scroll.
+   */
+  let wanted: string[] = [];
+  try {
+    const body = (await request.json()) as { classes?: unknown };
+    if (Array.isArray(body?.classes)) {
+      wanted = body.classes
+        .filter((c): c is string => typeof c === "string")
+        .map((c) => c.toLowerCase())
+        .filter((c) => PACK_CLASSES.includes(c));
+    }
+  } catch {
+    // No body at all — the pre-2026-09-01 call shape. Everything.
+  }
+
   // Matter (RLS read authorises access) + title for the filename.
-  const { data: matter } = await supabase.from("matters").select("id, title").eq("id", id).maybeSingle();
+  const { data: matter } = await supabase
+    .from("matters")
+    .select("id, title, municipality")
+    .eq("id", id)
+    .maybeSingle();
   if (!matter) return NextResponse.json({ message: "Matter not found or access denied" }, { status: 403 });
 
   const admin = createAdminClient();
@@ -49,14 +84,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .select("id, document_type, matter_party_id, file_name, mime_type, storage_bucket, storage_path")
     .eq("matter_id", id)
     .eq("document_status", "provided");
-  const docs = ((docRows as PackDoc[] | null) ?? []).filter((d) => d.storage_path);
-  if (docs.length === 0) {
+  const withFiles = ((docRows as PackDoc[] | null) ?? []).filter((d) => d.storage_path);
+  if (withFiles.length === 0) {
     return NextResponse.json({ message: "This matter has no documents to merge yet." }, { status: 400 });
   }
 
   const { data: partyRows } = await admin.from("matter_parties").select("id, role").eq("matter_id", id);
   const partyRoleById: Record<string, string> = {};
   for (const p of (partyRows as { id: string; role: string }[] | null) ?? []) partyRoleById[p.id] = p.role;
+
+  // Class is resolved the same way the matter page groups them, so what staff
+  // ticked is what they were looking at. `other` means "the resolver had to fall
+  // back" — it is a real bucket on the page, so it is selectable here too.
+  const municipality = (matter as { municipality?: string | null }).municipality ?? null;
+  const classOf = (d: PackDoc): string => {
+    const role = d.matter_party_id ? partyRoleById[d.matter_party_id] : null;
+    return resolveDocClass(municipality, d.document_type, role as PartyRole);
+  };
+  const docs =
+    wanted.length === 0
+      ? withFiles
+      : withFiles.filter((d) => wanted.includes(classOf(d)));
+  if (docs.length === 0) {
+    return NextResponse.json(
+      { message: "No documents on this matter are in the classes you picked." },
+      { status: 400 }
+    );
+  }
 
   const { ordered, leftover } = orderForCouncil(docs, partyRoleById);
   const sequence = [...ordered, ...leftover].slice(0, MAX_DOCS);

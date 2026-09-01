@@ -5,7 +5,7 @@ import { type UserRole } from "@/types";
 import { notifyUsers } from "@/lib/notify";
 import { requireStaff } from "@/lib/staff";
 import { logTransferActivity } from "@/lib/activity";
-import { ensureTransferServices } from "@/lib/transfer-services-init";
+import { createTransferFromRequest } from "@/lib/transfer-from-request";
 
 export const runtime = "nodejs";
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   const { data: req } = await admin
     .from("transfer_requests")
-    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes")
+    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id")
     .eq("id", id)
     .maybeSingle();
   if (!req) return NextResponse.json({ message: "Request not found" }, { status: 404 });
@@ -93,91 +93,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "A transfer reference is required." }, { status: 400 });
   }
 
-  const { data: transfer, error: createError } = await admin
-    .from("property_transfers")
-    .insert({
-      reference,
-      status: "open",
-      property_description: req.property_description,
-      municipality: req.municipality,
-      business_partner_id: req.firm_id,
-      notes: req.notes,
-      created_by: auth.callerId,
-    })
-    .select("id")
-    .single();
-
-  if (createError) {
-    const taken = /uq_property_transfers_reference|duplicate key/i.test(createError.message);
-    return NextResponse.json(
-      { message: taken ? `Reference "${reference}" is already used by another transfer.` : createError.message },
-      { status: 400 }
-    );
-  }
-
-  // The grant is what actually gives the firm access (052). Written before the
-  // request is marked approved so a failure here does not leave an approved
-  // request pointing at a transfer its firm cannot open.
-  const { error: grantError } = await admin.from("transfer_access_grants").insert({
-    transfer_id: transfer.id,
-    firm_id: req.firm_id,
-    granted_by: auth.callerId,
-    note: `Created from transfer request ${id}`,
-  });
-  if (grantError) {
-    return NextResponse.json(
-      { message: `Transfer created but access could not be granted: ${grantError.message}` },
-      { status: 500 }
-    );
-  }
-
-  // The service checklist, so an approved transfer arrives COMPLETE: the firm,
-  // the named conveyancer below, and the seven services to work through. Zewn,
-  // 2026-08-28 — this used to wait behind a button on an empty card.
-  await ensureTransferServices(admin, transfer.id, auth.callerId);
-
-  // §92 — the firm that asked IS the conveyancing attorney on this transfer, and
-  // the member who asked is the person handling it. Both facts are already in
-  // the request; until now neither reached the parties card, so every approved
-  // transfer opened with "Not linked" against a role we could already name, and
-  // staff retyped what the request had told us.
+  // 🔴 THE TRANSFER USUALLY ALREADY EXISTS. Since 2026-09-01 a firm's submission
+  // creates it in `draft` (083), so approval is a state change rather than a
+  // creation — Jukka: "instead of us approving it before it gets created, it
+  // gets created in a draft state and then we approve it."
   //
-  // WHY HERE AND NOT ON THE PARTIES CARD
-  //   `business_partner_id` is written above, but `026`'s column and `050`'s
-  //   party rows are two different records of the same fact (see
-  //   transfer-party-sync). The column alone leaves the card empty. Approval is
-  //   the moment both are knowable, so both get written.
-  //
-  // `contact_user_id` (059) names the individual WITHOUT narrowing access — the
-  // grant above is firm-wide and stays that way. Naming the requester is a
-  // statement about who is working the file, not about who may open it.
-  //
-  // Best-effort: a transfer that exists with a granted firm is the outcome that
-  // was approved. Failing the request here would leave staff re-approving an
-  // already-created transfer, which is worse than a party they can add by hand.
-  const { error: partyError } = await admin.from("transfer_parties").insert({
-    transfer_id: transfer.id,
-    role: "conveyancing_attorney",
-    firm_id: req.firm_id,
-    contact_user_id: req.requested_by,
-  });
-  if (partyError) {
-    console.error(
-      `[transfer-requests] transfer ${transfer.id} approved but the conveyancing-attorney party was not created: ${partyError.message}`
-    );
-  } else {
-    // 'system', not a party-specific type: 035's CHECK on transfer_activities
-    // admits post / system / matter_linked / matter_unlinked / document_upload /
-    // status_change, and this is a system-generated event. Inventing a type here
-    // would need a migration to widen a vocabulary that already says this.
+  // A request lodged BEFORE that shipped has no transfer, so the build path
+  // stays. Both go through createTransferFromRequest, so an approved transfer is
+  // the same object either way.
+  let transferId = (req as { transfer_id?: string | null }).transfer_id ?? null;
+
+  if (transferId) {
+    const { error: openError } = await admin
+      .from("property_transfers")
+      .update({ status: "open" })
+      .eq("id", transferId)
+      .eq("status", "draft");
+    if (openError) return NextResponse.json({ message: openError.message }, { status: 400 });
     await logTransferActivity(admin, {
-      transferId: transfer.id,
-      activityType: "system",
-      body: "Conveyancing attorney set to the requesting firm, from their transfer request.",
+      transferId,
+      activityType: "status_change",
+      body: "Transfer approved by ConveyClear and opened.",
       authorId: auth.callerId,
       authorLabel: "ConveyClear",
     });
+  } else {
+    const built = await createTransferFromRequest(admin, req, reference, auth.callerId, "open");
+    if (!built.ok) {
+      return NextResponse.json({ message: built.message }, { status: built.status });
+    }
+    transferId = built.transferId;
   }
+
+  const transfer = { id: transferId };
 
   const { error: updateError } = await admin
     .from("transfer_requests")
