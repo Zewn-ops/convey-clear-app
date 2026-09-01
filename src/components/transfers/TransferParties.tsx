@@ -629,7 +629,7 @@ export default function TransferParties({
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                className="w-full rounded border border-line bg-surface py-2 pl-3 pr-9 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
               >
                 {PARTY_ROLES.map((r) => (
                   <option
@@ -653,7 +653,7 @@ export default function TransferParties({
                   setMode(e.target.value as typeof mode);
                   setLinkId("");
                 }}
-                className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                className="w-full rounded border border-line bg-surface py-2 pl-3 pr-9 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
               >
                 <option value="entity">An existing client</option>
                 <option value="firm">A firm</option>
@@ -730,7 +730,7 @@ export default function TransferParties({
                 <select
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value)}
-                  className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                  className="w-full rounded border border-line bg-surface py-2 pl-3 pr-9 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                 >
                   <option value="natural_person">Person</option>
                   <option value="business">Business</option>

@@ -83,7 +83,7 @@ export default function PullVaultDoc({
             value={sel}
             onChange={(e) => setSel(e.target.value)}
             disabled={busy}
-            className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3"
+            className="bg-surface text-ink mt-1 w-full rounded-lg border border-line py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3"
           >
             <option value="">— Select a vault document —</option>
             {options.map((o) => (

@@ -210,6 +210,17 @@ export interface TransferServiceDot {
   settled: boolean;
   /** Needed, with a matter open against it. */
   running: boolean;
+  /**
+   * Marked "needed" by anyone — with or without a matter yet.
+   *
+   * Zewn, 2026-09-01: "can we get yellow circles for the items that are marked
+   * as needs to be done so we know whats in an active state of trying to
+   * complete the service." Before this, a line somebody had deliberately marked
+   * as needed but not yet opened a matter for drew the SAME hollow ring as a
+   * line nobody had looked at — the two most different states on the checklist,
+   * rendered identically.
+   */
+  needed: boolean;
 }
 
 export interface TransferProgress {
@@ -301,6 +312,7 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
       // cannot see the matter still gets this from matter_id, which is on the
       // service row itself rather than behind the RLS-filtered embed.
       running: !settled && r.status === "needed" && Boolean(r.matter_id),
+      needed: !settled && r.status === "needed",
     };
   });
 

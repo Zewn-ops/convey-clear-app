@@ -386,7 +386,7 @@ export function SubjectSection({
                   <select
                     value={form[f.key] ?? ""}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface py-2 pl-3 pr-9 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-action"
                   >
                     <option value="">— Not captured —</option>
                     {(f.options ?? []).map((o) => (
@@ -545,7 +545,7 @@ export function SubjectSection({
                       <select
                         value={method}
                         onChange={(e) => setMethod(e.target.value as CaptureMethod)}
-                        className="mt-1 w-full rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action"
+                        className="mt-1 w-full rounded-lg border border-line bg-surface text-ink py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-action"
                       >
                         <option value="">Select…</option>
                         {CAPTURE_METHODS.map((m) => (

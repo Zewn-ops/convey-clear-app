@@ -136,10 +136,6 @@ export async function POST(request: Request) {
     serviceCode = svc?.code ?? "";
   }
 
-  const title = buildMatterTitle({
-    municipality: body.municipality, serviceCode, clientName, property: body.property_description,
-  });
-
   // ── The PRC stage (RCA | RCF | RCC) ────────────────────────────────────────
   //
   // 🔴 THE BUG THIS FIXES. `matters.service_subtype` (021) was read in ten
@@ -183,6 +179,16 @@ export async function POST(request: Request) {
   }
 
   const pipeline = getPipeline(serviceCode, body.municipality, subtype);
+
+  // Built AFTER the stage is resolved, because the stage replaces the service
+  // code in the title (COT_RCA_…, not COT_PRC_…). Zewn, 2026-09-01.
+  const title = buildMatterTitle({
+    municipality: body.municipality,
+    serviceCode,
+    serviceSubtype: subtype,
+    clientName,
+    property: body.property_description,
+  });
 
   const { data: matter, error: mErr } = await admin.from("matters").insert({
     client_id: clientId,
