@@ -1,4 +1,5 @@
 import type { Pipeline } from "./types";
+import { COUNCIL_ISSUES } from "./build";
 
 // City of Tshwane — Property Rates Clearance, RCF (Memo). Vision Board 2026-06-22.
 // The Phase-2 COT decision is a branching outcome stage: Approved / Delayed /
@@ -39,12 +40,11 @@ export const cotRcf: Pipeline = {
               key: "memo_delayed",
               label: "Memo Delayed",
               clientVisible: true,
-              reasons: [
-                { key: "estimated_readings", label: "Estimated readings" },
-                { key: "billing", label: "Billing" },
-                { key: "pending_journals", label: "Pending Journals" },
-                { key: "system_error", label: "System Error" },
-              ],
+              // The COT sheet's five (notes §2.2), confirmed by Zewn on
+              // 2026-09-01 — W/A is a wrong account, "mistake on application"
+              // means incorrect details. `system_error` is the Vision Board's
+              // and is not on the sheet; kept because staff had it before.
+              reasons: COUNCIL_ISSUES.figuresDelayed,
             },
             {
               key: "memo_rejected",
@@ -52,7 +52,8 @@ export const cotRcf: Pipeline = {
               clientVisible: true,
               reasons: [
                 { key: "billing", label: "Billing" },
-                { key: "memo_expired", label: "Memo Expired" },
+                { key: "memo_expired", label: "Memo expired" },
+                { key: "mistake_on_application", label: "Mistake on application (incorrect details)" },
               ],
             },
           ],

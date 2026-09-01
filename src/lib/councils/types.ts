@@ -139,6 +139,38 @@ export const SERVICE_LABELS: Record<ServiceCode, string> = {
 };
 
 /**
+ * Service codes that exist in the `services` TABLE but are not among the seven.
+ *
+ * The seed (002) created eight service rows — BC, COO, BP, PPM, MAQ, RCF, RCC,
+ * MAD — and 072 renamed four of them into the canonical vocabulary. The rest are
+ * still there, still selectable by a client on "Request a service", and had no
+ * label anywhere: `serviceLabel()` fell through to the raw code, so a client
+ * request for pre-paid meters reached staff reading "PPM".
+ *
+ * Zewn, 2026-09-01: "it DOESNT MATTER IF THERES MORE THAN 6 OR 7 OR 8 JUST MAKE
+ * SURE EVERYTHING GETS COVERED."
+ *
+ * Covered means two things, and this is the first: every code a client can pick
+ * renders as words. The second is that the work is representable on a transfer —
+ * these are not lines of their own (the checklist instantiates the seven, and
+ * adding to that would put a Business Compliance line on every property
+ * transfer), so they attach under OTHER, which carries a free-text label for
+ * exactly this.
+ *
+ * ⚠️ RCC and MAQ are LEGACY rows. RCC is now a stage of PRC (072/075), not a
+ * service; MAQ predates MAD, which Zewn confirmed is the catch-all for the whole
+ * class of account queries. Neither should be offered to new clients — that is a
+ * data cleanup on the `services` table, not a code change, so they are labelled
+ * here rather than pretended away.
+ */
+export const NON_TRANSFER_SERVICE_LABELS: Record<string, string> = {
+  BC: "Business Compliance",
+  PPM: "Pre-Paid Meter Conversion",
+  MAQ: "Municipal Account Query (legacy — use Municipal Account Dispute)",
+  RCC: "Rates Clearance Certificate (legacy — now a stage of Property Rates Clearance)",
+};
+
+/**
  * The label for a code that came out of the database, where it is nullable and
  * typed `string`. Returns the raw code for anything unrecognised, so a service
  * added in SQL before it is added here still renders as itself rather than as
@@ -146,7 +178,7 @@ export const SERVICE_LABELS: Record<ServiceCode, string> = {
  */
 export function serviceLabel(code: string | null | undefined): string {
   if (!code) return "Service";
-  return SERVICE_LABELS[code as ServiceCode] ?? code;
+  return SERVICE_LABELS[code as ServiceCode] ?? NON_TRANSFER_SERVICE_LABELS[code.toUpperCase()] ?? code;
 }
 
 /** RCA opens the account, RCF gets the figures, RCC gets the certificate. */

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { STAFF_ROLES, type UserRole } from "@/types";
+import { getPipeline } from "@/lib/pipelines";
+import { normalisePrcStage } from "@/lib/prc-docs";
 
 export const runtime = "nodejs";
 
@@ -263,6 +265,50 @@ export async function PATCH(req: Request) {
 
   const { error } = await supabase.from("transfer_services").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // 🔴 The stage has to reach the MATTER, not just the checklist line.
+  //
+  // getPipeline() resolves a PRC matter on `matters.service_subtype`, and the
+  // in-place intake picks its document list from the same field. A stage that
+  // stops at the line leaves the matter reading "No pipeline configured" with an
+  // empty checklist while the transfer page shows the stage set — which is
+  // exactly the state J4483/KEA was found in.
+  //
+  // Fires when this request changed the stage OR attached a matter to the line,
+  // because both are moments at which the two can fall out of step. Best-effort:
+  // the line update has already succeeded and is the caller's actual request, so
+  // a failure here must not report that change as rejected.
+  if (patch.prc_subtype !== undefined || patch.matter_id !== undefined) {
+    const { data: line } = await supabase
+      .from("transfer_services")
+      .select("matter_id, prc_subtype, service_code")
+      .eq("id", id)
+      .maybeSingle();
+    const row = line as { matter_id?: string | null; prc_subtype?: string | null; service_code?: string | null } | null;
+    if (row?.matter_id && (row.service_code ?? "").toUpperCase() === "PRC") {
+      const stage = normalisePrcStage(row.prc_subtype);
+      const { data: m } = await supabase
+        .from("matters")
+        .select("municipality, current_phase")
+        .eq("id", row.matter_id)
+        .maybeSingle();
+      const mr = m as { municipality?: string | null; current_phase?: string | null } | null;
+      const pipeline = getPipeline("PRC", mr?.municipality, stage);
+      await supabase
+        .from("matters")
+        .update({
+          service_subtype: stage,
+          // A matter created while its stage was unknown was given no phase at
+          // all — the pipeline could not resolve, so there was no pre-phase to
+          // take. Setting the stage is the first moment it can have one. Only
+          // ever fills a blank: a matter already moving through its pipeline is
+          // not dragged back to New Instruction by an edit to the checklist.
+          ...(mr?.current_phase || !pipeline ? {} : { current_phase: pipeline.prePhase.key }),
+        })
+        .eq("id", row.matter_id);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
 

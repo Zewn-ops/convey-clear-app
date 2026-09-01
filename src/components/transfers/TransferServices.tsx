@@ -206,8 +206,28 @@ export default function TransferServices({
    * it as a matter from that line — and `PATCH /api/transfer-services
    * { matterId }` has existed the whole time with nothing calling it. The
    * "Other matters" card exists precisely to catch what fell through.
+   *
+   * 2026-09-01: that card is GONE, and this list absorbed its job. Zewn: "please
+   * merge this all into one and remove whatever is not neccesary. i dont think
+   * we need link a matter anymore since all matters will be created from a prop
+   * trf service list and as a result we also wont need the other matters in
+   * transfer either." Three surfaces said the same thing; this is the one that
+   * survived, because it is the only one attached to the line it concerns.
+   *
+   * A matter here still has to be REACHABLE — a transfer can carry two matters
+   * of one service (a rates clearance re-run), the line tracks the first, and
+   * deleting the card without a replacement would leave the second attached to
+   * the transfer while being invisible on it. So untracked matters are also
+   * listed under the line of their own service, below.
    */
-  linkableMatters?: { id: string; title: string | null; serviceName?: string | null }[];
+  linkableMatters?: {
+    id: string;
+    title: string | null;
+    serviceName?: string | null;
+    /** The matter's own service, so it can be listed under the right line. */
+    serviceCode?: string | null;
+    status?: string | null;
+  }[];
 }) {
   const router = useRouter();
   // Clients pass matterHrefBase={null} (see the prop doc). The admin page omits
@@ -583,6 +603,36 @@ export default function TransferServices({
                 </select>
               </div>
             )}
+
+            {/* Matters of THIS service that the line is not tracking — the
+                second rates clearance after a failed one, in practice. This is
+                what the deleted "Other matters on this transaction" card was
+                for; under the line it belongs to, it needs no card and no
+                explanation of its own. */}
+            {!r.parent_id &&
+              (() => {
+                const untracked = linkableMatters.filter(
+                  (m) => (m.serviceCode ?? "").toUpperCase() === code && m.id !== r.matter_id
+                );
+                if (!untracked.length) return null;
+                return (
+                  <ul className="mt-2 space-y-1 pl-6">
+                    {untracked.map((m) => (
+                      <li key={m.id} className="flex items-center gap-2 text-xs text-ink-3">
+                        <span className="text-ink-3">·</span>
+                        {matterHrefBase ? (
+                          <Link href={`${matterHrefBase}/${m.id}`} className="text-action hover:underline">
+                            {m.title || "Untitled"}
+                          </Link>
+                        ) : (
+                          <span>{m.title || "Untitled"}</span>
+                        )}
+                        <span>· also on this transfer, not tracked by this line</span>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
 
             {/* PRC splits three ways (§5.9). The stage is not decoration: a
                 pipeline is resolved by (service, council, stage), so a PRC line

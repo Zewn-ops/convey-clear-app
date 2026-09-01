@@ -47,6 +47,7 @@ import {
   phaseOrder,
   type Pipeline,
 } from "@/lib/pipelines";
+import { normalisePrcStage, prcStageLabel, PRC_SUBTYPES } from "@/lib/prc-docs";
 import StorageUpload from "@/components/matters/StorageUpload";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
@@ -100,7 +101,7 @@ function ActivityIcon({ type }: { type: string }) {
 async function matterCtx(supabase: Awaited<ReturnType<typeof createClient>>, matterId: string) {
   const { data } = await supabase
     .from("matters")
-    .select("status, current_stage, municipality, service_subtype, transfer_id, services(code)")
+    .select("status, current_phase, current_stage, municipality, service_subtype, transfer_id, services(code)")
     .eq("id", matterId)
     .maybeSingle();
   const code = (data as { services?: { code?: string } | null } | null)?.services?.code ?? null;
@@ -316,6 +317,58 @@ export default async function AdminMatterDetailPage({
     await logMatterActivity(supabase, {
       matterId, authorId: authorId || null, activityType: "system",
       body: value ? `Rates account number set: ${value}` : "Rates account number cleared",
+    });
+    revalidatePath(`/admin/matters/${matterId}`);
+  }
+
+  // The rates-clearance stage (RCA | RCF | RCC) — `matters.service_subtype`.
+  //
+  // 🔴 Until now NOTHING in the app wrote this column. It is read in ten places,
+  // getPipeline() and the in-place intake among them, so every PRC matter
+  // carried NULL and therefore had no pipeline and no document list. New matters
+  // now inherit the stage from their checklist line; this control covers the two
+  // cases inheritance cannot — a PRC matter opened outside any transfer, and a
+  // stage set wrongly that has to be corrected.
+  //
+  // Changing the stage changes which documents the matter asks for, so it is
+  // logged rather than being a silent edit.
+  async function setPrcStage(formData: FormData) {
+    "use server";
+    const supabase = await createClient();
+    const matterId = formData.get("matter_id") as string;
+    if (!matterId) return;
+    const stage = normalisePrcStage(formData.get("prc_stage") as string);
+
+    const { row, pl: prevPipeline, serviceCode } = await matterCtx(supabase, matterId);
+    // Guard, not decoration: a rates stage written onto a COO would send
+    // getPipeline() looking for a COO/RCF pipeline that cannot exist.
+    if ((serviceCode ?? "").toUpperCase() !== "PRC") return;
+    const prev = (row as { service_subtype?: string | null } | null)?.service_subtype ?? null;
+    if (prev === stage) return;
+
+    const pipeline = getPipeline(serviceCode, row?.municipality, stage);
+    // A matter created before its stage was known has no phase at all, because
+    // there was no pipeline to take a pre-phase from. Fill that blank now. Also
+    // reset when the stage change swapped the pipeline underneath the matter:
+    // its stored position is a key from a tree it is no longer in, and leaving
+    // it there renders a phase that the new pipeline does not contain.
+    const positionLost = Boolean(prevPipeline && pipeline && prevPipeline.subtype !== pipeline.subtype);
+    const phasePatch =
+      pipeline && (!row?.current_phase || positionLost)
+        ? { current_phase: pipeline.prePhase.key, current_stage: null }
+        : {};
+
+    await supabase
+      .from("matters")
+      .update({ service_subtype: stage, ...phasePatch })
+      .eq("id", matterId);
+    await logMatterActivity(supabase, {
+      matterId,
+      authorId: authorId || null,
+      activityType: "system",
+      body: stage
+        ? `Rates clearance stage set: ${prcStageLabel(stage)}${positionLost ? " — pipeline position reset" : ""}`
+        : "Rates clearance stage cleared",
     });
     revalidatePath(`/admin/matters/${matterId}`);
   }
@@ -598,7 +651,16 @@ export default async function AdminMatterDetailPage({
   );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    // Width + order, 2026-09-01. Same change as the property-transfer page and
+    // for the same reason: the 896px cap left half a wide screen empty, and the
+    // sections ran in the order they were built rather than the order they are
+    // read. Zewn: "please also rearrange matter page to align with the ordering
+    // of prop trf page."
+    //
+    // Left = the work, in the transfer page's order — who the matter is for,
+    // then what stage/pipeline it runs, then what has been filed. Right = the
+    // reference detail that used to interrupt it.
+    <div className="space-y-6">
       <div>
         {/* Back where you came from. A matter inside a property transfer is
             almost always reached FROM that transfer — Jukka's model makes the
@@ -633,318 +695,346 @@ export default async function AdminMatterDetailPage({
         </div>
       </div>
 
-      {/* Parent property transfer — the transaction this matter belongs to. */}
-      <MatterTransferCard
-        matterId={id}
-        transfer={matter.property_transfers ?? null}
-        options={transferOptions}
-        manage
-        basePath="/admin/property-transfers"
-      />
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
+        {/* In-place FICA — client details + consent. Together with the document
+            checklist below, this is what makes /onboard optional rather than the
+            only way to actually finish a matter (migration 033). */}
+        <InPlaceFica
+          matterId={id}
+          subjects={ficaSubjects}
+          isStaff
+          municipality={matter.municipality}
+          serviceCode={svc?.code ?? null}
+          prcStage={(matter as { service_subtype?: string | null }).service_subtype ?? null}
+          // The old "Client" card's whole contents. Zewn, 2026-09-01: "this is
+          // also duplicated data in 2 sections please fix" — that card named the
+          // client and listed their email and cell directly above this one,
+          // which opens by naming the same client and saying what is missing
+          // from their record.
+          contact={
+            matter.clients
+              ? {
+                  name: clientDisplayName(matter.clients),
+                  email: (matter.clients as { primary_email?: string | null }).primary_email ?? null,
+                  cell: (matter.clients as { primary_cell?: string | null }).primary_cell ?? null,
+                  profileHref: `/admin/clients/${(matter.clients as { id: string }).id}`,
+                }
+              : null
+          }
+        />
+        {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
+        <PartiesCard
+          parties={parties}
+          manage
+          matterId={id}
+          ficaSubjects={ficaSubjects}
+          isStaff
+          municipality={matter.municipality}
+          serviceCode={svc?.code ?? null}
+          prcStage={(matter as { service_subtype?: string | null }).service_subtype ?? null}
+        />
+        {/* ── Rates clearance stage ─────────────────────────────────────────────
+            A PRC matter is an RCA, an RCF or an RCC, and which one decides both
+            its pipeline and its document list. The stage normally arrives from the
+            transfer's service checklist; this is where it is set on a matter with
+            no transfer, and where a wrong one is corrected.
 
-      {/* Pipeline (config-driven) */}
-      {pipeline ? (
-        <Card accent="service" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide flex items-center gap-1.5"><Workflow className="h-3.5 w-3.5 text-sky-700" /> Pipeline · {pipeline.label}</p>
-            <span className="text-xs text-ink-3">
-              {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
-            </span>
-          </div>
-          {/* The bar the overview and the client portal both show. The stepper
-              below says WHERE the matter is; the bar says HOW FAR, which is the
-              thing you want at a glance on a process measured in months. */}
-          {hasPipelineProgress && (
-            <PhaseProgress
-              phase={pipelineIdx + 1}
-              total={pipelineSteps.length}
-              // Staff see the internal phase name, not the client-facing one.
-              label={phaseLabel(pipeline, matter.current_phase)}
-              done={pipelineIdx === pipelineSteps.length - 1}
-            />
-          )}
-          <PipelineProgress pipeline={pipeline} currentPhase={matter.current_phase} currentStage={matter.current_stage} audience="staff" />
-          {transferGated && (
-            <div className="rounded-lg border border-line bg-waiting-tint px-3 py-2.5 flex items-start gap-2">
-              <Lock className="h-4 w-4 shrink-0 mt-0.5 text-waiting" />
-              <p className="text-xs text-ink-2">
-                <span className="font-semibold text-ink">This matter cannot progress yet.</span>{" "}
-                {svc?.code === "COO" ? "Change of Ownership" : "Rates Clearance"} matters must be
-                linked to a property transfer before the phase or stage can move. Link one in the
-                Property transfer card above.
-              </p>
+            Sits directly above the pipeline card because it is the input to it —
+            with no stage there is no pipeline, and the card below says so. */}
+        {(svc?.code ?? "").toUpperCase() === "PRC" && (
+          <Card accent="service">
+            <form action={setPrcStage} className="flex items-end gap-2">
+              <input type="hidden" name="matter_id" value={id} />
+              <label className="flex-1 text-xs font-medium text-ink-3">
+                Rates clearance stage
+                <select
+                  name="prc_stage"
+                  defaultValue={(matter as { service_subtype?: string | null }).service_subtype ?? ""}
+                  className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+                >
+                  <option value="">— Stage not chosen —</option>
+                  {PRC_SUBTYPES.map((s) => (
+                    <option key={s.code} value={s.code}>{s.label}</option>
+                  ))}
+                </select>
+              </label>
+              <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Save</SubmitButton>
+            </form>
+            <p className="mt-2 text-xs text-ink-3">
+              {(matter as { service_subtype?: string | null }).service_subtype
+                ? "Changing the stage changes the documents this matter asks for. Moving to a different stage restarts its pipeline, because each stage runs its own."
+                : "Choose one — an application, a figures request and a certificate request need different documents and run different pipelines."}
+            </p>
+          </Card>
+        )}
+        {/* Pipeline (config-driven) */}
+        {pipeline ? (
+          <Card accent="service" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide flex items-center gap-1.5"><Workflow className="h-3.5 w-3.5 text-sky-700" /> Pipeline · {pipeline.label}</p>
+              <span className="text-xs text-ink-3">
+                {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
+              </span>
             </div>
-          )}
-          <div className="pt-3 border-t border-line grid gap-3 sm:grid-cols-2">
-            <form action={advancePhase} className="flex items-end gap-2">
-              <input type="hidden" name="matter_id" value={id} />
-              <input type="hidden" name="author_id" value={authorId ?? ""} />
-              <label className="flex-1 text-xs font-medium text-ink-3">
-                Phase
-                <select name="phase" defaultValue={matter.current_phase ?? ""} disabled={transferGated} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
-                  {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
-                </select>
-              </label>
-              <SubmitButton disabled={transferGated} pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set</SubmitButton>
-            </form>
-            <form action={setStage} className="flex items-end gap-2">
-              <input type="hidden" name="matter_id" value={id} />
-              <input type="hidden" name="author_id" value={authorId ?? ""} />
-              <label className="flex-1 text-xs font-medium text-ink-3">
-                Stage{curPhaseDef ? ` · ${curPhaseDef.internalName}` : ""}
-                <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={transferGated || curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
-                  <option value="">— Select stage —</option>
-                  {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
-                </select>
-              </label>
-              <SubmitButton disabled={transferGated} pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Update</SubmitButton>
-            </form>
-          </div>
-
-          {/* Decision outcome (RCF/RCC: Approved / Delayed / Rejected + reason) */}
-          {decisionOptions.length > 0 && (
-            <div className="pt-3 border-t border-line">
-              {currentOutcomeLabel && (
-                <p className="text-xs text-ink-3 mb-2">Current outcome: <span className="font-medium text-ink">{currentOutcomeLabel}</span></p>
-              )}
-              <form action={setOutcome} className="flex items-end gap-2">
+            {/* The bar the overview and the client portal both show. The stepper
+                below says WHERE the matter is; the bar says HOW FAR, which is the
+                thing you want at a glance on a process measured in months. */}
+            {hasPipelineProgress && (
+              <PhaseProgress
+                phase={pipelineIdx + 1}
+                total={pipelineSteps.length}
+                // Staff see the internal phase name, not the client-facing one.
+                label={phaseLabel(pipeline, matter.current_phase)}
+                done={pipelineIdx === pipelineSteps.length - 1}
+              />
+            )}
+            <PipelineProgress pipeline={pipeline} currentPhase={matter.current_phase} currentStage={matter.current_stage} audience="staff" />
+            {transferGated && (
+              <div className="rounded-lg border border-line bg-waiting-tint px-3 py-2.5 flex items-start gap-2">
+                <Lock className="h-4 w-4 shrink-0 mt-0.5 text-waiting" />
+                <p className="text-xs text-ink-2">
+                  <span className="font-semibold text-ink">This matter cannot progress yet.</span>{" "}
+                  {svc?.code === "COO" ? "Change of Ownership" : "Rates Clearance"} matters must be
+                  linked to a property transfer before the phase or stage can move. Link one in the
+                  Property transfer card above.
+                </p>
+              </div>
+            )}
+            <div className="pt-3 border-t border-line grid gap-3 sm:grid-cols-2">
+              <form action={advancePhase} className="flex items-end gap-2">
                 <input type="hidden" name="matter_id" value={id} />
                 <input type="hidden" name="author_id" value={authorId ?? ""} />
                 <label className="flex-1 text-xs font-medium text-ink-3">
-                  {decisionStage?.name} outcome
-                  <select name="outcomeReason" defaultValue={currentOutcomeValue} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
-                    <option value="">— Select outcome —</option>
-                    {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                  Phase
+                  <select name="phase" defaultValue={matter.current_phase ?? ""} disabled={transferGated} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
+                    {phaseSteps(pipeline).map((s) => (<option key={s.key} value={s.key}>{s.label}</option>))}
                   </select>
                 </label>
-                <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set outcome</SubmitButton>
+                <SubmitButton disabled={transferGated} pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set</SubmitButton>
+              </form>
+              <form action={setStage} className="flex items-end gap-2">
+                <input type="hidden" name="matter_id" value={id} />
+                <input type="hidden" name="author_id" value={authorId ?? ""} />
+                <label className="flex-1 text-xs font-medium text-ink-3">
+                  Stage{curPhaseDef ? ` · ${curPhaseDef.internalName}` : ""}
+                  <select name="stage" defaultValue={matter.current_stage ?? ""} disabled={transferGated || curPhaseStages.length === 0} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] disabled:bg-raised disabled:text-ink-3">
+                    <option value="">— Select stage —</option>
+                    {curPhaseStages.map((s) => (<option key={s.key} value={s.key}>{s.name}{s.clientVisible ? "" : " (internal)"}</option>))}
+                  </select>
+                </label>
+                <SubmitButton disabled={transferGated} pendingLabel="…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Update</SubmitButton>
               </form>
             </div>
-          )}
-        </Card>
-      ) : (
-        <Card accent="service">
-          <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-1">Pipeline</p>
-          <p className="text-sm text-ink-3">
-            No pipeline configured for {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"} yet.
-            {" "}Phase: {matter.current_phase ?? "—"} · Stage: {matter.current_stage ?? "—"}.
-          </p>
-        </Card>
-      )}
 
-      {/* Council rates account number — the council's primary key for a
-          clearance matter (proof / application / certificate reference it). */}
-      <Card accent="service">
-        <form action={setRatesAccount} className="flex items-end gap-2">
-          <input type="hidden" name="matter_id" value={id} />
-          <label className="flex-1 text-xs font-medium text-ink-3">
-            Rates account number
-            <input
-              type="text"
-              name="rates_account_no"
-              defaultValue={typeof sd.rates_account_no === "string" ? sd.rates_account_no : ""}
-              placeholder="Council rates account no."
-              className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
-            />
-          </label>
-          <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Save</SubmitButton>
-        </form>
-      </Card>
-
-      {/* Matter facts */}
-      <Card accent="service">
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <div>
-            <dt className="text-xs text-ink-3">Status</dt>
-            <dd className="text-ink mt-0.5">{matter.status ? MATTER_STATUS_LABELS[matter.status as MatterStatus] : "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-3">Priority</dt>
-            <dd className="text-ink mt-0.5">{matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-3">Estimated closing time</dt>
-            <dd className="text-ink mt-0.5">{matter.deadline ? formatDate(matter.deadline) : "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-3">Opened</dt>
-            <dd className="text-ink mt-0.5">{formatDate(matter.created_at)}</dd>
-          </div>
-          {(matter as { service_subtype?: string | null }).service_subtype && (
-            <div>
-              <dt className="text-xs text-ink-3">Clearance type</dt>
-              <dd className="text-ink mt-0.5">{(matter as { service_subtype?: string | null }).service_subtype}</dd>
-            </div>
-          )}
-          {/* Service-specific referral fields (PRC account no / utilities / query ref) merged in. */}
-          {Object.entries(((matter as { service_data?: Record<string, unknown> | null }).service_data ?? {}))
-            .filter(([k, v]) => v && !["stage_outcome", "stage_reason"].includes(k))
-            .map(([k, v]) => (
-              <div key={k}>
-                <dt className="text-xs text-ink-3 capitalize">{k.replace(/_/g, " ")}</dt>
-                <dd className="text-ink mt-0.5">{String(v)}</dd>
-              </div>
-            ))}
-          {matter.service_notes && (
-            <div className="col-span-2 sm:col-span-3">
-              <dt className="text-xs text-ink-3">Service Notes</dt>
-              <dd className="text-ink mt-0.5">{matter.service_notes}</dd>
-            </div>
-          )}
-        </dl>
-
-        {/* Status control (H1) — partner/client referrals arrive as "New"; staff
-            review then set Open (or Won/Lost/etc.). Won triggers the celebration. */}
-        <form action={setMatterStatus} className="mt-4 pt-4 border-t border-line flex flex-wrap items-center gap-2">
-          <input type="hidden" name="matter_id" value={id} />
-          <input type="hidden" name="author_id" value={authorId ?? ""} />
-          <label className="text-xs font-medium text-ink-3">Status</label>
-          <select
-            name="status"
-            defaultValue={matter.status ?? "new"}
-            className="bg-surface text-ink rounded-lg border border-line px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
-          >
-            {(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => (
-              <option key={s} value={s}>{MATTER_STATUS_LABELS[s]}</option>
-            ))}
-          </select>
-          <SubmitButton pendingLabel="Updating…" className="px-3 py-1.5 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">
-            Update status
-          </SubmitButton>
-          {matter.status === "new" && (
-            <span className="text-xs font-medium text-amber-600">Awaiting review — set to Open once reviewed</span>
-          )}
-        </form>
-      </Card>
-
-      {/* ConveyClear internal — staff-only container (note 2026-06-22). */}
-      <Card accent="internal" className="bg-action-fill/5">
-        <div className="flex items-center gap-1.5 mb-3">
-          <Lock className="h-3.5 w-3.5 text-action" />
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-action">ConveyClear internal</h2>
-        </div>
-        <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-          {firm?.name && (
-            <div>
-              <dt className="text-xs text-ink-3">Referring firm</dt>
-              <dd className="text-ink mt-0.5">{firm.name}{firm.abbreviation ? ` (${firm.abbreviation})` : ""}</dd>
-            </div>
-          )}
-          {matter.partner_file_ref && (
-            <div>
-              <dt className="text-xs text-ink-3">Internal file ref</dt>
-              <dd className="text-ink mt-0.5">{matter.partner_file_ref}</dd>
-            </div>
-          )}
-          {matter.deal_value && (
-            <div>
-              <dt className="text-xs text-ink-3">Deal value</dt>
-              <dd className="text-ink mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
-            </div>
-          )}
-          {!firm?.name && !matter.partner_file_ref && !matter.deal_value && (
-            <p className="text-sm text-ink-3 col-span-3">No internal details captured yet.</p>
-          )}
-        </dl>
-      </Card>
-
-      {/* Celebration when the matter is won/closed (H2) */}
-      <Celebrate active={matter.status === "won"} matterId={matter.id} />
-
-      {/* Enquiries — the shared client/partner/CC thread (A&A #3). Read + post
-          in place; the activity feed below stays internal. */}
-      <MatterEnquiries matterId={id} threads={enquiryThreads} audience="staff" />
-
-      {/* Client info */}
-      {matter.clients && (
-        <Card accent="client">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide flex items-center gap-1.5"><User className="h-3.5 w-3.5 text-emerald-700" /> Client</p>
-            <Link
-              href={`/admin/clients/${(matter.clients as any).id}`}
-              className="text-xs text-action hover:underline"
-            >
-              View profile
-            </Link>
-          </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-xs text-ink-3">Name</dt>
-              <dd className="font-medium mt-0.5">{clientDisplayName(matter.clients)}</dd>
-            </div>
-            {(matter.clients as any).primary_email && (
-              <div>
-                <dt className="text-xs text-ink-3">Email</dt>
-                <dd className="mt-0.5">{(matter.clients as any).primary_email}</dd>
+            {/* Decision outcome (RCF/RCC: Approved / Delayed / Rejected + reason) */}
+            {decisionOptions.length > 0 && (
+              <div className="pt-3 border-t border-line">
+                {currentOutcomeLabel && (
+                  <p className="text-xs text-ink-3 mb-2">Current outcome: <span className="font-medium text-ink">{currentOutcomeLabel}</span></p>
+                )}
+                <form action={setOutcome} className="flex items-end gap-2">
+                  <input type="hidden" name="matter_id" value={id} />
+                  <input type="hidden" name="author_id" value={authorId ?? ""} />
+                  <label className="flex-1 text-xs font-medium text-ink-3">
+                    {decisionStage?.name} outcome
+                    <select name="outcomeReason" defaultValue={currentOutcomeValue} className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]">
+                      <option value="">— Select outcome —</option>
+                      {decisionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                    </select>
+                  </label>
+                  <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Set outcome</SubmitButton>
+                </form>
               </div>
             )}
-            {(matter.clients as any).primary_cell && (
+          </Card>
+        ) : (
+          <Card accent="service">
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide mb-1">Pipeline</p>
+            {/* Two different situations were reading as one message. "No pipeline
+                configured" is true when none is DEFINED for this council; it was
+                also what a PRC matter said when the pipeline existed and the
+                matter simply had no stage to select it with — a fixable thing
+                reported as an unbuilt one. Say which. */}
+            {(svc?.code ?? "").toUpperCase() === "PRC" &&
+            !(matter as { service_subtype?: string | null }).service_subtype ? (
+              <p className="text-sm text-ink-3">
+                Choose a rates clearance stage above — an RCA, an RCF and an RCC each run their own
+                pipeline, so there is nothing to show until this matter says which it is.
+              </p>
+            ) : (
+              <p className="text-sm text-ink-3">
+                No pipeline configured for {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"}
+                {(matter as { service_subtype?: string | null }).service_subtype
+                  ? ` · ${(matter as { service_subtype?: string | null }).service_subtype}`
+                  : ""}{" "}
+                yet. Phase: {matter.current_phase ?? "—"} · Stage: {matter.current_stage ?? "—"}.
+              </p>
+            )}
+          </Card>
+        )}
+        {/* In-place intake — service-aware required-document checklist + upload
+            (the primary capture method; renders null for non-COO/PRC services) */}
+        <InPlaceIntake
+          matterId={id}
+          serviceCode={svc?.code ?? null}
+          serviceSubtype={(matter as { service_subtype?: string | null }).service_subtype ?? null}
+          parties={parties}
+          documents={documents}
+          municipality={matter.municipality}
+          unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
+          canManage
+          vaultByClient={vaultByClient}
+          matterClientId={matterClientId}
+          transferDocs={transferDocs}
+        />
+        {/* Documents — split client/partner uploads vs ConveyClear uploads (note 29) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold text-ink flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              {documents.length > 0 && <CouncilPackButton matterId={id} />}
+              <StorageUpload matterId={id} />
+              <CollectFicaButton matterId={id} fica={!isCoo} />
+            </div>
+          </div>
+          {docGroup("Client / business-partner uploads", clientPartnerDocs)}
+          {docGroup("ConveyClear uploads", ccDocs)}
+        </div>
+        </div>
+
+        <div className="min-w-0 space-y-6">
+        {/* Parent property transfer — the transaction this matter belongs to. */}
+        <MatterTransferCard
+          matterId={id}
+          transfer={matter.property_transfers ?? null}
+          options={transferOptions}
+          manage
+          basePath="/admin/property-transfers"
+        />
+        {/* Matter facts */}
+        <Card accent="service">
+          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <dt className="text-xs text-ink-3">Status</dt>
+              <dd className="text-ink mt-0.5">{matter.status ? MATTER_STATUS_LABELS[matter.status as MatterStatus] : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ink-3">Priority</dt>
+              <dd className="text-ink mt-0.5">{matter.priority ? PRIORITY_LABELS[matter.priority as MatterPriority] : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ink-3">Estimated closing time</dt>
+              <dd className="text-ink mt-0.5">{matter.deadline ? formatDate(matter.deadline) : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-ink-3">Opened</dt>
+              <dd className="text-ink mt-0.5">{formatDate(matter.created_at)}</dd>
+            </div>
+            {(matter as { service_subtype?: string | null }).service_subtype && (
               <div>
-                <dt className="text-xs text-ink-3">Cell</dt>
-                <dd className="mt-0.5">{(matter.clients as any).primary_cell}</dd>
+                <dt className="text-xs text-ink-3">Clearance type</dt>
+                <dd className="text-ink mt-0.5">{(matter as { service_subtype?: string | null }).service_subtype}</dd>
+              </div>
+            )}
+            {/* Service-specific referral fields (PRC account no / utilities / query ref) merged in. */}
+            {Object.entries(((matter as { service_data?: Record<string, unknown> | null }).service_data ?? {}))
+              .filter(([k, v]) => v && !["stage_outcome", "stage_reason"].includes(k))
+              .map(([k, v]) => (
+                <div key={k}>
+                  <dt className="text-xs text-ink-3 capitalize">{k.replace(/_/g, " ")}</dt>
+                  <dd className="text-ink mt-0.5">{String(v)}</dd>
+                </div>
+              ))}
+            {matter.service_notes && (
+              <div className="col-span-2 sm:col-span-3">
+                <dt className="text-xs text-ink-3">Service Notes</dt>
+                <dd className="text-ink mt-0.5">{matter.service_notes}</dd>
               </div>
             )}
           </dl>
+
+          {/* Status control (H1) — partner/client referrals arrive as "New"; staff
+              review then set Open (or Won/Lost/etc.). Won triggers the celebration. */}
+          <form action={setMatterStatus} className="mt-4 pt-4 border-t border-line flex flex-wrap items-center gap-2">
+            <input type="hidden" name="matter_id" value={id} />
+            <input type="hidden" name="author_id" value={authorId ?? ""} />
+            <label className="text-xs font-medium text-ink-3">Status</label>
+            <select
+              name="status"
+              defaultValue={matter.status ?? "new"}
+              className="bg-surface text-ink rounded-lg border border-line px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+            >
+              {(Object.keys(MATTER_STATUS_LABELS) as MatterStatus[]).map((s) => (
+                <option key={s} value={s}>{MATTER_STATUS_LABELS[s]}</option>
+              ))}
+            </select>
+            <SubmitButton pendingLabel="Updating…" className="px-3 py-1.5 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">
+              Update status
+            </SubmitButton>
+            {matter.status === "new" && (
+              <span className="text-xs font-medium text-amber-600">Awaiting review — set to Open once reviewed</span>
+            )}
+          </form>
         </Card>
-      )}
-
-      {/* Parties (COO buyer/seller etc.) — renders nothing for single-client matters */}
-      <PartiesCard
-        parties={parties}
-        manage
-        matterId={id}
-        ficaSubjects={ficaSubjects}
-        isStaff
-        municipality={matter.municipality}
-        serviceCode={svc?.code ?? null}
-        prcStage={(matter as { service_subtype?: string | null }).service_subtype ?? null}
-      />
-
-      {/* In-place FICA — client details + consent. Together with the document
-          checklist below, this is what makes /onboard optional rather than the
-          only way to actually finish a matter (migration 033). */}
-      <InPlaceFica
-        matterId={id}
-        subjects={ficaSubjects}
-        isStaff
-        municipality={matter.municipality}
-        serviceCode={svc?.code ?? null}
-        prcStage={(matter as { service_subtype?: string | null }).service_subtype ?? null}
-      />
-
-      {/* In-place intake — service-aware required-document checklist + upload
-          (the primary capture method; renders null for non-COO/PRC services) */}
-      <InPlaceIntake
-        matterId={id}
-        serviceCode={svc?.code ?? null}
-        serviceSubtype={(matter as { service_subtype?: string | null }).service_subtype ?? null}
-        parties={parties}
-        documents={documents}
-        municipality={matter.municipality}
-        unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
-        canManage
-        vaultByClient={vaultByClient}
-        matterClientId={matterClientId}
-        transferDocs={transferDocs}
-      />
-
-      {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
-      <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
-
-      {/* Documents — split client/partner uploads vs ConveyClear uploads (note 29) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-ink flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            {documents.length > 0 && <CouncilPackButton matterId={id} />}
-            <StorageUpload matterId={id} />
-            <CollectFicaButton matterId={id} fica={!isCoo} />
+        {/* Council rates account number — the council's primary key for a
+            clearance matter (proof / application / certificate reference it). */}
+        <Card accent="service">
+          <form action={setRatesAccount} className="flex items-end gap-2">
+            <input type="hidden" name="matter_id" value={id} />
+            <label className="flex-1 text-xs font-medium text-ink-3">
+              Rates account number
+              <input
+                type="text"
+                name="rates_account_no"
+                defaultValue={typeof sd.rates_account_no === "string" ? sd.rates_account_no : ""}
+                placeholder="Council rates account no."
+                className="bg-surface text-ink mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B]"
+              />
+            </label>
+            <SubmitButton pendingLabel="Saving…" className="px-3 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90">Save</SubmitButton>
+          </form>
+        </Card>
+        {/* Council POC(s) — internal, staff-only directory link (B5 / Theme G) */}
+        <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
+        {/* ConveyClear internal — staff-only container (note 2026-06-22). */}
+        <Card accent="internal" className="bg-action-fill/5">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Lock className="h-3.5 w-3.5 text-action" />
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-action">ConveyClear internal</h2>
           </div>
+          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            {firm?.name && (
+              <div>
+                <dt className="text-xs text-ink-3">Referring firm</dt>
+                <dd className="text-ink mt-0.5">{firm.name}{firm.abbreviation ? ` (${firm.abbreviation})` : ""}</dd>
+              </div>
+            )}
+            {matter.partner_file_ref && (
+              <div>
+                <dt className="text-xs text-ink-3">Internal file ref</dt>
+                <dd className="text-ink mt-0.5">{matter.partner_file_ref}</dd>
+              </div>
+            )}
+            {matter.deal_value && (
+              <div>
+                <dt className="text-xs text-ink-3">Deal value</dt>
+                <dd className="text-ink mt-0.5">R {matter.deal_value.toLocaleString("en-ZA")}</dd>
+              </div>
+            )}
+            {!firm?.name && !matter.partner_file_ref && !matter.deal_value && (
+              <p className="text-sm text-ink-3 col-span-3">No internal details captured yet.</p>
+            )}
+          </dl>
+        </Card>
         </div>
-        {docGroup("Client / business-partner uploads", clientPartnerDocs)}
-        {docGroup("ConveyClear uploads", ccDocs)}
       </div>
 
+      {/* Celebration when the matter is won/closed (H2) */}
+      <Celebrate active={matter.status === "won"} matterId={matter.id} />
+      {/* Enquiries — the shared client/partner/CC thread (A&A #3). Read + post
+          in place; the activity feed below stays internal. */}
+      <MatterEnquiries matterId={id} threads={enquiryThreads} audience="staff" />
       {/* Internal activity feed. Named for its AUDIENCE, not its content (Jukka,
           meeting 1): staff kept having to remember which of the two threads on
           this page the partner firm can see. The enquiry thread above is the

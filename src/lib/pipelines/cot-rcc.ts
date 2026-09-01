@@ -1,4 +1,5 @@
 import type { Pipeline } from "./types";
+import { COUNCIL_ISSUES } from "./build";
 
 // City of Tshwane — Property Rates Clearance, RCC (Certificate). Vision Board
 // 2026-06-22. Same shape as RCF; the COT decision outcome = Certificate
@@ -35,17 +36,15 @@ export const cotRcc: Pipeline = {
           ownerRole: "staff_ops",
           outcomes: [
             { key: "certificate_approved", label: "Certificate Approved", clientVisible: true },
-            { key: "certificate_delayed", label: "Certificate Delayed", clientVisible: true },
+            { key: "certificate_delayed", label: "Certificate Delayed", clientVisible: true, reasons: COUNCIL_ISSUES.certificateRejected },
             {
               key: "certificate_rejected",
               label: "Certificate Rejected",
               clientVisible: true,
-              reasons: [
-                { key: "credit_short", label: "Credit Short" },
-                { key: "pending_journals", label: "Pending Journals" },
-                { key: "proof_of_payment_not_uploaded", label: "Proof of payment not uploaded" },
-                { key: "system_error", label: "System error" },
-              ],
+              // The COT sheet's RCC issues (notes §2.3): W/A · CREDIT SHORT. ·
+              // EST. Wrong account and estimated readings were missing here —
+              // the sheet has them and the form did not.
+              reasons: COUNCIL_ISSUES.certificateRejected,
             },
           ],
         },

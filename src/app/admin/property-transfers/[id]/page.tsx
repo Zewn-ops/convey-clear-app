@@ -4,8 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import LinkMatterControl from "@/components/transfers/LinkMatterControl";
-import UnlinkMatterButton from "@/components/transfers/UnlinkMatterButton";
 import TransferParties, { type PartyRow as TPartyRow, type PartyOption, type FirmContact } from "@/components/transfers/TransferParties";
 import {
   TRANSFER_PARTY_SELECT,
@@ -18,7 +16,6 @@ import {
   isStaffRole,
   isAdminRole,
   clientDisplayName,
-  MATTER_STATUS_LABELS,
   TRANSFER_STATUS_LABELS,
   type Matter,
   type MatterStatus,
@@ -38,20 +35,14 @@ import {
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
 import RequestHandover, { type HandoverRequest } from "@/components/transfers/RequestHandover";
-import CreateMatterForm from "@/components/admin/CreateMatterForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
-import { ArrowLeft, Pencil, Plus, Scale } from "lucide-react";
+import { ArrowLeft, Pencil, Scale } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
   return ({ open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
-}
-function matterStatusVariant(s: string): "info" | "success" | "danger" | "warning" | "gray" {
-  return ({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[
-    s as MatterStatus
-  ] ?? "gray";
 }
 
 type FirmRef = { name: string | null } | null;
@@ -131,13 +122,14 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const transfer = transferData as TransferDetail | null;
   if (!transfer) notFound();
 
-  // Matters under this transfer + the pool of matters free to attach + what the
-  // "create a matter in here" form needs (services, clients).
+  // Matters under this transfer, the service checklist, and the request this
+  // transfer came from.
+  //
+  // The pool of unattached matters and the services/clients lists went with the
+  // "Create a matter" and "Link a matter" cards (2026-09-01). Three queries, two
+  // of them fetching up to 300 rows, for controls that no longer exist.
   const [
     { data: linkedData },
-    { data: freeData },
-    { data: servicesData },
-    { data: clientsData },
     { data: serviceItems },
     { data: originRequest },
   ] = await Promise.all([
@@ -146,18 +138,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, services(code, name)")
       .eq("transfer_id", id)
       .order("created_at", { ascending: true }),
-    supabase
-      .from("matters")
-      .select("id, title, municipality, created_at")
-      .is("transfer_id", null)
-      .order("created_at", { ascending: false })
-      .limit(100),
-    supabase.from("services").select("id, code, name").order("name"),
-    supabase
-      .from("clients")
-      .select("id, full_name, business_name")
-      .order("created_at", { ascending: false })
-      .limit(200),
     // The umbrella checklist (063). Both levels in one read — the tree is small
     // and bounded, so the component splits it rather than paying two queries.
     supabase
@@ -183,10 +163,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   ]);
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
-  const candidates = ((freeData as { id: string; title: string | null; municipality: string | null }[] | null) ?? []).map(
-    (m) => ({ id: m.id, label: m.title || `Untitled matter (${municipalityLabel(m.municipality)})` })
-  );
-
   // Parties live in transfer_parties (050). The four legacy FK columns on
   // property_transfers are still populated and still read below, so this card
   // and the legacy seller/buyer picker agree until those reads are retired.
@@ -228,13 +204,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     firmId: u.business_partner_id,
     name: u.full_name?.trim() || u.email,
   }));
-
-  // The transaction's own seller/buyer, offered first when creating a matter in
-  // here — on a transfer the matter is nearly always for one of these two.
-  const transferParties = [
-    transfer.seller ? { id: transfer.seller.id, label: clientDisplayName(transfer.seller), role: "Seller" } : null,
-    transfer.buyer ? { id: transfer.buyer.id, label: clientDisplayName(transfer.buyer), role: "Buyer" } : null,
-  ].filter((p): p is { id: string; label: string; role: string } => p !== null);
 
   // Transfer-level documents (migration 034) + how many matters already reuse
   // each one — that count is what tells staff a document is load-bearing before
@@ -372,7 +341,14 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const unlistedMatters = linked.filter((m) => !trackedMatterIds.has(m.id));
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    // ── Page width ───────────────────────────────────────────────────────────
+    // Was `max-w-4xl mx-auto` — an 896px column centred in a screen twice that
+    // wide, with the right half empty. The CLIENT portal never had the cap, and
+    // that is the difference Zewn saw: "i like how the property transfers and
+    // stuff take up more screen space on the client portals, can we do that for
+    // the attorney and admin portals aswell". The shell (`main`) already brings
+    // its own padding, so removing the cap is the whole change.
+    <div className="space-y-6">
       <div>
         <Link href="/admin/property-transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All property transfers
@@ -397,208 +373,152 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         </div>
       </div>
 
-      {/* Parties to the transaction — transfer_parties (050) */}
-      <Card>
-        <TransferParties
-          transferId={id}
-          parties={partyList}
-          entities={entityOptions}
-          firms={firmOptions}
-          firmContacts={firmContacts}
-          canEdit
-          clientHrefBase="/admin/clients"
-          showIdNumbers
-          designatedMember={memberOf(transfer.designated_member)}
-        />
-        {!transfer.business_partner_id && (
-          <div className="mt-4 rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-waiting">
-              No attorney firm set
-            </p>
-            <p className="mt-1 text-[13px] text-ink-2">
-              No partner can see this transfer until a firm is set on the Edit screen. Adding a
-              conveyancing attorney here records the role; it does not grant the firm access.
-            </p>
-          </div>
-        )}
-      </Card>
+      {/* ── Two columns ────────────────────────────────────────────────────────
+          Zewn, 2026-09-01: "we want parties and services at first and second as
+          things we see at the top. then documents. the weird section here must
+          move down ... we were supposed to have left/right splits like i showed
+          you on the bert smith screenshot".
 
-      {/* Facts. Showed three fields and stopped — the reference, the property and
-          the attorney firm all lived only in the page header or behind Edit. */}
-      <Card accent="service">
-        <DetailFields
-          primary={[
-            { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
-            { label: "Council", value: municipalityLabel(transfer.municipality) },
-            { label: "Attorney firm", value: transfer.attorney?.name ?? null, required: true },
-            { label: "Reference", value: transfer.reference },
-            // 077 — the Bert Smith cover sheet puts the price up front, so it
-            // sits with the headline fields rather than under "extra".
-            { label: "Purchase price", value: formatRands(transfer.purchase_price) },
-            { label: "Property", value: transfer.property_description, wide: true },
-          ]}
-          extra={[
-            { label: "Estate agency", value: transfer.estate_agent?.name ?? null },
-            { label: "Matters linked", value: String(linked.length) },
-            { label: "Opened", value: formatDate(transfer.created_at) },
-            { label: "Last updated", value: formatDate(transfer.updated_at) },
-            { label: "Notes", value: transfer.notes, wide: true },
-          ]}
-        />
-      </Card>
+          So the WORK is the left column, in his order — who is in the deal, what
+          the deal needs, what has been filed — and the reference facts sit to the
+          right where the eye goes second, instead of pushing the services below
+          the fold. The Bert Smith cover sheet reads the same way: the parties
+          face each other at the top of the page and the administrative detail
+          runs down the side.
 
-      {/* The attorney's original request (065) — "a new container just below
-          parties that gives us that info ... and we have the option to dismiss it
-          once we have used those details to capture the parties". */}
-      {originRequest && <RequestHandover request={originRequest as unknown as HandoverRequest} />}
-
-      {/* The umbrella (063). Sits ABOVE the matters table on purpose: this is
-          the plan for the transaction — which of the seven services this property
-          needs — and the table below is the work that has actually been opened
-          against it. Plan first, then progress. */}
-      <Card accent="service" padding="none">
-        <div className="px-5 py-4 border-b border-line">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
-            {transferRollup.total > 0 && (
-              <div className="w-full sm:w-56">
-                <TransferProgressBar progress={transferRollup} />
+          One column below `xl`. The split earns its keep on a wide screen; on a
+          laptop it just makes two narrow ones. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
+          {/* 1 · Parties to the transaction — transfer_parties (050) */}
+          <Card>
+            <TransferParties
+              transferId={id}
+              parties={partyList}
+              entities={entityOptions}
+              firms={firmOptions}
+              firmContacts={firmContacts}
+              canEdit
+              clientHrefBase="/admin/clients"
+              showIdNumbers
+              designatedMember={memberOf(transfer.designated_member)}
+            />
+            {!transfer.business_partner_id && (
+              <div className="mt-4 rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-waiting">
+                  No attorney firm set
+                </p>
+                <p className="mt-1 text-[13px] text-ink-2">
+                  No partner can see this transfer until a firm is set on the Edit screen. Adding a
+                  conveyancing attorney here records the role; it does not grant the firm access.
+                </p>
               </div>
             )}
-          </div>
-        </div>
-        <TransferServices
-          transferId={id}
-          rows={serviceRows}
-          canManage
-          municipality={transfer.municipality}
-          // §5.2 — the same list the "Other matters" card below shows. A line
-          // can adopt one, which is what that card was standing in for.
-          linkableMatters={unlistedMatters.map((m) => ({
-            id: m.id,
-            title: m.title,
-            serviceName: m.services?.name ?? null,
-          }))}
-        />
-      </Card>
+          </Card>
 
-      {/* ── Matters NOT represented on the checklist ───────────────────────
-          Zewn, 2026-08-28: "i think we can remove the matters in this transfer
-          block now, its been replaced by the services tab no?"
+          {/* 2 · The umbrella (063) — which of the seven services this property
+                  needs, and the work opened against each.
 
-          Mostly yes. As a PROGRESS display it is fully replaced — phase, stage
-          and status are all said better by the service lines' circles and bars,
-          so those columns are gone.
+                  🔴 THIS IS NOW THE ONLY PLACE MATTERS APPEAR ON THIS PAGE.
+                  Three surfaces used to say overlapping things: the service
+                  lines, an "Other matters on this transaction" card, and a
+                  "Create a matter / Link a matter" card. Zewn, 2026-09-01:
+                  "please merge this all into one and remove whatever is not
+                  neccesary. i dont think we need link a matter anymore since all
+                  matters will be created from a prop trf service list and as a
+                  result we also wont need the other matters in transfer either."
 
-          🔴 BUT IT CANNOT SIMPLY BE DELETED, because a service line tracks at
-          most ONE matter. api/admin/matters puts it plainly: "a transfer can
-          legitimately carry two matters of the same service (a rates clearance
-          re-run after a failed one), and the first is the one the checklist is
-          tracking". The second matter sets matters.transfer_id and attaches to
-          no line — delete this block and it is still on the transfer while
-          being invisible on it.
-
-          So the block now shows ONLY what the checklist cannot: matters with no
-          service line pointing at them. On an ordinary transfer that is none,
-          and the whole card disappears — which is the clean page he was after,
-          without losing the exception.
-
-          ▶ REVISIT (noted in RESUME_HERE §3.5): the real fix is to let a
-          service line hold more than one matter, or to let one be linked to a
-          line from the line itself. Both are bigger than this, and both would
-          let this card go entirely. */}
-      {unlistedMatters.length > 0 && (
-        <Card accent="service" padding="none">
-          <div className="border-b border-line px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
-              Other matters on this transaction · {unlistedMatters.length}
-            </p>
-            <p className="mt-1 text-xs text-ink-3">
-              Attached to the transfer but not tracked by a service above — a repeat of a
-              service already listed, or one linked by hand.
-            </p>
-          </div>
-          <ul className="divide-y divide-line">
-            {unlistedMatters.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div className="min-w-0">
-                  <Link
-                    href={`/admin/matters/${m.id}`}
-                    className="font-medium text-ink hover:text-action hover:underline"
-                  >
-                    {m.title || "Untitled"}
-                  </Link>
-                  {m.services?.name && <p className="mt-0.5 text-xs text-ink-3">{m.services.name}</p>}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {m.status && (
-                    <Badge label={MATTER_STATUS_LABELS[m.status]} variant={matterStatusVariant(m.status)} />
-                  )}
-                  <UnlinkMatterButton matterId={m.id} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {/* Creating and linking stay, but as ACTIONS rather than as a table.
-          Jukka, meeting 1: "we want to move away from linking matters and
-          instead create matters within the property transfer immediately" — so
-          creating is first. Linking an existing matter stays because a PRC
-          opened months before anyone knew it belonged to this transaction still
-          has to be attachable, and no service line offers that today.
-
-          Native <details>: this is a server component, and a disclosure needs
-          no JavaScript to be one. */}
-      <Card padding="none">
-        <div className="space-y-4 px-5 py-4">
-          <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-action hover:underline">
-              <Plus className="h-4 w-4" /> Create a matter in this transfer
-            </summary>
-            <div className="mt-3">
-              <CreateMatterForm
-                services={(servicesData as { id: string; code: string; name: string }[] | null) ?? []}
-                clients={(clientsData as { id: string; full_name: string | null; business_name: string | null }[] | null) ?? []}
-                transfer={{
-                  id,
-                  reference: transfer.reference,
-                  municipality: transfer.municipality,
-                  property_description: transfer.property_description,
-                  parties: transferParties,
-                }}
-              />
+                  Both cards are deleted. What they did that the lines did not,
+                  the lines now do: "Open as matter" creates one against the line,
+                  "Track an existing matter" adopts one, and a matter of a service
+                  that some other line already tracks (a rates clearance re-run)
+                  is listed under its own line rather than in a card of its own.
+                  Nothing attached to this transfer is invisible on it. */}
+          <Card accent="service" padding="none">
+            <div className="px-5 py-4 border-b border-line">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+                {transferRollup.total > 0 && (
+                  <div className="w-full sm:w-56">
+                    <TransferProgressBar progress={transferRollup} />
+                  </div>
+                )}
+              </div>
             </div>
-          </details>
+            <TransferServices
+              transferId={id}
+              rows={serviceRows}
+              canManage
+              municipality={transfer.municipality}
+              linkableMatters={unlistedMatters.map((m) => ({
+                id: m.id,
+                title: m.title,
+                serviceName: m.services?.name ?? null,
+                serviceCode: m.services?.code ?? null,
+                status: m.status ?? null,
+              }))}
+            />
+          </Card>
 
-          <div className="border-t border-line pt-4">
-            <LinkMatterControl transferId={id} candidates={candidates} />
-          </div>
+          {/* 3 · Documents about the property itself — reused by every matter
+                  above instead of being fetched once per matter (034).
+                  nameSubject mirrors resolveTransferSubject() exactly, so the
+                  name previewed in the upload panel is the name the server
+                  stores. */}
+          <TransferDocuments
+            transferId={id}
+            docs={transferDocsWithUrls}
+            canManage
+            canDelete={isAdminRole(session.profile?.role)}
+            vaultOptions={vaultOptions}
+            sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
+            buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
+            nameSubject={transfer.property_description || transfer.reference}
+            municipality={transfer.municipality}
+          />
         </div>
-      </Card>
 
-      {/* What this transfer is about (056). Always rendered, linked or not —
-          a card that only appears when populated cannot say it is empty. */}
-      <TransferPropertyCard transferId={id} linked={linkedProperty} options={propertyOptions} />
+        {/* ── The side column: reference detail, not work ──────────────────── */}
+        <div className="min-w-0 space-y-6">
+          {/* The facts. Moved out of second place, where it separated the
+              parties from the services for no reason a reader would give. */}
+          <Card accent="service">
+            <DetailFields
+              primary={[
+                { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
+                { label: "Council", value: municipalityLabel(transfer.municipality) },
+                { label: "Attorney firm", value: transfer.attorney?.name ?? null, required: true },
+                { label: "Reference", value: transfer.reference },
+                // 077 — the Bert Smith cover sheet puts the price up front, so it
+                // sits with the headline fields rather than under "extra".
+                { label: "Purchase price", value: formatRands(transfer.purchase_price) },
+                { label: "Property", value: transfer.property_description, wide: true },
+              ]}
+              extra={[
+                { label: "Estate agency", value: transfer.estate_agent?.name ?? null },
+                { label: "Matters linked", value: String(linked.length) },
+                { label: "Opened", value: formatDate(transfer.created_at) },
+                { label: "Last updated", value: formatDate(transfer.updated_at) },
+                { label: "Notes", value: transfer.notes, wide: true },
+              ]}
+            />
+          </Card>
 
-      {/* Documents about the property itself — reused by every matter above
-          instead of being fetched once per matter (migration 034). */}
-      {/* nameSubject mirrors resolveTransferSubject() exactly, so the name
-          previewed in the upload panel is the name the server stores. */}
-      <TransferDocuments
-        transferId={id}
-        docs={transferDocsWithUrls}
-        canManage
-        canDelete={isAdminRole(session.profile?.role)}
-        vaultOptions={vaultOptions}
-        sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
-        buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
-        nameSubject={transfer.property_description || transfer.reference}
-        municipality={transfer.municipality}
-      />
+          {/* The attorney's original request (065) — "a new container just below
+              parties that gives us that info ... and we have the option to
+              dismiss it once we have used those details to capture the
+              parties". */}
+          {originRequest && <RequestHandover request={originRequest as unknown as HandoverRequest} />}
 
-      {/* The transaction's history + conversation, shared with the owning firm. */}
+          {/* What this transfer is about (056). Always rendered, linked or not —
+              a card that only appears when populated cannot say it is empty. */}
+          <TransferPropertyCard transferId={id} linked={linkedProperty} options={propertyOptions} />
+        </div>
+      </div>
+
+      {/* The transaction's history + conversation, shared with the owning firm.
+          Full width: it is a thread, and a thread in a third of the page wraps
+          every line to nothing. */}
       <TransferFeed
         transferId={id}
         activities={feed}
