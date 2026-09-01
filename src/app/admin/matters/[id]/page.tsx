@@ -776,6 +776,31 @@ export default async function AdminMatterDetailPage({
                 {matter.current_stage ? stageLabel(pipeline, matter.current_stage) : "Stage not set"}
               </span>
             </div>
+
+            {/* 🔒 STAFF ONLY. Rendered on the admin matter page and nowhere else
+                — not the partner matter page, not the client portal. Zewn,
+                2026-09-01: "make a note saying its a default pipeline so that
+                only conveyclear members can see the note and not attorneys or
+                clients."
+
+                It is a note about OUR build state, not about their matter. A
+                client reading it learns only that we have not mapped their
+                service yet, which is our problem to solve and not theirs to
+                carry. Staff need it because the stage names below are generic
+                and would otherwise look like the council's own. */}
+            {pipeline.isDefault && (
+              <div className="rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
+                <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-waiting">
+                  <Lock className="h-3 w-3" /> Default pipeline · ConveyClear only
+                </p>
+                <p className="mt-1 text-[13px] text-ink-2">
+                  {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"} has no mapped
+                  process yet, so this matter is running the general four-step one. The stages below are
+                  ours, not the council&apos;s. Progress still tracks and the client still sees where the
+                  matter is — they are not shown this note.
+                </p>
+              </div>
+            )}
             {/* The bar the overview and the client portal both show. The stepper
                 below says WHERE the matter is; the bar says HOW FAR, which is the
                 thing you want at a glance on a process measured in months. */}
@@ -862,12 +887,13 @@ export default async function AdminMatterDetailPage({
                 pipeline, so there is nothing to show until this matter says which it is.
               </p>
             ) : (
+              // Since the generic four-step fallback exists, this branch is
+              // reached only by a matter with NO SERVICE at all — there is
+              // nothing to run a process for, not even a default one.
               <p className="text-sm text-ink-3">
-                No pipeline configured for {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"}
-                {(matter as { service_subtype?: string | null }).service_subtype
-                  ? ` · ${(matter as { service_subtype?: string | null }).service_subtype}`
-                  : ""}{" "}
-                yet. Phase: {matter.current_phase ?? "—"} · Stage: {matter.current_stage ?? "—"}.
+                This matter has no service set, so it has no process to run. Set one on Edit and a
+                pipeline appears — the general four-step one, if this council and service have no
+                mapped process of their own.
               </p>
             )}
           </Card>

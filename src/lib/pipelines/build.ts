@@ -369,3 +369,75 @@ export function buildCouncilPipelines(municipality: string, councilName: string,
     buildRcc(municipality, councilName, short),
   ];
 }
+
+/**
+ * The GENERIC four-step pipeline, used for any (service, council) with no
+ * definition of its own.
+ *
+ * Zewn, 2026-09-01: "please can we try and create a general very basic 4 step
+ * pipeline for anything that doesnt have a pre-existing pipeline built in
+ * already."
+ *
+ * WHAT IT FIXES. Twelve pipelines now exist and they cover COO and the three
+ * rates-clearance stages at three councils. Everything else — EBP, COC, MAD, REF
+ * and OTHER, at every council — resolved to null, and a null pipeline is not a
+ * neutral state: the matter reports "No pipeline configured", draws no progress
+ * circles anywhere, cannot be advanced, and reads to a client as though nothing
+ * is happening. A placeholder that says "received → with the council → back from
+ * the council → done" is true of all of them, and is the difference between a
+ * matter that looks unstarted and one that looks in progress.
+ *
+ * DELIBERATELY SHALLOW. Four phases, one or two stages each, no decision
+ * outcomes and no failure vocabulary. Guessing at a service's real stages would
+ * put words in the council's mouth; this claims only what is true of any council
+ * request. When a service earns a real pipeline, add it to PIPELINES and it wins
+ * — nothing here has to be removed.
+ *
+ * 🔒 Marked `isDefault` so staff, and only staff, are told which matters are on
+ * it. See the flag's note in ./types.
+ */
+export function buildDefaultPipeline(serviceCode: string, municipality: string): Pipeline {
+  const council = municipality.toUpperCase();
+  // "the council" rather than its name: this pipeline is the one used where we
+  // have not mapped the council's own process, so naming it would imply we had.
+  return {
+    serviceCode: serviceCode.toUpperCase(),
+    municipality: council,
+    isDefault: true,
+    label: "General process",
+    prePhase: PRE_PHASE,
+    phases: [
+      {
+        key: "onboarding",
+        internalName: "Onboarding",
+        clientName: "Request Received",
+        clientVisible: true,
+        stages: [
+          { key: "documents_received", name: "Documents Received", clientVisible: true, ownerRole: "staff_services" },
+          { key: "documents_verified", name: "Documents Verified", clientVisible: true, ownerRole: "staff_services" },
+        ],
+      },
+      {
+        key: "operations",
+        internalName: "Operations",
+        clientName: "With the Council",
+        clientVisible: true,
+        stages: [
+          { key: "submitted", name: "Submitted to the council", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
+          { key: "pending_council", name: "Pending the council", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
+        ],
+      },
+      {
+        key: "client_delivery",
+        internalName: "Client Delivery",
+        clientVisible: false,
+        stages: [
+          { key: "outcome_received", name: "Outcome Received", clientVisible: true, ownerRole: "staff_delivery" },
+          { key: "delivered_to_client", name: "Delivered to Client", clientVisible: true, ownerRole: "staff_delivery" },
+        ],
+      },
+      OFFBOARDING,
+    ],
+    terminal: TERMINAL,
+  };
+}

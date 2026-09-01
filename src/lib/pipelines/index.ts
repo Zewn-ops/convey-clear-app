@@ -4,7 +4,7 @@ import { cotCoo } from "./cot-coo";
 import { cotRca } from "./cot-rca";
 import { cotRcf } from "./cot-rcf";
 import { cotRcc } from "./cot-rcc";
-import { buildCouncilPipelines } from "./build";
+import { buildCouncilPipelines, buildDefaultPipeline } from "./build";
 
 export * from "./types";
 
@@ -38,14 +38,31 @@ export function getPipeline(
   const svc = (serviceCode ?? "").toUpperCase();
   const muni = (municipality ?? "COT").toUpperCase();
   const sub = (subtype ?? "").toUpperCase() || undefined;
-  return (
-    PIPELINES.find(
-      (p) =>
-        p.serviceCode === svc &&
-        p.municipality === muni &&
-        (p.subtype ?? undefined) === (svc === "PRC" ? sub : undefined)
-    ) ?? null
+  const match = PIPELINES.find(
+    (p) =>
+      p.serviceCode === svc &&
+      p.municipality === muni &&
+      (p.subtype ?? undefined) === (svc === "PRC" ? sub : undefined)
   );
+  if (match) return match;
+
+  // No service code at all — a matter with no service cannot have a process.
+  if (!svc) return null;
+
+  // 🔴 PRC WITH NO STAGE STAYS NULL, and this is the one exception that matters.
+  //
+  // An RCA, an RCF and an RCC each have their own pipeline; which one applies is
+  // a question the matter can answer, by having its stage set. Falling back to
+  // the generic four steps here would answer it with a shrug — the matter would
+  // draw plausible progress circles, and the "choose a rates clearance stage"
+  // prompt that exists precisely to get the real pipeline would never appear.
+  // A missing stage is a gap in the DATA; the fallback below is for a gap in
+  // what has been BUILT, and they need different answers.
+  if (svc === "PRC" && !sub) return null;
+
+  // Everything else gets the generic four-step process rather than nothing.
+  // See buildDefaultPipeline for what it does and does not claim.
+  return buildDefaultPipeline(svc, muni);
 }
 
 export interface FlatStage {
