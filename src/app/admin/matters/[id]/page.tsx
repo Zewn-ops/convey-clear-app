@@ -53,8 +53,10 @@ import InPlaceFica from "@/components/matters/InPlaceFica";
 import SubmitButton from "@/components/ui/SubmitButton";
 import { buildFicaSubjects } from "@/lib/fica";
 import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
+import CouncilPortalDetails from "@/components/matters/CouncilPortalDetails";
 import {
   councilServiceSpec,
+  councilPartyFieldKeys,
   documentsOfClass,
   DOC_CLASSES,
   DOC_CLASS_LABELS,
@@ -928,6 +930,35 @@ export default async function AdminMatterDetailPage({
             )}
           </Card>
         )}
+        {/* ── Council portal details ───────────────────────────────────────────
+            One panel per party this council asks extra fields of — today the
+            BUYER on a City of Tshwane RCA, which is the eTshwane "Purchaser
+            details" screen from the handwritten notes (080 / §5.12).
+
+            Sits above the intake because it is read while filling the council's
+            portal, and the intake below is about files rather than fields.
+            Renders nothing anywhere else: councilPartyFieldKeys returns an empty
+            list when the council asks nothing extra. */}
+        {ficaSubjects.map((subj) => {
+          const keys = councilPartyFieldKeys(
+            matter.municipality,
+            svc?.code ?? null,
+            (matter as { service_subtype?: string | null }).service_subtype ?? null,
+            subj.partyRole ?? null
+          );
+          if (keys.length === 0) return null;
+          return (
+            <CouncilPortalDetails
+              key={subj.partyId ?? "matter-client"}
+              label={subj.label}
+              client={subj.client}
+              municipality={matter.municipality}
+              requiredKeys={keys}
+              partyEntity={subj.partyEntity ?? null}
+            />
+          );
+        })}
+
         {/* In-place intake — service-aware required-document checklist + upload
             (the primary capture method; renders null for non-COO/PRC services) */}
         <InPlaceIntake

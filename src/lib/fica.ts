@@ -189,6 +189,14 @@ export interface FicaSubjectData {
   consents: ConsentEvent[];
   directors: DirectorInput[];
   partyEntity?: string | null;
+  /**
+   * 'seller' | 'buyer' | … — 080/§5.12. `build()` has returned this since the
+   * council fields landed, but the interface did not declare it, so every
+   * consumer had to cast to reach it. Declared now: the council asks for the
+   * extra eTshwane fields of the BUYER only, and the role is how anything
+   * downstream knows which party that is.
+   */
+  partyRole?: string | null;
 }
 
 /**
