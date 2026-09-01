@@ -189,8 +189,15 @@ export function prcStageDocs(
   return out;
 }
 
-/** 'rca' / 'RCA ' / null → a stage the council registry recognises, or null. */
-function normalisePrcStage(stage?: string | null): PrcStageCode | null {
+/**
+ * 'rca' / 'RCA ' / null → a stage the council registry recognises, or null.
+ *
+ * Exported so that every writer of a PRC stage — the matter-creation route, the
+ * checklist line, the stage picker — validates against ONE list. The database
+ * has its own CHECK (072), and two disagreeing validators is how a value gets
+ * rejected at the far end of a form nobody expected to fail.
+ */
+export function normalisePrcStage(stage?: string | null): PrcStageCode | null {
   const up = (stage ?? "").trim().toUpperCase();
   return up === "RCA" || up === "RCF" || up === "RCC" ? up : null;
 }

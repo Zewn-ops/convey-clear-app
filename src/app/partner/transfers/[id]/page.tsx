@@ -16,7 +16,6 @@ import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib
 import { formatDate, municipalityLabel, formatRands } from "@/lib/utils";
 import {
   clientDisplayName,
-  MATTER_STATUS_LABELS,
   TRANSFER_STATUS_LABELS,
   type Matter,
   type MatterStatus,
@@ -34,7 +33,6 @@ import {
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
-import LinkMatterControl from "@/components/transfers/LinkMatterControl";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { DOC_UPLOADING_FIRM_TYPES } from "@/lib/transfer-upload-access";
@@ -221,18 +219,6 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
 
   const linked = (linkedData as LinkedMatter[] | null) ?? [];
 
-  // The firm's own matters not yet under any transfer — the pool this transfer
-  // can pull from. RLS (can_access_matter) already scopes these to the firm.
-  const { data: freeData } = await supabase
-    .from("matters")
-    .select("id, title, municipality, created_at")
-    .is("transfer_id", null)
-    .order("created_at", { ascending: false })
-    .limit(100);
-  const candidates = ((freeData as { id: string; title: string | null; municipality: string | null }[] | null) ?? []).map(
-    (m) => ({ id: m.id, label: m.title || `Untitled matter (${municipalityLabel(m.municipality)})` })
-  );
-
   // Transfer documents — the owning firm READS them (RLS: can_access_transfer)
   // but does not author them, matching how transfers themselves work (026).
   const { data: tdocData } = await supabase
@@ -279,7 +265,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   const unlistedMatters = linked.filter((m) => !trackedMatterIds.has(m.id));
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    // Width: was `max-w-4xl mx-auto`. See the note on the admin page — the
+    // client portal never capped this and that is the difference Zewn saw.
+    <div className="space-y-6">
       <div>
         <Link href="/partner/transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All property transfers
@@ -320,155 +308,114 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         </div>
       </div>
 
-      <Card>
-        <TransferParties
-          transferId={id}
-          parties={partyList}
-          entities={entityOptions}
-          firms={firmOptions}
-          canEdit
-          designatedMember={designatedMember}
-        />
-      </Card>
+      {/* Two columns, in the admin page's order and for the same reasons: work
+          on the left (parties, services, documents), reference detail on the
+          right. §5.13 exists because these two portals drift apart when only one
+          is edited — so they are restructured together. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
+          <Card>
+            <TransferParties
+              transferId={id}
+              parties={partyList}
+              entities={entityOptions}
+              firms={firmOptions}
+              canEdit
+              designatedMember={designatedMember}
+            />
+          </Card>
 
-      {/* Same two-tier card as the admin side. `notes` is deliberately NOT here:
-          it is ConveyClear's internal working note on the transaction, and the
-          admin card is the only place it belongs. */}
-      <Card>
-        <p className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Transaction</p>
-        <DetailFields
-          primary={[
-            { label: "Reference", value: transfer.reference },
-            { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
-            { label: "Council", value: municipalityLabel(transfer.municipality) },
-            // 077 — visible to the firm as well as staff. Zewn: "the sale price
-            // can be available to all, its just one number which is purchase
-            // price."
-            { label: "Purchase price", value: formatRands(transfer.purchase_price) },
-            { label: "Property", value: transfer.property_description, wide: true },
-          ]}
-          extra={[
-            { label: "Matters linked", value: String(linked.length) },
-            { label: "Opened", value: formatDate(transfer.created_at) },
-            { label: "Last updated", value: formatDate(transfer.updated_at) },
-          ]}
-        />
-      </Card>
+          {/* The umbrella (063), READ-ONLY here. Meeting §110 makes the transfer
+              the primary view for attorneys, so the firm sees the plan for the
+              transaction — but §122 has the markers set by ConveyClear, because
+              they decide what work we do. A firm marking its own clearance
+              "already done" would be telling us what to skip. Hence canManage is
+              not passed.
 
-      {/* The umbrella (063), READ-ONLY here. Meeting §110 makes the transfer the
-          primary view for attorneys, so the firm sees the plan for the
-          transaction — but §122 has the markers set by ConveyClear, because they
-          decide what work we do. A firm marking its own clearance "already done"
-          would be telling us what to skip. Hence canManage is not passed. */}
-      <Card padding="none" className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-line">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
-            {/* The roll-up sits with the checklist it is derived from, so the
-                number and the lines that produce it are read together. */}
-            {transferRollup.total > 0 && (
-              <div className="w-full sm:w-56">
-                <TransferProgressBar progress={transferRollup} />
-              </div>
-            )}
-          </div>
-        </div>
-        <TransferServices
-          transferId={id}
-          rows={serviceRows}
-          canMark={firmMayMarkServices}
-          matterHrefBase="/partner/matters"
-          municipality={transfer.municipality}
-        />
-      </Card>
-
-      {/* §5.2 / §5.13 — the same block as the admin page, at last.
-          `e7308e3` turned this into an exception list on 2026-08-28 and only
-          touched the admin file, so the two portals have shown the same data in
-          two different shapes ever since. That is the drift §5.13 exists to
-          catch, and Zewn named it directly: "we need to revisit how and why the
-          matters link to the prop trfs. currently its a bit all over the place
-          and messy."
-
-          Why an exception list rather than a table: the services checklist
-          above already lists every service, its progress and a link to the
-          matter realising it, so a table of the same matters is the same
-          information twice. What the checklist CANNOT show is a matter no
-          service line points at — a transfer legitimately carries two matters
-          of the same service (a rates clearance re-run), and the second
-          attaches to the transfer and to no line. Delete this and it is on the
-          transfer while being invisible on it.
-
-          ⚠️ This does NOT narrow what partners can see, which §5.6 asked to
-          widen. Every matter still appears above, with more detail than the
-          table carried; only the duplicate listing goes. */}
-      {unlistedMatters.length > 0 && (
-        <Card padding="none" className="overflow-hidden">
-          <div className="border-b border-line px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
-              Other matters on this transaction · {unlistedMatters.length}
-            </p>
-            <p className="mt-1 text-xs text-ink-3">
-              Attached to the transfer but not tracked by a service above — a
-              repeat of a service already listed, or one linked by hand.
-            </p>
-          </div>
-          <ul className="divide-y divide-line">
-            {unlistedMatters.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div className="min-w-0">
-                  <Link
-                    href={`/partner/matters/${m.id}`}
-                    className="font-medium text-ink hover:text-action hover:underline"
-                  >
-                    {m.title || "Untitled"}
-                  </Link>
-                  {m.services?.name && (
-                    <p className="mt-0.5 text-xs text-ink-3">{m.services.name}</p>
-                  )}
-                </div>
-                {m.status && (
-                  <StatusPill
-                    tone={
-                      ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
-                        m.status
-                      ] ?? "neutral"
-                    }
-                  >
-                    {MATTER_STATUS_LABELS[m.status]}
-                  </StatusPill>
+              As on the admin page, this is now the ONLY place matters appear.
+              The "Other matters on this transaction" card and the "Link a
+              matter" control below it are both gone (2026-09-01) — untracked
+              matters are listed under the service line they belong to. */}
+          <Card padding="none" className="overflow-hidden">
+            <div className="px-5 py-4 border-b border-line">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Services in this transfer</p>
+                {/* The roll-up sits with the checklist it is derived from, so the
+                    number and the lines that produce it are read together. */}
+                {transferRollup.total > 0 && (
+                  <div className="w-full sm:w-56">
+                    <TransferProgressBar progress={transferRollup} />
+                  </div>
                 )}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+              </div>
+            </div>
+            <TransferServices
+              transferId={id}
+              rows={serviceRows}
+              canMark={firmMayMarkServices}
+              matterHrefBase="/partner/matters"
+              municipality={transfer.municipality}
+              // Read-only for the firm: the adopt control is staff-gated inside
+              // the component (canManage), so passing the list here only makes
+              // the untracked matters visible, which is what the deleted card
+              // did.
+              linkableMatters={unlistedMatters.map((m) => ({
+                id: m.id,
+                title: m.title,
+                serviceName: m.services?.name ?? null,
+                serviceCode: m.services?.code ?? null,
+                status: m.status ?? null,
+              }))}
+            />
+          </Card>
 
-      {/* The firm attaches its own referred matters (Meeting 2). Server route
-          re-checks both matter and transfer belong to this firm. */}
-      <Card padding="none">
-        <div className="px-5 py-4">
-          <LinkMatterControl transferId={id} candidates={candidates} endpoint="/api/partner/transfers/link" />
+          {/* The firm uploads (attorney firms only, §112) but does not manage:
+              staff approve, share and archive. The route enforces both halves —
+              this only decides whether to draw the control.
+              nameSubject mirrors resolveTransferSubject() exactly, so the name
+              previewed in the upload panel is the name the server stores. */}
+          <TransferDocuments
+            transferId={id}
+            docs={transferDocsWithUrls}
+            canManage={false}
+            canUpload={firmMayUpload}
+            sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
+            buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
+            nameSubject={transfer.property_description || transfer.reference}
+            municipality={transfer.municipality}
+          />
         </div>
-      </Card>
 
-      {/* The firm uploads (attorney firms only, §112) but does not manage: staff
-          approve, share and archive. The route enforces both halves — this only
-          decides whether to draw the control. */}
-      {/* nameSubject mirrors resolveTransferSubject() exactly, so the name
-          previewed in the upload panel is the name the server stores. */}
-      <TransferDocuments
-        transferId={id}
-        docs={transferDocsWithUrls}
-        canManage={false}
-        canUpload={firmMayUpload}
-        sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
-        buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
-        nameSubject={transfer.property_description || transfer.reference}
-        municipality={transfer.municipality}
-      />
+        <div className="min-w-0 space-y-6">
+          {/* Same two-tier card as the admin side. `notes` is deliberately NOT
+              here: it is ConveyClear's internal working note on the transaction,
+              and the admin card is the only place it belongs. */}
+          <Card>
+            <p className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Transaction</p>
+            <DetailFields
+              primary={[
+                { label: "Reference", value: transfer.reference },
+                { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
+                { label: "Council", value: municipalityLabel(transfer.municipality) },
+                // 077 — visible to the firm as well as staff. Zewn: "the sale price
+                // can be available to all, its just one number which is purchase
+                // price."
+                { label: "Purchase price", value: formatRands(transfer.purchase_price) },
+                { label: "Property", value: transfer.property_description, wide: true },
+              ]}
+              extra={[
+                { label: "Matters linked", value: String(linked.length) },
+                { label: "Opened", value: formatDate(transfer.created_at) },
+                { label: "Last updated", value: formatDate(transfer.updated_at) },
+              ]}
+            />
+          </Card>
+        </div>
+      </div>
 
-      {/* …but the firm DOES post to the feed — it is the shared channel. */}
+      {/* …but the firm DOES post to the feed — it is the shared channel.
+          Full width: a thread in a third of the page wraps every line to
+          nothing. */}
       <TransferFeed
         transferId={id}
         activities={feed}

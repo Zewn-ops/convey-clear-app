@@ -897,8 +897,14 @@ export default function TransferParties({
           agent: "parties should only be targeted toward people making
           accounts". Estate agencies have no portal role at all (026:44), so
           their agents are not users and never will be under that rule. The
-          role is NOT deleted — it moves to the list below. */}
-      <ul className="space-y-2.5">
+          role is NOT deleted — it moves to the list below.
+
+          2026-09-01: TWO COLUMNS on a wide screen. The Bert Smith cover sheet
+          (the layout source, notes §7) puts SELLER and PURCHASER side by side,
+          which is how an attorney reads a transaction — two parties facing each
+          other, not a queue. One column below `lg`, where side-by-side would
+          just make both halves too narrow to read. */}
+      <ul className="grid gap-2.5 lg:grid-cols-2">
         {HEADLINE_ROLES.map((r) => {
           const p = parties.find((x) => x.role === r.value);
           if (p) return renderPartyRow(p);

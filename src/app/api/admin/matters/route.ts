@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logMatterActivity, logTransferActivity } from "@/lib/activity";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { getPipeline } from "@/lib/pipelines";
+import { normalisePrcStage } from "@/lib/prc-docs";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { isStaffRole, composeFullName, type UserRole } from "@/types";
 import { firePortalIntake } from "@/lib/n8n";
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
     email?: string;
     cell?: string;
     service_id?: string;
+    /** PRC only — RCA | RCF | RCC. Inherited from the checklist line when absent. */
+    service_subtype?: string | null;
     municipality?: string;
     property_description?: string;
     priority?: string;
@@ -136,7 +139,50 @@ export async function POST(request: Request) {
   const title = buildMatterTitle({
     municipality: body.municipality, serviceCode, clientName, property: body.property_description,
   });
-  const pipeline = getPipeline(serviceCode, body.municipality);
+
+  // ── The PRC stage (RCA | RCF | RCC) ────────────────────────────────────────
+  //
+  // 🔴 THE BUG THIS FIXES. `matters.service_subtype` (021) was read in ten
+  // places and written in none, so EVERY PRC matter carried NULL. getPipeline()
+  // requires the subtype to match for PRC, so `cot-rcf` and `cot-rcc` could
+  // never resolve — the matter said "No pipeline configured" while the pipeline
+  // sat right there — and InPlaceIntake fell to "Stage not chosen" and listed no
+  // documents. One null field, both symptoms.
+  //
+  // The stage is chosen on the transfer's service checklist (075's
+  // transfer_services.prc_subtype). It has to reach the matter, so read it off
+  // the line this matter is about to adopt. The line is resolved BEFORE the
+  // insert (rather than updated blindly afterwards) precisely so its subtype can
+  // be copied down in the same breath, and so the adoption targets one known row
+  // instead of "whichever lines happen to match".
+  //
+  // An explicit body.service_subtype wins, for a matter created outside any
+  // transfer — there is no line to inherit from there.
+  const isPrc = serviceCode.toUpperCase() === "PRC";
+  let adoptLineId: string | null = null;
+  let subtype: string | null = normalisePrcStage(body.service_subtype);
+  if (transferId && serviceCode) {
+    // Matching is by SERVICE CODE, and only onto a line that has no matter yet —
+    // a transfer can legitimately carry two matters of the same service (a rates
+    // clearance re-run after a failed one), and the first is the one the
+    // checklist is tracking.
+    const { data: line } = await admin
+      .from("transfer_services")
+      .select("id, prc_subtype")
+      .eq("transfer_id", transferId)
+      .eq("service_code", serviceCode.toUpperCase())
+      .is("parent_id", null)
+      .is("matter_id", null)
+      .order("position", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (line) {
+      adoptLineId = line.id as string;
+      if (!subtype) subtype = normalisePrcStage((line as { prc_subtype?: string | null }).prc_subtype);
+    }
+  }
+
+  const pipeline = getPipeline(serviceCode, body.municipality, subtype);
 
   const { data: matter, error: mErr } = await admin.from("matters").insert({
     client_id: clientId,
@@ -147,6 +193,10 @@ export async function POST(request: Request) {
     priority: body.priority || "standard",
     municipality: body.municipality || null,
     service_notes: body.notes || null,
+    // Only ever set on a PRC matter: the column means the rates-clearance stage
+    // and nothing else, so writing it on a COO would be a lie the pipeline
+    // resolver happens to ignore today.
+    service_subtype: isPrc ? subtype : null,
     current_owner_id: me?.id ?? null,
     transfer_id: transferId,
   }).select("id").single();
@@ -154,19 +204,13 @@ export async function POST(request: Request) {
 
   // Attach the new matter to its line on the transfer's service checklist (063),
   // so the umbrella shows progress without anyone having to link the two by hand.
-  //
-  // Matching is by SERVICE CODE, and only onto a line that has no matter yet —
-  // a transfer can legitimately carry two matters of the same service (a rates
-  // clearance re-run after a failed one), and the first is the one the checklist
-  // is tracking. Best-effort on purpose: a checklist that has not been created,
-  // or a service with no line item, must not fail the matter creation.
-  if (transferId && serviceCode) {
+  // Best-effort on purpose: a checklist that has not been created, or a service
+  // with no line item, must not fail the matter creation.
+  if (adoptLineId) {
     await admin
       .from("transfer_services")
       .update({ matter_id: matter.id })
-      .eq("transfer_id", transferId)
-      .eq("service_code", serviceCode.toUpperCase())
-      .is("parent_id", null)
+      .eq("id", adoptLineId)
       .is("matter_id", null);
   }
 

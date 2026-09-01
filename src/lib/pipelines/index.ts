@@ -1,16 +1,17 @@
 import type { Pipeline, PipelinePhase, PipelineStage } from "./types";
 import { phaseClientName } from "./types";
 import { cotCoo } from "./cot-coo";
+import { cotRca } from "./cot-rca";
 import { cotRcf } from "./cot-rcf";
 import { cotRcc } from "./cot-rcc";
 
 export * from "./types";
 
 // Registry of all defined pipelines. Add COJ/COE variants here as they land.
-export const PIPELINES: Pipeline[] = [cotCoo, cotRcf, cotRcc];
+export const PIPELINES: Pipeline[] = [cotCoo, cotRca, cotRcf, cotRcc];
 
-// Resolve a pipeline for a matter. PRC (service code RCF) splits on subtype
-// (RCF/RCC); COO has no subtype. Municipality defaults to COT (the only set
+// Resolve a pipeline for a matter. PRC splits on subtype (RCA/RCF/RCC); COO has
+// no subtype. Municipality defaults to COT (the only set
 // defined so far) — returns null when no definition exists so callers can fall
 // back gracefully.
 export function getPipeline(

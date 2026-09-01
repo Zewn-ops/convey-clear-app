@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { ClipboardCheck, CheckCircle2, AlertTriangle, Plus, X, ShieldAlert } from "lucide-react";
@@ -76,6 +77,7 @@ export default function InPlaceFica({
   municipality = null,
   serviceCode = null,
   prcStage = null,
+  contact = null,
 }: {
   matterId: string;
   subjects: FicaSubject[];
@@ -84,6 +86,17 @@ export default function InPlaceFica({
   municipality?: string | null;
   serviceCode?: string | null;
   prcStage?: string | null;
+  /**
+   * The matter's client, shown as a contact strip above the capture list.
+   *
+   * Zewn, 2026-09-01: "this is also duplicated data in 2 sections please fix" —
+   * a "Client" card carrying name / email / cell sat immediately above this one,
+   * which opens by naming the same person and listing what is still missing from
+   * their record. Two cards, one subject. The contact details moved in here
+   * because this is the card that DOES something with them; the other was a
+   * read-only restatement.
+   */
+  contact?: { name: string; email?: string | null; cell?: string | null; profileHref?: string | null } | null;
 }) {
   // Party-based subjects now live INSIDE their own party card (PartiesCard), so
   // capturing a buyer's details is one continuous move from reading their name
@@ -91,18 +104,52 @@ export default function InPlaceFica({
   // What is left here is the matter's OWN client — the single-client services,
   // which have no party card to live in.
   const own = subjects.filter((s) => s.partyId === null);
-  if (own.length === 0) return null;
+  // On a COO the subjects are party-based and live in the party cards, so there
+  // is nothing to capture here — but the contact strip is still this card's to
+  // show, now that it absorbed the Client card. Only render nothing when there
+  // is neither.
+  if (own.length === 0 && !contact) return null;
 
   return (
     <Card accent="client">
-      <div className="mb-1 flex items-center gap-2">
-        <ClipboardCheck className="h-4 w-4 text-action" />
-        <h2 className="font-semibold text-ink">Client details &amp; consent</h2>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 text-action" />
+          <h2 className="font-semibold text-ink">{own.length ? "Client details & consent" : "Client"}</h2>
+        </div>
+        {contact?.profileHref && (
+          <Link href={contact.profileHref} className="text-xs text-action hover:underline">
+            View profile
+          </Link>
+        )}
       </div>
-      <p className="mb-3 text-xs text-ink-3">
-        The details and consent the onboarding link used to collect. Capture them here to complete the matter without
-        sending one.
-      </p>
+      {own.length > 0 && (
+        <p className="mb-3 text-xs text-ink-3">
+          The details and consent the onboarding link used to collect. Capture them here to complete the matter without
+          sending one.
+        </p>
+      )}
+
+      {contact && (
+        <dl className="mb-3 grid grid-cols-1 gap-3 border-b border-line pb-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-xs text-ink-3">Name</dt>
+            <dd className="mt-0.5 font-medium text-ink">{contact.name}</dd>
+          </div>
+          {contact.email && (
+            <div className="min-w-0">
+              <dt className="text-xs text-ink-3">Email</dt>
+              <dd className="mt-0.5 truncate text-ink">{contact.email}</dd>
+            </div>
+          )}
+          {contact.cell && (
+            <div>
+              <dt className="text-xs text-ink-3">Cell</dt>
+              <dd className="mt-0.5 text-ink">{contact.cell}</dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       <div className="divide-y divide-line">
         {own.map((s) => (
