@@ -4,11 +4,27 @@ import { cotCoo } from "./cot-coo";
 import { cotRca } from "./cot-rca";
 import { cotRcf } from "./cot-rcf";
 import { cotRcc } from "./cot-rcc";
+import { buildCouncilPipelines } from "./build";
 
 export * from "./types";
 
-// Registry of all defined pipelines. Add COJ/COE variants here as they land.
-export const PIPELINES: Pipeline[] = [cotCoo, cotRca, cotRcf, cotRcc];
+// Registry of all defined pipelines.
+//
+// COT's four are transcribed from the Vision Board 2026-06-22 and live in their
+// own files. CoE's and CoJ's are DERIVED from them — the handwritten sheets
+// describe the three councils as one process with per-council issue lists ("SAME
+// AS COT", "same as CoE"), which is the §5.15 decision made real. See ./build.ts.
+//
+// Before 2026-09-01 this held COT only, so getPipeline() returned null for every
+// matter at the other two councils and their matters drew no phases at all.
+export const PIPELINES: Pipeline[] = [
+  cotCoo,
+  cotRca,
+  cotRcf,
+  cotRcc,
+  ...buildCouncilPipelines("COE", "City of Ekurhuleni", "CoE"),
+  ...buildCouncilPipelines("COJ", "City of Johannesburg", "CoJ"),
+];
 
 // Resolve a pipeline for a matter. PRC splits on subtype (RCA/RCF/RCC); COO has
 // no subtype. Municipality defaults to COT (the only set

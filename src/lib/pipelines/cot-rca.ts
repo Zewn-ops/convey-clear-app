@@ -1,4 +1,5 @@
 import type { Pipeline } from "./types";
+import { COUNCIL_ISSUES } from "./build";
 
 // City of Tshwane — Property Rates Clearance, RCA (Rates Clearance Application).
 //
@@ -61,22 +62,16 @@ export const cotRca: Pipeline = {
               // reasons they stall a memo. "Missing meter readings" is added
               // because the RCA is the step that captures them (§2.1: METER
               // READING (W + E) sits on the RCA line, not the RCF's).
-              reasons: [
-                { key: "estimated_readings", label: "Estimated readings" },
-                { key: "missing_meter_readings", label: "Missing meter readings" },
-                { key: "billing", label: "Billing" },
-                { key: "pending_journals", label: "Pending Journals" },
-                { key: "system_error", label: "System Error" },
-              ],
+              reasons: COUNCIL_ISSUES.applicationDelayed,
             },
             {
               key: "application_rejected",
               label: "Application Rejected",
               clientVisible: true,
               reasons: [
-                { key: "incorrect_account", label: "Wrong account" },
+                { key: "wrong_account", label: "Wrong account" },
                 { key: "documents_insufficient", label: "Documents insufficient" },
-                { key: "mistake_on_application", label: "Mistake on application" },
+                { key: "mistake_on_application", label: "Mistake on application (incorrect details)" },
               ],
             },
           ],
