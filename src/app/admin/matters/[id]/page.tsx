@@ -23,7 +23,6 @@ import {
   type TransferDocument,
 } from "@/types";
 import { ArrowLeft, FileText, MessageSquare, ArrowUpCircle, UploadCloud, Mail, Settings, Lock, User, Workflow } from "lucide-react";
-import CollectFicaButton from "@/components/admin/CollectFicaButton";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
 import MatterPocsCard from "@/components/matters/MatterPocsCard";
@@ -32,7 +31,7 @@ import PhaseProgress from "@/components/ui/PhaseProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import CouncilPackButton from "@/components/matters/CouncilPackButton";
 import Celebrate from "@/components/matters/Celebrate";
-import MatterEnquiries from "@/components/enquiries/MatterEnquiries";
+import MatterFeed from "@/components/matters/MatterFeed";
 import { getMatterEnquiries } from "@/lib/enquiries";
 import { notifyMatterParties, notifyStaff } from "@/lib/notify";
 import {
@@ -895,7 +894,6 @@ export default async function AdminMatterDetailPage({
             <div className="flex flex-wrap items-center gap-3">
               {documents.length > 0 && <CouncilPackButton matterId={id} />}
               <StorageUpload matterId={id} />
-              <CollectFicaButton matterId={id} fica={!isCoo} />
             </div>
           </div>
           {docGroup("Client / business-partner uploads", clientPartnerDocs)}
@@ -1032,81 +1030,22 @@ export default async function AdminMatterDetailPage({
 
       {/* Celebration when the matter is won/closed (H2) */}
       <Celebrate active={matter.status === "won"} matterId={matter.id} />
-      {/* Enquiries — the shared client/partner/CC thread (A&A #3). Read + post
-          in place; the activity feed below stays internal. */}
-      <MatterEnquiries matterId={id} threads={enquiryThreads} audience="staff" />
-      {/* Internal activity feed. Named for its AUDIENCE, not its content (Jukka,
-          meeting 1): staff kept having to remember which of the two threads on
-          this page the partner firm can see. The enquiry thread above is the
-          shared one; everything here is ours. */}
-      <div>
-        <div className="mb-3 flex items-center gap-1.5">
-          <Lock className="h-3.5 w-3.5 text-ink-3" />
-          <h2 className="font-semibold text-ink">Internal Activity Feed</h2>
-        </div>
-        <p className="-mt-2 mb-3 text-xs text-ink-3">
-          ConveyClear only. Notes here are never shown to the client or the partner firm — use Matter Enquiries above to
-          talk to them.
-        </p>
+      {/* Conversation + Activity, in the property-transfer page's shape.
+          Zewn, 2026-09-01: "remove the matter enquiries and copy the prop trfs
+          chat and activity feed section to matters."
 
-        {/* Post note form */}
-        <form action={postNote} className="mb-4">
-          <input type="hidden" name="matter_id" value={id} />
-          <input type="hidden" name="author_id" value={authorId ?? ""} />
-          <div className="flex gap-2">
-            <textarea
-              name="body"
-              rows={2}
-              placeholder="Add a note or update..."
-              className="bg-surface text-ink flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E6B] resize-none"
-            />
-            <SubmitButton
-              pendingLabel="Posting…"
-              className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 transition-colors self-end"
-            >
-              Post
-            </SubmitButton>
-          </div>
-        </form>
-
-        {activities.length > 0 ? (
-          <Card accent="internal" padding="none">
-            <ul className="divide-y divide-line">
-              {activities.map((a) => {
-                const authorName = (a.users as any)?.full_name ?? a.author_label ?? "System";
-                // Internal = not in the external-safe set (mirrors the partner-page
-                // whitelist). Staff see these on a grey background so it's obvious
-                // at a glance what the client/partner can and cannot see.
-                const isInternal = !["status_change", "document_upload", "phase_transition", "poa_signed"].includes(a.activity_type);
-                return (
-                  <li key={a.id} className={"flex gap-3 px-5 py-4 " + (isInternal ? "bg-raised" : "")}>
-                    <div className="mt-0.5 shrink-0">
-                      <ActivityIcon type={a.activity_type} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-ink">{a.body || a.activity_type}</p>
-                        {isInternal && (
-                          <span className="shrink-0 rounded bg-raised px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-2" title="Not visible to client or business partner">
-                            Internal
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-ink-3 mt-1">
-                        {authorName} · {formatDateTime(a.created_at)}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        ) : (
-          <Card accent="internal" className="text-center py-8">
-            <p className="text-sm text-ink-3">No activity yet</p>
-          </Card>
-        )}
-      </div>
+          Replaces two stacked sections — the MatterEnquiries ticket list and the
+          Internal Activity Feed. The tabs read DIFFERENT tables on purpose: the
+          conversation is the shared enquiry thread (client + firm + us), the
+          activity is staff-only. See the note in MatterFeed for why the smaller
+          version of this change would have sent messages nobody could read. */}
+      <MatterFeed
+        matterId={id}
+        threads={enquiryThreads}
+        activities={activities}
+        audience="staff"
+        firmName={firm?.name ?? null}
+      />
     </div>
   );
 }

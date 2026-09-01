@@ -312,7 +312,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           on the left (parties, services, documents), reference detail on the
           right. §5.13 exists because these two portals drift apart when only one
           is edited — so they are restructured together. */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
           <Card>
             <TransferParties
@@ -410,19 +410,20 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               ]}
             />
           </Card>
+
+          {/* …but the firm DOES post to the feed — it is the shared channel.
+              In the right column for the same reason as the admin page: the
+              documents panel is tall, the reference cards are short, and the
+              thread is the section that grows to fill what is left. */}
+          <TransferFeed
+            transferId={id}
+            activities={feed}
+            canPost
+            viewerSide="firm"
+            firmName={transfer.attorney?.name ?? null}
+          />
         </div>
       </div>
-
-      {/* …but the firm DOES post to the feed — it is the shared channel.
-          Full width: a thread in a third of the page wraps every line to
-          nothing. */}
-      <TransferFeed
-        transferId={id}
-        activities={feed}
-        canPost
-        viewerSide="firm"
-        firmName={transfer.attorney?.name ?? null}
-      />
     </div>
   );
 }
