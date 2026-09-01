@@ -33,8 +33,8 @@ interface Row {
   updated_at: string;
 }
 
-function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s] ?? "info";
+function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s] ?? "info";
 }
 
 export default async function ClientTransfersPage() {

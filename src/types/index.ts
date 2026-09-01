@@ -422,11 +422,24 @@ export interface Firm {
  * can read it and upload to it; a CLIENT cannot see it at all, and it is not
  * live work. Approval moves it to `open`.
  */
-export type TransferStatus = "draft" | "open" | "registered" | "cancelled" | "on_hold";
+export type TransferStatus =
+  | "draft"
+  | "open"
+  | "registered"
+  | "cancelled"
+  | "on_hold"
+  /**
+   * 084 — this transfer should never have existed: a typo, a duplicate, a
+   * test. Distinct from `cancelled`, which means the transaction genuinely
+   * died and the firm and client are still owed the record. An archived
+   * transfer is staff-only; a cancelled one is not.
+   */
+  | "archived";
 
 export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
   draft: "Draft — awaiting approval",
   open: "Open",
+  archived: "Archived",
   registered: "Registered",
   cancelled: "Cancelled",
   on_hold: "On Hold",

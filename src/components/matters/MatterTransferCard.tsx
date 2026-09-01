@@ -20,8 +20,8 @@ export interface LinkedTransfer {
   status: TransferStatus;
 }
 
-function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
+function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s];
 }
 
 // The matter's place in a bigger property transaction (migration 026). Staff can

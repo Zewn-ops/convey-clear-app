@@ -41,8 +41,8 @@ import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
+function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s];
 }
 function matterStatusVariant(s: string): "info" | "success" | "danger" | "warning" | "gray" {
   return ({ new: "warning", open: "info", won: "success", lost: "danger", archived: "gray", on_hold: "warning" } as const)[
@@ -299,7 +299,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           </div>
           <StatusPill
             tone={
-              ({ draft: "waiting", open: "action", registered: "ok", cancelled: "danger", on_hold: "waiting" } as Record<string, StatusTone>)[
+              ({ draft: "waiting", open: "action", registered: "ok", cancelled: "danger", on_hold: "waiting", archived: "neutral" } as Record<string, StatusTone>)[
                 transfer.status
               ] ?? "neutral"
             }

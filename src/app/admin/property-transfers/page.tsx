@@ -34,8 +34,8 @@ import EmptyState from "@/components/ui/EmptyState";
 export const metadata = { title: "Property Transfers — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
 
-function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" {
-  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning" } as const)[s];
+function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
+  return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s];
 }
 
 type TransferRow = PropertyTransfer & {
@@ -74,7 +74,15 @@ export default async function AdminTransfersPage({
     .from("property_transfers")
     .select("*, firms!property_transfers_business_partner_id_fkey(name)", { count: "exact" })
     .order("created_at", { ascending: false });
+  // 084 — an ARCHIVED transfer is out of the working list unless it is asked
+  // for by name. Archived means "should never have existed", so leaving it in
+  // the default view would defeat the point of having the state at all.
+  //
+  // CANCELLED is deliberately NOT hidden. A dead transaction is a real thing
+  // that staff still refer to, and a queue that quietly forgets sales that
+  // fell through is how someone re-opens work that was already abandoned.
   if (filters.type) query = query.eq("status", filters.type);
+  else query = query.neq("status", "archived");
   if (muni) query = query.eq("municipality", muni);
   if (firmId) query = query.eq("business_partner_id", firmId);
   if (filters.scope === "month") query = query.gte("created_at", startOfMonthISO());
