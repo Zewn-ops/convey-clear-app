@@ -67,7 +67,19 @@ export default function MatterCard({
 }) {
   const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
   const steps = pl ? phaseSteps(pl) : [];
-  const idx = pl ? phaseOrder(pl, m.current_phase) : -1;
+  // 🔴 A NULL PHASE IS THE PRE-PHASE, not "no pipeline".
+  //
+  // phaseOrder returns -1 for a missing key, and the stepper below was hidden on
+  // that. Matters created while their pipeline did not exist were written with
+  // current_phase NULL — every EBP, COC, MAD and REF, and every PRC that had no
+  // stage — so the moment those gained a pipeline (the default one, and the PRC
+  // stage fix) the DETAIL page drew six phases and the LIST drew none. Found on
+  // production 2026-09-01.
+  //
+  // Fixed here rather than by backfilling the column: a matter that has a
+  // pipeline and no recorded phase IS at the start of it, and saying so in the
+  // one place that reads it beats writing a value to every historic row.
+  const idx = pl ? Math.max(phaseOrder(pl, m.current_phase), m.current_phase ? -1 : 0) : -1;
 
   const open = workdaysSince(m.created_at);
   const seen = relativeDays(m.updated_at);

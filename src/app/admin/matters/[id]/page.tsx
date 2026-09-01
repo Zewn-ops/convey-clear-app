@@ -594,7 +594,12 @@ export default async function AdminMatterDetailPage({
   // implementations of one progress figure will drift and then disagree about
   // the same matter in front of the same person.
   const pipelineSteps = pipeline ? phaseSteps(pipeline) : [];
-  const pipelineIdx = pipeline ? phaseOrder(pipeline, matter.current_phase) : -1;
+  // A null phase is the pre-phase, not "no pipeline" — see the note in
+  // MatterCard. Here it decides whether the progress BAR draws; the stepper
+  // below already rendered, so the two disagreed on the same page.
+  const pipelineIdx = pipeline
+    ? Math.max(phaseOrder(pipeline, matter.current_phase), matter.current_phase ? -1 : 0)
+    : -1;
   const hasPipelineProgress = pipeline !== null && pipelineIdx >= 0;
   // Stop-gate (Meeting 2, 2026-08-06). Computed here rather than only enforced
   // in the action so the controls can be disabled WITH a reason — a control that
