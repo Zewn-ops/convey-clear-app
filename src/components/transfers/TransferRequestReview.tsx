@@ -86,7 +86,9 @@ export default function TransferRequestReview({
             disabled={busy || !reference.trim()}
             className="px-3 py-2 text-sm font-medium bg-ok-fill text-white rounded-lg hover:bg-ok-fill/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {busy ? "Creating…" : "Create transfer"}
+            {/* "Approve and open", not "Create transfer": since 083 the draft is
+                already there, and this is the step that accepts it. */}
+            {busy ? "Opening…" : "Approve and open"}
           </button>
           <button type="button" onClick={() => setMode("idle")} disabled={busy} className="px-3 py-2 text-sm text-ink-3 hover:text-ink-2">
             Cancel
