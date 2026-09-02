@@ -216,3 +216,22 @@ export function councilAsksRatesScope(
 ): boolean {
   return getCouncil(municipality)?.ratesScope ?? false;
 }
+
+/**
+ * Which councils ask the FIRM for a given document, derived rather than typed.
+ *
+ * 🔴 THIS EXISTS BECAUSE THE TYPED VERSION WAS WRONG. `FIRM_DOC_TYPES.askedBy`
+ * was transcribed off the COT and CoE sheets, and COJ — which is CoE plus two
+ * fields, and therefore asks for every one of CoE's firm documents — appeared
+ * against none of them. Zewn, 2026-09-02: "this doesnt show COJ on any of the
+ * docs, is there a reason for that?"
+ *
+ * Reading `firmRequirements` means a council added or derived tomorrow labels
+ * itself, and "same as CoE" is true in the interface as well as in the config.
+ * Returns council CODES in registry order, so the display is stable.
+ */
+export function councilsAskingForFirmDoc(docCode: string): string[] {
+  return COUNCILS.filter((c) => c.firmRequirements.documents.includes(docCode)).map(
+    (c) => c.code
+  );
+}

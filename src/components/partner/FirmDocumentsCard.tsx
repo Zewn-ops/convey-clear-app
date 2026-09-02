@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import Select from "@/components/ui/Select";
 import { FileText, Upload, Check } from "lucide-react";
 import { FIRM_DOC_TYPES, firmDocLabel } from "@/lib/firm-docs";
+import { councilsAskingForFirmDoc } from "@/lib/councils";
 
 export interface FirmDocumentRow {
   id: string;
@@ -127,7 +128,14 @@ export default function FirmDocumentsCard({
                 </p>
               </div>
               <span className="shrink-0 mono text-[10px] font-bold uppercase tracking-[0.11em] text-ink-3">
-                {t.askedBy.join(" · ")}
+                {/* Derived from the council registry, not from the typed
+                    askedBy list — COJ is CoE by derivation and was showing on
+                    nothing (2026-09-02). Falls back to the transcription if a
+                    code is not in the registry at all. */}
+                {(councilsAskingForFirmDoc(t.code).length
+                  ? councilsAskingForFirmDoc(t.code)
+                  : t.askedBy
+                ).join(" · ")}
               </span>
             </div>
           );

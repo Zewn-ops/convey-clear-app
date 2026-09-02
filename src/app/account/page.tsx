@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { getSessionProfile, homePathForRole } from "@/lib/auth";
-import { ROLE_LABELS, isStaffRole } from "@/types";
+import { ROLE_LABELS, isPartnerRole, isStaffRole } from "@/types";
 import Card from "@/components/ui/Card";
 import ChangePasswordForm from "@/components/auth/ChangePasswordForm";
 import MfaCard from "@/components/auth/MfaCard";
@@ -32,6 +32,36 @@ export default async function AccountPage() {
     notify_email: boolean | null;
   } | null;
   const phone = meRow?.phone ?? "";
+
+  // 🔴 "Business Partner" is OUR word for the table, not theirs for themselves.
+  //
+  // Zewn, 2026-09-02: "remove business partner from the subtitle, add attorney
+  // and which firm they are from." An attorney reading their own account page
+  // was told they are a business partner — a role name out of `users.role` that
+  // means something in the schema and nothing to the person holding it. What
+  // they recognise is what they do and who they do it for.
+  //
+  // Read with the service role: `firms` is not self-readable through the users
+  // table embed, and the same read on the partner LAYOUT already does this.
+  let subtitleRole = profile?.role ? ROLE_LABELS[profile.role] : null;
+  if (isPartnerRole(profile?.role)) {
+    const firmName = profile?.business_partner_id
+      ? ((
+          await createAdminClient()
+            .from("firms")
+            .select("name, partner_type")
+            .eq("id", profile.business_partner_id)
+            .maybeSingle()
+        ).data as { name: string | null; partner_type: string | null } | null)
+      : null;
+    // "Attorney" unless the firm says otherwise — an estate agency on the same
+    // role should not be called one (059, §112).
+    const kind =
+      firmName?.partner_type && firmName.partner_type !== "attorney"
+        ? firmName.partner_type.replace(/_/g, " ")
+        : "Attorney";
+    subtitleRole = [kind, firmName?.name].filter(Boolean).join(" · ");
+  }
   const notifySound = meRow?.notify_sound !== false;
   const notifyEnquiries = meRow?.notify_enquiries !== false;
   const notifyEmail = meRow?.notify_email !== false;
@@ -70,8 +100,11 @@ export default async function AccountPage() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-action">Account</h1>
-          <p className="text-sm text-ink-3 mt-1">{profile?.email}{profile?.role ? ` · ${ROLE_LABELS[profile.role]}` : ""}</p>
+          <h1 className="text-2xl font-bold text-ink">Account</h1>
+          <p className="text-sm text-ink-3 mt-1">
+            {profile?.email}
+            {subtitleRole ? ` · ${subtitleRole}` : ""}
+          </p>
         </div>
 
         <Card>

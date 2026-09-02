@@ -1,7 +1,7 @@
 import Link from "next/link";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
-import { formatDate, municipalityLabel } from "@/lib/utils";
+import { formatDate, formatRands, municipalityLabel } from "@/lib/utils";
 import { workdaysSince } from "@/lib/elapsed";
 import { TRANSFER_STATUS_LABELS, type PropertyTransfer, type TransferStatus } from "@/types";
 import TransferProgressBar from "@/components/transfers/TransferProgressBar";
@@ -19,10 +19,16 @@ import type { TransferProgress } from "@/lib/transfer-service-progress";
  */
 
 const STATUS_TONE: Record<string, StatusTone> = {
+  // Amber, not the default grey: "Draft — awaiting approval" is a transfer
+  // waiting on somebody, and a neutral pill read as a finished state on a card
+  // that is anything but. Zewn, 2026-09-02: "make the bubble yellow to indicate
+  // it more visually".
+  draft: "waiting",
   open: "action",
   registered: "ok",
   cancelled: "danger",
   on_hold: "waiting",
+  archived: "neutral",
 };
 
 const STALLED_WORKDAYS = 60;
@@ -30,12 +36,22 @@ const STALLED_WORKDAYS = 60;
 export default function TransferCard({
   transfer: t,
   href,
-  matterCount = 0,
+  matterCount,
   progress,
 }: {
   transfer: PropertyTransfer;
   href: string;
-  matterCount?: number;
+  /**
+   * How many matters hang off this transfer. OMIT IT to drop the chip entirely.
+   *
+   * Zewn, 2026-09-02, looking at the attorney's list: "remove the matters block
+   * here for attorneys as the services indicators are enough". A firm reads the
+   * transaction through its seven service lines, and "Matters 0" beside a
+   * settled bar was a second, worse answer to the same question — worse because
+   * a transfer can be well underway with no matter yet, so the chip read as a
+   * warning about nothing. Staff keep it: matters are the unit they work in.
+   */
+  matterCount?: number | null;
   /**
    * Rolled up from the transfer's service lines. Omitted where a caller has not
    * fetched it — the bar then does not render at all, rather than drawing an
@@ -69,20 +85,42 @@ export default function TransferCard({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <MetaChip
-          label="Matters"
-          value={matterCount}
-          tone={matterCount === 0 ? "required" : "neutral"}
-        />
+        {typeof matterCount === "number" && (
+          <MetaChip
+            label="Matters"
+            value={matterCount}
+            tone={matterCount === 0 ? "required" : "neutral"}
+          />
+        )}
         {t.municipality && <MetaChip label="Council" value={municipalityLabel(t.municipality)} />}
-        {open !== null && live && (
+        {/* 077 — one number, visible to everyone. Zewn, 2026-09-02: "add the
+            sell price on the prop trfs somewhere … or show sell price: unknown
+            if its not entered." ALWAYS drawn, because a missing price is a fact
+            about the transaction and not a reason to say nothing: a card that
+            hides the field cannot be read as "nobody has told us yet". */}
+        <MetaChip
+          label="Sell price"
+          value={formatRands(t.purchase_price) ?? "Unknown"}
+          tone={t.purchase_price == null ? "waiting" : "neutral"}
+        />
+        {/* ONE time fact per card, not two. Zewn, 2026-09-02: "remove how many
+            days its been open or remove the date opened from the details in the
+            cards … leave only one of them on the list pages." Elapsed time is
+            the one that survives: "Open 82 workdays" is a state of affairs, and
+            an opening date is a lookup. Both are on the detail page.
+
+            A card that is NOT live has no elapsed time to report, so it falls
+            back to the date — otherwise a registered transfer would carry no
+            time information at all. */}
+        {open !== null && live ? (
           <MetaChip
             label="Open"
             value={`${open} workday${open === 1 ? "" : "s"}`}
             tone={stalled ? "waiting" : "neutral"}
           />
+        ) : (
+          t.created_at && <MetaChip label="Opened" value={formatDate(t.created_at)} />
         )}
-        {t.created_at && <MetaChip label="Opened" value={formatDate(t.created_at)} />}
       </div>
 
       {/* Below the chips, not among them: the chips are facts about the

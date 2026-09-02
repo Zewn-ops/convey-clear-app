@@ -89,11 +89,28 @@ export default function ExpectedDocuments({ municipality }: { municipality: stri
   );
 }
 
-/** What the attorney brings: input and supporting, minus the firm's own. */
+/**
+ * What the attorney brings: input and supporting, minus the firm's own.
+ *
+ * 🔴 A COUNCIL'S OWN WORD IS NOT ALWAYS THE PORTAL'S, and pretending otherwise
+ * sent an attorney hunting for something that was there under another name. COT
+ * writes "Statement" against three of its services; the upload picker calls it
+ * "Municipal Account Statement" — Zewn, 2026-09-02: "when i search statement in
+ * the doc upload it gives me municipal account statement only. what about the
+ * other types of statements?"
+ *
+ * So where a council renames a document, BOTH names show: the council's first,
+ * because that is the word on the sheet in front of them, and the portal's in
+ * brackets, because that is what they will type into the picker.
+ */
 function expected(spec: ReturnType<typeof councilServiceSpec>): string[] {
   if (!spec) return [];
   const names = [...documentsOfClass(spec, "input"), ...documentsOfClass(spec, "supporting")]
     .filter((r) => r.owner !== "firm")
-    .map((r) => r.label ?? docLabel(r.type));
+    .map((r) => {
+      const shared = docLabel(r.type);
+      if (!r.label || r.label === shared) return shared;
+      return `${r.label} (${shared})`;
+    });
   return Array.from(new Set(names));
 }

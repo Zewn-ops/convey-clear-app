@@ -43,7 +43,7 @@ export default async function EntitiesPage() {
   if (ids.length === 0) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
           My entities
         </h1>
         <Card className="py-12 text-center">
@@ -95,7 +95,7 @@ export default async function EntitiesPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
           My entities
         </h1>
         <p className="mt-1 text-sm text-ink-3">

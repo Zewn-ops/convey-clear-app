@@ -283,7 +283,10 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               {transfer.municipality && (
                 <MetaChip label="Council" value={municipalityLabel(transfer.municipality)} />
               )}
-              <MetaChip label="Matters" value={linked.length} tone={linked.length === 0 ? "required" : "neutral"} />
+              {/* No matter count. Zewn, 2026-09-02: "the services indicators are
+                  enough" — the checklist below answers the same question better,
+                  and "Matters 0" on a transfer being actively worked read as a
+                  fault. Staff keep theirs; matters are the unit they work in. */}
               {(() => {
                 const live = transfer.status === "open" || transfer.status === "on_hold";
                 const open = workdaysSince(transfer.created_at);
@@ -322,6 +325,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               entities={entityOptions}
               firms={firmOptions}
               canEdit
+              // The firm captures and corrects parties; it does not remove them
+              // (2026-09-02). Enforced by the route and by 086, not by this.
+              canRemove={false}
               designatedMember={designatedMember}
             />
           </Card>
@@ -399,7 +405,11 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               and the admin card is the only place it belongs. */}
           <Card>
             <p className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Transaction</p>
+            {/* Not collapsible, and no matter count. The card has the side
+                column to itself since the 2026-09-01 restructure, so hiding
+                three dates behind a toggle bought nothing but a click. */}
             <DetailFields
+              collapsible={false}
               primary={[
                 { label: "Reference", value: transfer.reference },
                 { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
@@ -408,12 +418,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
                 // can be available to all, its just one number which is purchase
                 // price."
                 { label: "Purchase price", value: formatRands(transfer.purchase_price) },
-                { label: "Property", value: transfer.property_description, wide: true },
-              ]}
-              extra={[
-                { label: "Matters linked", value: String(linked.length) },
                 { label: "Opened", value: formatDate(transfer.created_at) },
                 { label: "Last updated", value: formatDate(transfer.updated_at) },
+                { label: "Property", value: transfer.property_description, wide: true },
               ]}
             />
           </Card>

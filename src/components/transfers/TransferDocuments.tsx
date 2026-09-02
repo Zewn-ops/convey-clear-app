@@ -9,6 +9,7 @@ import Card from "@/components/ui/Card";
 import { docLabel } from "@/lib/prc-docs";
 import TransferUploadPanel from "@/components/transfers/TransferUploadPanel";
 import {
+  NAMED_DOC_TYPES,
   SUPPORTING_DOC_GROUPS,
   SUPPORTING_DOC_TYPES,
   partyRoleLabel,
@@ -23,18 +24,11 @@ const MAX_SIZE = 10 * 1024 * 1024;
 // the transfer confirmation letter, the clearance figures. Uploaded once here and
 // reused by every matter in the transfer ("From transfer" on the intake), instead
 // of being fetched again for the PRC, the COO and the refund.
-/** The five documents a transfer is expected to gather, in order. */
-const NAMED_DOC_TYPES = [
-  "deed_search",
-  "transfer_letter",
-  "clearance_figures",
-  "proof_of_payment_figures",
-  "coc_electrical",
-];
-// What the supporting-documents section may upload lives in
-// `lib/transfer-doc-types.ts` — the five named documents are deliberately not in
-// it, because each already has its own tile above and offering them twice made
-// the tiles look optional.
+// The five documents a transfer is expected to gather, in order, now declared in
+// `lib/transfer-doc-types.ts` beside the supporting list that must exclude them:
+// each has its own tile above, and offering them in the dropdown too made the
+// tiles look optional. One list, because the completeness check over the council
+// registry needs to know what the tiles already cover.
 //
 // Seller / buyer is no longer a document TYPE (it was, for one day, on
 // 2026-08-26). Migration 067 splits the two questions: `document_type` says what

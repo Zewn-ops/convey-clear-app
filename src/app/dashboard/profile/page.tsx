@@ -16,7 +16,7 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">Profile</h1>
+        <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Profile</h1>
         <p className="text-sm text-ink-3 mt-1">Your account details</p>
       </div>
 

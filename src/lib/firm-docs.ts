@@ -15,7 +15,22 @@
 export interface FirmDocType {
   code: string;
   label: string;
-  /** Which councils name it, for the "why is this here" line in the UI. */
+  /**
+   * 🔴 PROVENANCE, NOT THE LIST TO RENDER. Which councils' SHEETS named this
+   * document when it was transcribed.
+   *
+   * Zewn, 2026-09-02, looking at the firm-documents card: "this doesnt show COJ
+   * on any of the docs, is there a reason for that?" There was, and it was a
+   * bug. COJ's own sheet reads "same as CoE", which the registry expresses by
+   * DERIVING COJ from CoE (councils/coj.ts) — so City of Johannesburg has asked
+   * for all four of CoE's firm documents since the day it was added, and this
+   * hand-typed array never learned about it. The card was reading the array.
+   *
+   * That is 066 a third time: one fact in two places, and the copy nobody
+   * remembers to update is the one on screen. `councilsAskingForFirmDoc()` in
+   * lib/councils derives the answer from `firmRequirements`, and the card uses
+   * that. These stay, because "SLA came off the COT sheet" is worth keeping.
+   */
   askedBy: string[];
   hint?: string;
 }

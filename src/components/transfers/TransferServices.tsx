@@ -94,15 +94,25 @@ const PARTNER_STATUS_ORDER = ["needed", "already_done", "not_applicable"];
 // amber. The tones are named by MEANING rather than colour, so "action" is the
 // blue one and "waiting" the amber — see components/ui/StatusPill.tsx, where the
 // fills are contrast-measured against white text.
+//
+// 🔴 AMBER MOVED 2026-09-02, from not-applicable onto not-specified. Zewn,
+// looking at seven grey "Not specified" lines: "change not specified to yellow
+// so they know it needs to be selected."
+//
+// Amber can only mean one thing on one list, so the two swapped rather than
+// doubling up: NOT SPECIFIED is the unanswered state — nobody has told us
+// anything and the line is waiting on the reader — while NOT APPLICABLE is a
+// decision already taken that needs nothing further, which is what neutral says
+// everywhere else in this portal.
 const STATUS_TONE: Record<string, StatusTone> = {
-  not_specified: "neutral",
+  not_specified: "waiting",
   needed: "action",
   // Both finished states are green — to anyone reading the list, "done" is
   // "done", and the distinction between who did it belongs in the label rather
   // than in a colour nobody would decode.
   completed: "ok",
   already_done: "ok",
-  not_applicable: "waiting",
+  not_applicable: "neutral",
 };
 
 /**
@@ -114,11 +124,11 @@ const STATUS_TONE: Record<string, StatusTone> = {
  * before changing any fill). If a tone moves there, move it here too.
  */
 const SELECT_TONE: Record<string, string> = {
-  not_specified: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
+  not_specified: "bg-waiting-fill text-white",
   needed: "bg-action-fill text-white",
   completed: "bg-ok-fill text-white",
   already_done: "bg-ok-fill text-white",
-  not_applicable: "bg-waiting-fill text-white",
+  not_applicable: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
 };
 
 const statusSelectClass = (status: string) =>
@@ -136,7 +146,10 @@ const statusSelectClass = (status: string) =>
  */
 const chevronClass = (status: string) =>
   "pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 opacity-70 " +
-  (status === "not_specified" ? "text-ink-2" : "text-white");
+  // Follows the FILL, not one named status: not-applicable is the neutral one
+  // since 2026-09-02, and a chevron left behind reads as invisible white on a
+  // pale pill.
+  (status === "not_applicable" ? "text-ink-2" : "text-white");
 
 export interface ServiceRow {
   id: string;
@@ -561,6 +574,28 @@ export default function TransferServices({
                 </StatusPill>
               )}
             </div>
+
+            {/* What marking a line "already done" actually COSTS, said once,
+                beside the line it applies to.
+
+                Zewn, 2026-09-02: "for already done, please make a small note
+                letting them know that this means conveyclear will not be doing
+                that service for them or something along those lines." The
+                marker is not a status report — it is an instruction, and the two
+                read identically on a dropdown. Shown only to whoever can set it
+                (staff and the marking firm): a client can neither choose it nor
+                act on the sentence.
+
+                Same reasoning applies to "not applicable", which has the same
+                consequence by a different route, so it says so too. */}
+            {mayPickStatus && (r.status === "already_done" || r.status === "not_applicable") && (
+              <p className="mt-2 pl-6 text-xs text-ink-3">
+                {r.status === "already_done"
+                  ? "Marked as handled elsewhere — ConveyClear will not do this one for you."
+                  : "Marked as not needed on this transaction — ConveyClear will not do this one for you."}{" "}
+                Change the marker if that is wrong.
+              </p>
+            )}
 
             {/* §114, shown and not enforced. Deliberately advisory wording: it
                 reports the municipal reality, it does not claim the portal is

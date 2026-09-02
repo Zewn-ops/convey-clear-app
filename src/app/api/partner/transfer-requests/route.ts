@@ -208,6 +208,14 @@ export async function POST(request: Request) {
         property_description: propertyDescription,
         municipality: str("municipality"),
         notes: str("notes"),
+        // The parties as typed, so the draft transfer opens with its seller and
+        // buyer already on it (2026-09-02) instead of asking for them twice.
+        seller_name: fields.seller_name,
+        seller_email: fields.seller_email,
+        seller_cell: fields.seller_cell,
+        buyer_name: fields.buyer_name,
+        buyer_email: fields.buyer_email,
+        buyer_cell: fields.buyer_cell,
       },
       suggestedReference,
       auth.userId,

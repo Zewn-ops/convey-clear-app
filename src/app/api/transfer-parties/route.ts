@@ -339,6 +339,23 @@ export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
+  // 🔒 STAFF ONLY, as of 2026-09-02. Zewn: "you can allow the attorney to edit
+  // the parties details but not to delete the party from the matter."
+  //
+  // Adding and correcting a party is the firm's own work — POST and PATCH stay
+  // open to them. Removing one rewrites who the transaction was between, and
+  // the transfer's denormalised seller/buyer columns are resynced off the back
+  // of it, so it is a ConveyClear act. Checked BEFORE the row is read, so the
+  // refusal cannot depend on what the caller can see. Migration 086 says the
+  // same thing in RLS, for the callers that never come through this route.
+  const isStaff = await callerIsStaff(supabase, user.id);
+  if (!isStaff) {
+    return NextResponse.json(
+      { error: "Only ConveyClear can remove a party. Message us and we will sort it out." },
+      { status: 403 }
+    );
+  }
+
   // Read before deleting: once it is gone there is no way to tell which of the
   // transfer's columns, if any, was pointing at it. RLS applies to this select,
   // so a party the caller cannot reach is simply not found.
@@ -351,7 +368,7 @@ export async function DELETE(req: Request) {
   const { error } = await supabase.from("transfer_parties").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  if (doomed && (await callerIsStaff(supabase, user.id))) {
+  if (doomed) {
     const p = doomed as { transfer_id: string; role: string; client_id: string | null; firm_id: string | null };
     await syncTransferFromParty(
       createAdminClient(),

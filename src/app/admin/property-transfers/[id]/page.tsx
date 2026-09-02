@@ -356,7 +356,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">{transfer.reference}</h1>
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{transfer.reference}</h1>
             <p className="text-sm text-ink-3 mt-1">
               {transfer.property_description || "No property description"}
               {transfer.municipality ? ` · ${municipalityLabel(transfer.municipality)}` : ""}

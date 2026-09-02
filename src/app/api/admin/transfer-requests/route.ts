@@ -48,7 +48,12 @@ export async function POST(request: Request) {
 
   const { data: req } = await admin
     .from("transfer_requests")
-    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id")
+    // The party columns are selected since 2026-09-02 so a request lodged before
+    // the draft flow shipped still opens with its seller and buyer captured when
+    // approval builds the transfer. One string literal, not a concatenation:
+    // supabase-js infers the row type from the literal, and splitting it drops
+    // every field to `GenericStringError`.
+    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell")
     .eq("id", id)
     .maybeSingle();
   if (!req) return NextResponse.json({ message: "Request not found" }, { status: 404 });

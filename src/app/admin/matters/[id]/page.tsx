@@ -741,7 +741,7 @@ export default async function AdminMatterDetailPage({
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
               {matter.title || displayName}
             </h1>
             <p className="text-sm text-ink-3 mt-1">
