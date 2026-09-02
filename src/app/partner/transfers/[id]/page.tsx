@@ -41,6 +41,17 @@ import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The record's own name in the tab.
+ *
+ * Every detail page fell through to the ROOT metadata, so an ADMIN looking at a
+ * property transfer had a tab reading "ConveyClear -- Client Portal" (found
+ * 2026-09-02). Staff keep several of these open at once; a tab that names the
+ * portal rather than the record cannot be told from its neighbours.
+ */
+export const metadata = { title: "Property transfer \u2014 ConveyClear Partner" };
+
+
 function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
   return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s];
 }
@@ -269,11 +280,13 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     // Width: was `max-w-4xl mx-auto`. See the note on the admin page — the
     // client portal never capped this and that is the difference Zewn saw.
     <div className="space-y-6">
-      <div>
-        <Link href="/partner/transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
-          <ArrowLeft className="h-4 w-4" /> All property transfers
-        </Link>
-        <div className="page-header flex items-start justify-between gap-4">
+      {/* The back link is a SIBLING of the sticky bar, not its parent: sticky is
+          bounded by the parent box, and a wrapper holding only the link and the
+          title unsticks as soon as it scrolls away. See the admin page. */}
+      <Link href="/partner/transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink">
+        <ArrowLeft className="h-4 w-4" /> All property transfers
+      </Link>
+      <div className="page-header flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{transfer.reference}</h1>
             <p className="mt-2.5 text-[15px] font-medium text-ink-3">
@@ -309,7 +322,6 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           >
             {TRANSFER_STATUS_LABELS[transfer.status]}
           </StatusPill>
-        </div>
       </div>
 
       {/* Two columns, in the admin page's order and for the same reasons: work

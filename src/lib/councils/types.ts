@@ -187,6 +187,31 @@ export function serviceLabel(code: string | null | undefined): string {
   return SERVICE_LABELS[code as ServiceCode] ?? NON_TRANSFER_SERVICE_LABELS[code.toUpperCase()] ?? code;
 }
 
+/**
+ * The label for a service row read out of the database, preferring OUR name.
+ *
+ * 🔴 `services.name` is a second vocabulary and it drifts. The 2026-09-02 rename
+ * of Certificates to COC landed in SERVICE_LABELS — which every transfer surface
+ * reads — while the "New matter" and client "Request a service" dropdowns were
+ * reading the row's own name column, so both still said "Certificates" after the
+ * deploy. Found by opening the form.
+ *
+ * Takes the row's name as the LAST resort rather than returning a raw code, so a
+ * service someone adds in SQL before it is added here still reads as words.
+ */
+export function serviceDisplayName(
+  code: string | null | undefined,
+  fallback: string | null | undefined
+): string {
+  const key = (code ?? "").toUpperCase();
+  return (
+    SERVICE_LABELS[key as ServiceCode] ??
+    NON_TRANSFER_SERVICE_LABELS[key] ??
+    fallback?.trim() ??
+    serviceLabel(code)
+  );
+}
+
 /** RCA opens the account, RCF gets the figures, RCC gets the certificate. */
 export type PrcStage = PrcSubtype["code"];
 

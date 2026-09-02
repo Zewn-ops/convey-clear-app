@@ -10,6 +10,7 @@ import Select from "@/components/ui/Select";
 import SearchSelect from "@/components/ui/SearchSelect";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { PRC_SUBTYPES } from "@/lib/prc-docs";
+import { serviceDisplayName } from "@/lib/councils/types";
 import { PRIORITY_LABELS, type MatterPriority } from "@/types";
 import { CheckCircle2, ExternalLink, Home } from "lucide-react";
 
@@ -361,7 +362,20 @@ export default function CreateMatterForm({
         label="Service"
         value={serviceId}
         onChange={(e) => setServiceId(e.target.value)}
-        options={services.map((s) => ({ value: s.id, label: s.name }))}
+        // 🔴 `services.name` IS A SECOND VOCABULARY. It still said "Certificates"
+        // after the 2026-09-02 rename to COC, because that rename landed in
+        // SERVICE_LABELS — the map every transfer surface reads — while this one
+        // dropdown was reading the row's own name column straight out of the
+        // database. Found by opening the form, minutes after the deploy.
+        //
+        // 066 for the fourth time: two names for one service, and the one on
+        // screen is whichever the reader happens to be looking at. The label map
+        // wins; `s.name` is the fallback for a service code the map has never
+        // heard of, which is exactly what serviceLabel() already does.
+        options={services.map((s) => ({
+          value: s.id,
+          label: serviceDisplayName(s.code, s.name),
+        }))}
       />
 
       {/* Then the transaction it belongs to. ~90% of matters hang off a property

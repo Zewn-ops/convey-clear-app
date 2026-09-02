@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { CheckCircle2 } from "lucide-react";
+import { serviceDisplayName } from "@/lib/councils/types";
 
 const MUNI = [
   { value: "COT", label: "City of Tshwane (COT)" },
@@ -71,7 +72,7 @@ export default function RequestServiceForm({
   return (
     <Card className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Select label="Service" value={serviceId} onChange={(e) => setServiceId(e.target.value)} options={services.map((s) => ({ value: s.id, label: s.name }))} />
+        <Select label="Service" value={serviceId} onChange={(e) => setServiceId(e.target.value)} options={services.map((s) => ({ value: s.id, label: serviceDisplayName(s.code, s.name) }))} />
         <Select label="Municipality" value={municipality} onChange={(e) => setMunicipality(e.target.value)} options={MUNI} />
       </div>
       <Input label="Property description" value={property} onChange={(e) => setProperty(e.target.value)} placeholder="e.g. Erf 123 Valhalla" />

@@ -42,6 +42,17 @@ import { ArrowLeft, Pencil, Scale } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The record's own name in the tab.
+ *
+ * Every detail page fell through to the ROOT metadata, so an ADMIN looking at a
+ * property transfer had a tab reading "ConveyClear -- Client Portal" (found
+ * 2026-09-02). Staff keep several of these open at once; a tab that names the
+ * portal rather than the record cannot be told from its neighbours.
+ */
+export const metadata = { title: "Property transfer \u2014 ConveyClear Admin" };
+
+
 function statusVariant(s: TransferStatus): "info" | "success" | "danger" | "warning" | "gray" {
   return ({ draft: "warning", open: "info", registered: "success", cancelled: "danger", on_hold: "warning", archived: "gray" } as const)[s];
 }
@@ -355,11 +366,16 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
     // the attorney and admin portals aswell". The shell (`main`) already brings
     // its own padding, so removing the cap is the whole change.
     <div className="space-y-6">
-      <div>
-        <Link href="/admin/property-transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
-          <ArrowLeft className="h-4 w-4" /> All property transfers
-        </Link>
-        <div className="page-header flex items-start justify-between gap-4">
+      {/* 🔴 THE BACK LINK IS A SIBLING, NOT A PARENT. `position: sticky` is
+          bounded by the element's own parent box, so while this row sat inside a
+          wrapper that held only the link and the title, it unstuck the moment
+          that short box scrolled away — which looked exactly like the class not
+          working at all. Found by scrolling, 2026-09-02. The bar has to be a
+          direct child of the tall page root to travel the whole page. */}
+      <Link href="/admin/property-transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink">
+        <ArrowLeft className="h-4 w-4" /> All property transfers
+      </Link>
+      <div className="page-header flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{transfer.reference}</h1>
             <p className="text-sm text-ink-3 mt-1">
@@ -376,7 +392,6 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
               <Pencil className="h-3.5 w-3.5" /> Edit
             </Link>
           </div>
-        </div>
       </div>
 
       {/* ── Two columns ────────────────────────────────────────────────────────
