@@ -266,7 +266,19 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     progress: serviceProgress(r.status, r.matters ?? null, "client", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
-  const transferRollup = transferProgress(serviceRows);
+  // 🔴 THE FIRM'S ROLL-UP COUNTS THE FIRM'S LIST. Since the "+" shipped, an
+  // attorney sees the services they have asked for and not the untouched rest —
+  // so a denominator of seven sat above a list of two, and on a brand-new
+  // transfer "0 of 7 services settled" sat above nothing at all. A number is
+  // wrong if it does not describe the thing under it.
+  //
+  // Scoped to THIS page deliberately. Staff keep seven, because knowing what has
+  // not been decided is their job, and the cards on both list pages keep it too —
+  // they carry no list beside them to contradict. ▶ If the cards should follow,
+  // that is one change in transferProgress and it moves what staff read.
+  const transferRollup = transferProgress(
+    serviceRows.filter((r) => r.status !== "not_specified")
+  );
 
   // Matters on this transfer that no service line is tracking — the only thing
   // the checklist above cannot show. Same derivation as the admin page, so the

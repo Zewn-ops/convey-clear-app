@@ -15,6 +15,7 @@ import {
   isStageClientVisible,
 } from "@/lib/pipelines";
 import { clientDisplayName, MATTER_STATUS_LABELS, type MatterStatus } from "@/types";
+import { serviceDisplayName } from "@/lib/councils/types";
 
 /**
  * The matter card. One definition, used by the partner overview and the matters
@@ -111,7 +112,12 @@ export default function MatterCard({
   const stalled = open !== null && open > STALLED_WORKDAYS;
   const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
 
-  const service = [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
+  // serviceDisplayName, not services.name: the row's own name column still said
+  // "Certificates" after the COC rename, so a matter card contradicted the
+  // transfer page it was opened from. Third site of that leak (2026-09-02).
+  const service = [serviceDisplayName(m.services?.code, m.services?.name), m.service_subtype]
+    .filter(Boolean)
+    .join(": ");
   const subtitle = [service, m.municipality ? municipalityLabel(m.municipality) : null]
     .filter(Boolean)
     .join(" · ");
