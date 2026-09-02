@@ -7,10 +7,10 @@ import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
 import Callout from "@/components/ui/Callout";
 import { workdaysSince } from "@/lib/elapsed";
-import PartnerDocUpload from "@/components/partner/PartnerDocUpload";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
-import MatterFeed from "@/components/matters/MatterFeed";
+import MatterFeed, { type MatterActivity } from "@/components/matters/MatterFeed";
+import ExpectedDocuments from "@/components/transfers/ExpectedDocuments";
 import { getMatterEnquiries } from "@/lib/enquiries";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import StorageUpload from "@/components/matters/StorageUpload";
@@ -72,7 +72,9 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
     supabase.from("documents").select("id, document_type, document_status, file_name, uploaded_at, verified, matter_party_id, storage_bucket, storage_path, drive_file_id, uploaded_by, client_document_id, transfer_document_id").eq("matter_id", params.id).neq("document_status", "superseded"),
     // Comment-type ('post') activities are INTERNAL ONLY — partners (and clients)
     // see only lifecycle events, never staff notes. (Jukka, 2026-06-16.)
-    supabase.from("matter_activities").select("id, body, activity_type, created_at").eq("matter_id", params.id).in("activity_type", ["status_change", "document_upload", "phase_transition", "poa_signed"]).order("created_at", { ascending: false }).limit(20),
+    // author_label since 2026-09-02: the rows now render through MatterFeed's
+    // Activity tab, which names who did each thing rather than listing bodies.
+    supabase.from("matter_activities").select("id, body, activity_type, author_label, created_at").eq("matter_id", params.id).in("activity_type", ["status_change", "document_upload", "phase_transition", "poa_signed"]).order("created_at", { ascending: false }).limit(20),
     supabase.from("matter_parties").select("*").eq("matter_id", params.id).order("role", { ascending: true }),
   ]);
   const docs = (docsData as MatterDocument[] | null) ?? [];
@@ -118,7 +120,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   // that too — it refuses those fields from a partner, it doesn't just hide them.
   const ficaSubjects = await buildFicaSubjects(supabase, matterClientId, parties);
 
-  const activities = (actData as { id: string; body: string; activity_type: string; created_at: string }[] | null) ?? [];
+  const activities = (actData as MatterActivity[] | null) ?? [];
 
   // The shared enquiry thread on this matter (#3). RLS gives the firm its own
   // threads plus every 'shared' one on a matter it can access.
@@ -191,6 +193,16 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         )}
       </div>
 
+      {/* Two columns, in the transfer page's shape and for its reasons (§5.13 —
+          the surfaces change together). Zewn, 2026-09-02: "structure it like the
+          prop trf page with a left side and right side."
+
+          Left is WORK, in the order it gets done: the transaction it belongs to,
+          where it has got to, the parties, their details, the documents. Right is
+          REFERENCE and the conversation — short cards that would otherwise wedge
+          themselves between two pieces of work. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
       {/* Parent property transfer, when this matter belongs to one (read-only). */}
       <MatterTransferCard
         matterId={params.id}
@@ -225,8 +237,19 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         </Card>
       )}
 
-      {/* Upload docs for the client — hidden once documents have been submitted */}
-      <PartnerDocUpload matterId={matter.id} submitted={docs.length > 0} />
+      {/* 🔴 THE "OPEN UPLOAD FORM" BLOCK IS GONE (2026-09-02). Zewn: "i dont see
+          a reason for the upload form anymore since we are doing all of that
+          inline."
+          It minted an onboarding token and opened /onboard in a new tab — the
+          route the attorney needed before capture existed on this page. Since
+          the in-place work below (client details and consent, then the
+          service-aware document checklist) they can do all of it here, and a
+          button that opens a second, differently-shaped form for the same job is
+          two answers to one question.
+          PartnerDocUpload and /api/partner/onboarding-link both REMAIN: the
+          admin "Collect FICA" control still mints links, and /onboard is still
+          the unauthenticated path a CLIENT uses. This only stops offering it to
+          an attorney who is already standing in front of the fields. */}
 
       {/* Parties (COO buyer/seller) — renders nothing for single-client matters */}
       {/* Party FICA moved INTO the party card (see PartiesCard). Passing the
@@ -271,20 +294,18 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         transferDocs={transferDocs}
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Client (single-client matters only) */}
-        {client && (
-        <Card>
-          <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Client</h2>
-          <dl className="space-y-2.5 text-[14px]">
-            <div className="flex justify-between"><dt className="text-ink-3">Name</dt><dd className="text-ink">{clientDisplayName(client)}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-3">Type</dt><dd className="text-ink">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-3">Email</dt><dd className="text-ink">{client?.primary_email || "—"}</dd></div>
-            <div className="flex justify-between"><dt className="text-ink-3">Cell</dt><dd className="text-ink">{client?.primary_cell || "—"}</dd></div>
-          </dl>
-        </Card>
-        )}
-
+      {/* 🔴 DOCUMENTS ARE THE WIDE THING NOW. Zewn: "please also expand the
+          documents section a bit more." It shared a two-up row with the client
+          card, so file names truncated at half a column while a four-line
+          contact card sat beside them doing nothing with the space. The client
+          card moves to the right rail, where a short reference card belongs. */}
+      {/* 🔴 DOCUMENTS ARE THE WIDE THING NOW. Zewn, 2026-09-02: "please also
+          expand the documents section a bit more." They shared a two-up row with
+          the client card, so file names truncated at half a column while a
+          four-line contact card sat beside them using none of the space. The
+          client card has moved to the right rail, where a short reference card
+          belongs, and the documents get the whole left column. */}
+      <div className="grid grid-cols-1 gap-6">
         {/* Documents — your / client uploads vs ConveyClear uploads (note 29) */}
         <Card>
           <div className="flex items-center justify-between mb-3">
@@ -326,31 +347,49 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         </Card>
       </div>
 
-      {/* Activity */}
-      <Card>
-        <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink mb-4">Activity</h2>
-        {activities.length === 0 ? (
-          <p className="text-sm text-ink-3">No activity yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {activities.map((a) => (
-              <li key={a.id} className="flex gap-3 text-sm">
-                <div className="mt-1 h-2 w-2 rounded-full bg-action shrink-0" />
-                <div>
-                  <p className="text-ink-2">{a.body}</p>
-                  <p className="text-xs text-ink-3">{formatDate(a.created_at)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+        </div>
 
-      {/* The shared thread with ConveyClear and the client (#3), in the same
-          shape as the admin matter page and the transfer pages. No Activity tab
-          here: matter_activity is ConveyClear-internal, so the firm has nothing
-          to show on it. §5.13 — the two matter pages change together. */}
-      <MatterFeed matterId={params.id} threads={enquiryThreads} audience="partner" />
+        <div className="min-w-0 space-y-6">
+          {/* The client, as a reference card rather than half a work row. */}
+          {client && (
+            <Card>
+              <h2 className="mb-4 text-[19px] font-semibold tracking-[-0.015em] text-ink">Client</h2>
+              <dl className="space-y-2.5 text-[14px]">
+                <div className="flex justify-between gap-3"><dt className="text-ink-3">Name</dt><dd className="text-right text-ink">{clientDisplayName(client)}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-ink-3">Type</dt><dd className="text-right text-ink">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-ink-3">Email</dt><dd className="min-w-0 break-all text-right text-ink">{client?.primary_email || "—"}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-ink-3">Cell</dt><dd className="text-right text-ink">{client?.primary_cell || "—"}</dd></div>
+              </dl>
+            </Card>
+          )}
+
+          {/* What this council asks for, for THIS service — the same generated
+              list the transfer page carries, narrowed to the one matter. Zewn,
+              2026-09-02: "drag through the list of 'what we normally need' for
+              this specific matter so the attorneys can see that aswell." */}
+          <ExpectedDocuments
+            municipality={matter.municipality}
+            serviceCode={serviceCode}
+            prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
+          />
+
+          {/* 🔴 ONE CARD, TWO TABS — the Activity card that used to sit above
+              this is gone. Zewn, 2026-09-02: "merge the activity and conversation
+              sections here." MatterFeed has carried an Activity tab since it was
+              built (the transfer page went through the same merge on 08-27);
+              this page simply never passed the rows to it and rendered its own
+              card instead. Two boxes, one question: what has happened here.
+
+              The activities are already filtered to lifecycle events by the
+              query — a firm never sees a staff note (Jukka, 2026-06-16). */}
+          <MatterFeed
+            matterId={params.id}
+            threads={enquiryThreads}
+            activities={activities}
+            audience="partner"
+          />
+        </div>
+      </div>
     </div>
   );
 }

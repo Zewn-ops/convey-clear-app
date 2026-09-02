@@ -35,7 +35,7 @@ export default async function NewMatterPage({
     supabase
       .from("property_transfers")
       .select(
-        "id, reference, property_description, municipality, status, transfer_parties(role, client_id, full_name, business_name, clients(id, full_name, business_name)), transfer_services(service_code, prc_subtype, matter_id, parent_id, position)"
+        "id, reference, property_description, municipality, status, transfer_parties(role, client_id, full_name, business_name, entity_type, email, cell, clients(id, full_name, business_name)), transfer_services(service_code, prc_subtype, matter_id, parent_id, position)"
       )
       .neq("status", "cancelled")
       .order("created_at", { ascending: false })
@@ -52,6 +52,9 @@ export default async function NewMatterPage({
       client_id: string | null;
       full_name: string | null;
       business_name: string | null;
+      entity_type: string | null;
+      email: string | null;
+      cell: string | null;
       clients: { id: string; full_name: string | null; business_name: string | null } | null;
     }[] | null;
     transfer_services: {
@@ -89,6 +92,29 @@ export default async function NewMatterPage({
         id: p.clients!.id,
         role: p.role,
         label: p.clients!.business_name || p.clients!.full_name || "Unnamed",
+      })),
+    // 🔴 THE CAPTURED ONES, which the filter above deliberately drops and which
+    // are now the COMMON case. Since 2026-09-02 a firm's transfer request writes
+    // its seller and buyer onto the transfer as inline captures — real detail,
+    // no client record — so a transfer typically arrives with two parties that
+    // cannot be picked as the client and, until now, could not be used at all.
+    //
+    // Jukka, watching exactly this: "this we would have to have autofilled, it
+    // doesn't do that at the moment." Zewn: "we want to autofill from the data
+    // that's been entered into the property transfer."
+    //
+    // They are offered as a PREFILL for the new-client form rather than as a
+    // selection, because that is what they are: what the attorney told us, ready
+    // to become a client record once a staff member has checked it.
+    capturedParties: (t.transfer_parties ?? [])
+      .filter((p) => !p.client_id && (p.full_name || p.business_name))
+      .map((p) => ({
+        role: p.role,
+        entityType: p.entity_type ?? "natural_person",
+        fullName: p.full_name ?? null,
+        businessName: p.business_name ?? null,
+        email: p.email ?? null,
+        cell: p.cell ?? null,
       })),
   }));
 
