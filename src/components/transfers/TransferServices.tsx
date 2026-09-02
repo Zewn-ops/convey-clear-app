@@ -439,7 +439,16 @@ export default function TransferServices({
   // resolve. Showing the standard shape answers the question they actually have,
   // which is "what does this transaction involve", and claims nothing about any
   // of them until ConveyClear sets a marker.
-  if (!top.length && !canManage) {
+  //
+  // 🔴 `allTop`, NOT `top`. The test is "does this transfer HAVE a checklist",
+  // and `top` stopped answering that the moment the firm's view began hiding
+  // unspecified lines — so a brand-new transfer, where all seven are
+  // unspecified, took this branch and rendered seven DEAD pills with no "+" and
+  // no way to ask for anything. Found on a transfer created through the request
+  // form minutes after the feature shipped, 2026-09-02: the rows were there and
+  // readable, and the component was throwing them away before deciding what to
+  // draw. A filtered-down view is not an absent one.
+  if (!allTop.length && !canManage) {
     return (
       <ul className="divide-y divide-line">
         {DEFAULT_SERVICE_CODES.map((code) => (
@@ -447,14 +456,23 @@ export default function TransferServices({
             <span className="flex-1 truncate text-[15px] font-medium text-ink">
               {SERVICE_LABELS[code]}
             </span>
-            <StatusPill tone="neutral">{STATUS_LABEL.not_specified}</StatusPill>
+            {/* Through STATUS_TONE, so this fallback cannot keep a colour the
+                vocabulary has moved on from — it said neutral while every other
+                "Not specified" on the portal turned amber. */}
+            <StatusPill tone={STATUS_TONE.not_specified}>
+              {STATUS_LABEL.not_specified}
+            </StatusPill>
           </li>
         ))}
       </ul>
     );
   }
 
-  if (!top.length) {
+  // Staff, and genuinely no rows. Same correction as above: `allTop`, because
+  // this branch offers to CREATE the checklist and must not fire on a checklist
+  // that exists. (Staff see every line anyway, so the two are equal for them
+  // today — it is written this way so it stays true if that ever changes.)
+  if (!allTop.length) {
     return (
       <div className="px-5 py-10 text-center">
         <ListChecks className="mx-auto h-8 w-8 text-ink-3" />
