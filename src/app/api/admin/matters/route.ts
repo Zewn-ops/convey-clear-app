@@ -218,12 +218,26 @@ export async function POST(request: Request) {
   // so the umbrella shows progress without anyone having to link the two by hand.
   // Best-effort on purpose: a checklist that has not been created, or a service
   // with no line item, must not fail the matter creation.
+  //
+  // ⚠️ Best-effort means the CALLER is not failed. It does not mean the failure
+  // goes unrecorded. This write was refused on every single matter from the day
+  // it shipped until 2026-09-02 — 071's guard asks `app_is_staff()`, the service
+  // role has no auth.uid(), so the server was judged as if it were a firm and
+  // told 'Only the service marker can be changed here.' Nobody knew, because the
+  // error was discarded here. 085 exempts the service role; this logs it, so the
+  // next silent refusal on this path lasts one deploy instead of a month.
   if (adoptLineId) {
-    await admin
+    const { error: adoptErr } = await admin
       .from("transfer_services")
       .update({ matter_id: matter.id })
       .eq("id", adoptLineId)
       .is("matter_id", null);
+    if (adoptErr) {
+      console.error(
+        `[admin/matters] could not attach matter ${matter.id} to service line ${adoptLineId}:`,
+        adoptErr.message,
+      );
+    }
   }
 
   // A COO matter is a two-sided transaction: it always has a seller (current

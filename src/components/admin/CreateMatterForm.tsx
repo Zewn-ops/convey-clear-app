@@ -132,6 +132,13 @@ export interface CreateInTransfer {
   property_description: string | null;
   /** Seller/buyer of the transfer — the two clients this matter is almost always for. */
   parties: { id: string; label: string; role: string }[];
+  /**
+   * The rates-clearance stage already chosen on this transfer's PRC line, which
+   * a new PRC matter INHERITS unless the form overrides it. Carried purely so
+   * the title preview can agree with what the server will save — leaving it out
+   * is what made the preview read COT_PRC_… for a matter created as COT_RCF_….
+   */
+  prcSubtype: string | null;
 }
 
 export default function CreateMatterForm({
@@ -230,10 +237,16 @@ export default function CreateMatterForm({
           const c = clients.find((x) => x.id === clientId);
           return c?.business_name || c?.full_name || "";
         })();
+  // An empty stage picker means "take it from the transfer", and the server does
+  // exactly that — so the preview has to as well, or it shows a name that is
+  // never saved. Mirrors the creation route's inheritance: an explicit choice
+  // wins, otherwise the PRC line's stage, otherwise nothing.
+  const effectivePrcStage =
+    prcStage || (svcCode.toUpperCase() === "PRC" ? linkedTransfer?.prcSubtype ?? "" : "");
   const previewTitle = buildMatterTitle({
     municipality,
     serviceCode: svcCode,
-    serviceSubtype: prcStage,
+    serviceSubtype: effectivePrcStage,
     // The transfer's reference replaces the client name where there is one.
     transferReference: linkedTransfer?.reference ?? null,
     clientName,

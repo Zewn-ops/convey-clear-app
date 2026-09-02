@@ -567,8 +567,8 @@ export default function TransferServices({
                 stopping anyone. */}
             {isCoo && outstanding.length > 0 && (
               <p className="mt-2 pl-6 text-xs text-ink-3">
-                Municipal sequence: {outstanding.join(", ")} normally clear{" "}
-                {outstanding.length === 1 ? "s" : ""} before change of ownership.
+                Municipal sequence: {outstanding.join(", ")} normally{" "}
+                {outstanding.length === 1 ? "clears" : "clear"} before change of ownership.
               </p>
             )}
 

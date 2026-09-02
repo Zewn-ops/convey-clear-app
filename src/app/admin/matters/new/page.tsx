@@ -35,7 +35,7 @@ export default async function NewMatterPage({
     supabase
       .from("property_transfers")
       .select(
-        "id, reference, property_description, municipality, status, transfer_parties(role, client_id, full_name, business_name, clients(id, full_name, business_name))"
+        "id, reference, property_description, municipality, status, transfer_parties(role, client_id, full_name, business_name, clients(id, full_name, business_name)), transfer_services(service_code, prc_subtype, matter_id, parent_id, position)"
       )
       .neq("status", "cancelled")
       .order("created_at", { ascending: false })
@@ -54,6 +54,13 @@ export default async function NewMatterPage({
       business_name: string | null;
       clients: { id: string; full_name: string | null; business_name: string | null } | null;
     }[] | null;
+    transfer_services: {
+      service_code: string | null;
+      prc_subtype: string | null;
+      matter_id: string | null;
+      parent_id: string | null;
+      position: number | null;
+    }[] | null;
   };
 
   const transfers = ((transferRows as RawTransfer[] | null) ?? []).map((t) => ({
@@ -61,6 +68,18 @@ export default async function NewMatterPage({
     reference: t.reference,
     property_description: t.property_description,
     municipality: t.municipality,
+    // The stage the PRC line already carries, so the title PREVIEW can show what
+    // the server is actually going to save. Without it the preview read
+    // COT_PRC_… while the created matter came out COT_RCF_…, because the stage
+    // is inherited server-side and the form did not know it.
+    //
+    // Same rule the creation route adopts by: the first unclaimed top-level PRC
+    // line in position order. If they ever disagree the preview is wrong again,
+    // so they are written to match deliberately.
+    prcSubtype:
+      (t.transfer_services ?? [])
+        .filter((s) => (s.service_code ?? "").toUpperCase() === "PRC" && !s.matter_id && !s.parent_id)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))[0]?.prc_subtype ?? null,
     // Only parties that ARE client records can be pre-selected as the matter's
     // client — a matter's client_id is a clients FK, so an uncaptured party has
     // nothing to point at.
