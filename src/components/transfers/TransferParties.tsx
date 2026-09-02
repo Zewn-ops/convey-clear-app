@@ -268,6 +268,7 @@ export default function TransferParties({
   firms,
   firmContacts = [],
   canEdit,
+  canRemove,
   clientHrefBase,
   showIdNumbers = false,
   designatedMember = null,
@@ -279,6 +280,19 @@ export default function TransferParties({
   /** The firms' own people. Empty is fine — the contact field falls back to free text. */
   firmContacts?: FirmContact[];
   canEdit: boolean;
+  /**
+   * May this viewer take a party OFF the transfer? Defaults to `canEdit`.
+   *
+   * Zewn, 2026-09-02: "you can allow the attorney to edit the parties details
+   * but not to delete the party from the matter." Adding and correcting a party
+   * is the firm's own work; removing one rewrites who the transaction was
+   * between, and that record is ConveyClear's to keep.
+   *
+   * ⚠️ Presentation only. `DELETE /api/transfer-parties` refuses a non-staff
+   * caller and migration 086 narrows the RLS policy to match — this only avoids
+   * drawing a control that would be refused.
+   */
+  canRemove?: boolean;
   /**
    * Where a linked client's record lives, e.g. "/admin/clients". Omitted on the
    * partner portal, which has no such route — there the contact card is the
@@ -296,6 +310,9 @@ export default function TransferParties({
   designatedMember?: { id: string; name: string } | null;
 }) {
   const router = useRouter();
+  // Defaulted here rather than in the destructure so an existing caller that
+  // passes only canEdit keeps exactly the behaviour it had.
+  const mayRemove = canRemove ?? canEdit;
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -505,7 +522,7 @@ export default function TransferParties({
                     <StatusPill tone={p.via === "inline" ? "waiting" : "neutral"}>
                       {p.via === "entity" ? "Client" : p.via === "firm" ? "Firm" : "Captured"}
                     </StatusPill>
-                    {canEdit && (
+                    {mayRemove && (
                       <button
                         title="Remove this party"
                         disabled={busy === p.id}
@@ -590,6 +607,16 @@ export default function TransferParties({
                           {p.via === "firm" && (
                             <span className="text-[13px] text-ink-3">
                               Firm details are edited on the firm&apos;s own page.
+                            </span>
+                          )}
+                          {/* A linked client, on a portal with no client record
+                              to send anyone to (the firm's). Without this the
+                              row simply offered nothing and read as broken —
+                              PRODUCT.md §5, never dead-end. */}
+                          {p.via === "entity" && !clientHref && (
+                            <span className="text-[13px] text-ink-3">
+                              These details live on the client&apos;s own record. Message ConveyClear
+                              below to have them corrected.
                             </span>
                           )}
                         </div>

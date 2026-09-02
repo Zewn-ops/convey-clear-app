@@ -132,6 +132,26 @@ export interface CreateInTransfer {
   property_description: string | null;
   /** Seller/buyer of the transfer — the two clients this matter is almost always for. */
   parties: { id: string; label: string; role: string }[];
+  /**
+   * Parties CAPTURED on the transfer but not yet client records — what the firm
+   * typed into its request (2026-09-02). Offered as a prefill for the new-client
+   * form; see the control below.
+   */
+  capturedParties?: {
+    role: string;
+    entityType: string;
+    fullName: string | null;
+    businessName: string | null;
+    email: string | null;
+    cell: string | null;
+  }[];
+  /**
+   * The rates-clearance stage already chosen on this transfer's PRC line, which
+   * a new PRC matter INHERITS unless the form overrides it. Carried purely so
+   * the title preview can agree with what the server will save — leaving it out
+   * is what made the preview read COT_PRC_… for a matter created as COT_RCF_….
+   */
+  prcSubtype: string | null;
 }
 
 export default function CreateMatterForm({
@@ -230,10 +250,16 @@ export default function CreateMatterForm({
           const c = clients.find((x) => x.id === clientId);
           return c?.business_name || c?.full_name || "";
         })();
+  // An empty stage picker means "take it from the transfer", and the server does
+  // exactly that — so the preview has to as well, or it shows a name that is
+  // never saved. Mirrors the creation route's inheritance: an explicit choice
+  // wins, otherwise the PRC line's stage, otherwise nothing.
+  const effectivePrcStage =
+    prcStage || (svcCode.toUpperCase() === "PRC" ? linkedTransfer?.prcSubtype ?? "" : "");
   const previewTitle = buildMatterTitle({
     municipality,
     serviceCode: svcCode,
-    serviceSubtype: prcStage,
+    serviceSubtype: effectivePrcStage,
     // The transfer's reference replaces the client name where there is one.
     transferReference: linkedTransfer?.reference ?? null,
     clientName,
@@ -419,6 +445,56 @@ export default function CreateMatterForm({
           />
         </div>
       ) : (
+        <div className="space-y-4">
+          {/* 🔴 THE ATTORNEY ALREADY TYPED THIS. Jukka, watching a new client
+              being created inside a transfer: "this we would have to have
+              autofilled, it doesn't do that at the moment." Zewn: "we want to
+              autofill from the data that's been entered into the property
+              transfer actually, because that would be better."
+
+              Since 2026-09-02 the request's seller and buyer land on the
+              transfer as captures — a name, a type, an email, a cell — and this
+              is where that becomes a client record. It FILLS, it does not
+              submit: staff still check the detail against the FICA documents
+              before anything is created, which is the whole point of the check
+              Jukka described. */}
+          {(linkedTransfer?.capturedParties ?? []).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-raised px-3 py-2">
+              <span className="text-xs text-ink-3">Take from this transfer:</span>
+              {(linkedTransfer?.capturedParties ?? []).map((p) => (
+                <button
+                  key={p.role}
+                  type="button"
+                  onClick={() => {
+                    const type =
+                      p.entityType === "business" || p.entityType === "trust"
+                        ? p.entityType
+                        : "natural_person";
+                    setEntityType(type);
+                    if (type === "natural_person") {
+                      // Split on the LAST space: "van der Merwe" keeps its
+                      // surname intact, which a first-space split destroys.
+                      const whole = (p.fullName ?? p.businessName ?? "").trim();
+                      const cut = whole.lastIndexOf(" ");
+                      setFirstName(cut > 0 ? whole.slice(0, cut) : whole);
+                      setLastName(cut > 0 ? whole.slice(cut + 1) : "");
+                      setName("");
+                    } else {
+                      setName((p.businessName ?? p.fullName ?? "").trim());
+                      setFirstName("");
+                      setLastName("");
+                    }
+                    setEmail(p.email ?? "");
+                    setCell(p.cell ?? "");
+                  }}
+                  className="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-2 hover:border-action hover:text-action"
+                >
+                  {p.businessName || p.fullName} <span className="opacity-70">· {p.role}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Entity type"
@@ -440,6 +516,7 @@ export default function CreateMatterForm({
           )}
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input label="Cell" value={cell} onChange={(e) => setCell(e.target.value)} />
+        </div>
         </div>
       )}
 

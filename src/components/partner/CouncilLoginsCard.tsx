@@ -118,10 +118,22 @@ export default function CouncilLoginsCard({
         council portal login so ConveyClear can lodge on your behalf.
       </p>
 
-      <Callout tone="waiting" label="Write only">
-        Once saved, a login cannot be displayed again — not to you, and not to
-        your colleagues. Only ConveyClear administrators can read one. To change
-        a login, enter it again; to remove it, use the bin.
+      {/* 🔴 WHO CAN READ IT IS NOT THE FIRM'S PROBLEM, and naming them made it
+          one. Zewn, 2026-09-02: "change this message a bit about the logins to
+          just say you can only enter it once and then it will be hidden, for
+          security purposes … dont mention cc admin or anything like that."
+          "Only ConveyClear administrators can read one" was written as
+          reassurance and lands as the opposite — it tells an attorney their
+          council password is legible to a named group of people. What they need
+          is the operating rule: enter it once, it is hidden after that.
+
+          Nothing about the storage changed: still AES-256-GCM at rest with the
+          key in the environment (074), still admin-tier read for the one
+          purpose. This is the sentence, not the policy. */}
+      <Callout tone="waiting" label="Entered once">
+        For security, a login is hidden as soon as it is saved and cannot be
+        displayed again. To change one, enter it again; to remove it, use the
+        bin.
       </Callout>
 
       {stored.length > 0 && (

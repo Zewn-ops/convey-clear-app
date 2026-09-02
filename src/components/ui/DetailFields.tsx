@@ -45,30 +45,47 @@ export default function DetailFields({
   extra = [],
   moreLabel = "More detail",
   lessLabel = "Less detail",
+  collapsible = true,
 }: {
   primary: DetailField[];
   extra?: DetailField[];
   moreLabel?: string;
   lessLabel?: string;
+  /**
+   * Whether the extra tier hides behind a toggle.
+   *
+   * The two tiers were designed for a card competing for space in the middle of
+   * a page. Since the 2026-09-01 restructure the transfer's card sits alone in
+   * the side column with room to spare, and there the toggle only costs a click
+   * — Zewn, 2026-09-02: "since its on the right side now it doesnt need to be
+   * collapsable". Pass false and every field renders, in one list.
+   */
+  collapsible?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Count what is actually missing, so the toggle can say whether opening it is
   // worth doing. "More detail (3 not captured)" is a reason to click; a bare
   // chevron over an empty drawer is a small betrayal on a record staff check daily.
   const missing = extra.filter((f) => f.value == null || String(f.value).trim() === "").length;
+  const shown = collapsible ? primary : [...primary, ...extra];
+
+  // gap-y-5 rather than gap-4, and a wider column gutter: in a side rail two
+  // columns of short values were reading as one crowded block (Zewn, 2026-09-02:
+  // "maybe try to spread out the data a litte bit more here").
+  const grid = "grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2";
 
   return (
     <>
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {primary.map((f, i) => (
+      <dl className={grid}>
+        {shown.map((f, i) => (
           <DetailValue key={`${f.label}-${i}`} {...f} />
         ))}
       </dl>
 
-      {extra.length > 0 && (
+      {collapsible && extra.length > 0 && (
         <>
           {open && (
-            <dl className="mt-4 grid grid-cols-1 gap-4 border-t border-line pt-4 sm:grid-cols-2">
+            <dl className={cn(grid, "mt-5 border-t border-line pt-5")}>
               {extra.map((f, i) => (
                 <DetailValue key={`${f.label}-${i}`} {...f} />
               ))}

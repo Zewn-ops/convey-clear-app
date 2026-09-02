@@ -14,6 +14,8 @@
  * this: a second vocabulary for the same things silently stopped matching.
  */
 
+import { COUNCILS } from "./councils";
+
 export const TRANSFER_PARTY_ROLES = ["seller", "buyer"] as const;
 export type TransferPartyRole = (typeof TRANSFER_PARTY_ROLES)[number];
 
@@ -23,11 +25,28 @@ export interface SupportingDocGroup {
 }
 
 /**
- * Grouped for the dropdown. A flat list of a dozen options is a scan; four short
- * groups is a choice — and the grouping is the one an attorney already has in
- * their head when they pick up the file.
+ * The five documents a transfer gathers under its own tiles.
+ *
+ * Deliberately absent from the dropdown below — each already has a tile with its
+ * own upload, and offering them twice made the tiles look optional. Declared
+ * here rather than in TransferDocuments.tsx because the completeness check at
+ * the bottom of this file has to know what is already covered, and a second copy
+ * of this list is exactly the drift 066 is the standing warning about.
  */
-export const SUPPORTING_DOC_GROUPS: SupportingDocGroup[] = [
+export const NAMED_DOC_TYPES = [
+  "deed_search",
+  "transfer_letter",
+  "clearance_figures",
+  "proof_of_payment_figures",
+  "coc_electrical",
+];
+
+/**
+ * Grouped for the dropdown. A flat list of a dozen options is a scan; a few
+ * short groups is a choice — and the grouping is the one an attorney already has
+ * in their head when they pick up the file.
+ */
+const AUTHORED_GROUPS: SupportingDocGroup[] = [
   {
     label: "Identity & authority",
     types: [
@@ -36,6 +55,10 @@ export const SUPPORTING_DOC_GROUPS: SupportingDocGroup[] = [
       "id_certified_trustee",
       "poa",
       "letter_of_authority",
+      // The councils' own "LETTER OF AUTHORITY" (CoE's sheet corrects "letter of
+      // executor" to it). A separate code from the FICA one on purpose — see
+      // COUNCIL_DOC_LABELS.
+      "letter_of_authority_council",
       "cor_14_3",
       "cipc_docs",
     ],
@@ -45,20 +68,94 @@ export const SUPPORTING_DOC_GROUPS: SupportingDocGroup[] = [
     types: ["proof_of_address", "tax_clearance"],
   },
   {
-    // 🔴 Inferred from the transaction, not from Jukka. Every transfer has an
-    // offer to purchase, and a municipal account statement is what a MAD and a
-    // rates clearance are both about — but neither was named in a meeting.
-    // Confirm, and add whatever else he actually files here; the list is one
-    // array, and a code that turns out to be wrong costs a rename, not a
-    // migration, because nothing keys on it.
+    // 🔴 THE STATEMENTS ARE THREE DOCUMENTS, NOT ONE. Zewn, 2026-09-02: "for
+    // certificates it just says statement, but when i search statement in the
+    // doc upload it gives me municipal account statement only. what about the
+    // other types of statements?"
+    //
+    // The councils ask for a rates account statement and a utilities account
+    // statement by name (COT's RCA sheet: "RATES ACC NUMBER / STATEMENT
+    // (INVOICE)"), and both were unreachable from this dropdown — so an attorney
+    // holding one had to file it as "Municipal Account Statement" or "Other",
+    // and the class it landed in came out of a type that was not what they had.
+    // Their labels carry the word "Statement" so the search that failed now
+    // finds all three.
+    label: "Accounts & readings",
+    types: [
+      "municipal_account",
+      "rates_account_invoice",
+      "utilities_account_invoice",
+      // Split water/electricity on 2026-09-01, both optional — a prepaid meter
+      // has nothing to photograph.
+      "meter_reading_water",
+      "meter_reading_electricity",
+    ],
+  },
+  {
+    // 🔴 The offer to purchase was inferred from the transaction rather than
+    // named by Jukka. Confirm; the list is one array and a wrong code costs a
+    // rename, not a migration, because nothing keys on it.
     label: "The transaction",
-    types: ["offer_to_purchase", "municipal_account"],
+    types: ["offer_to_purchase", "consumer_agreement"],
   },
   {
     label: "Anything else",
     types: ["other"],
   },
 ];
+
+/**
+ * Every document type a COUNCIL asks an attorney to bring.
+ *
+ * The same rule ExpectedDocuments renders from — input and supporting, minus
+ * anything the FIRM record autofills — so the two lists cannot disagree about
+ * what an attorney is expected to hand over. Outputs are excluded because those
+ * are what ConveyClear produces; nobody uploads their own deed search (updated).
+ */
+function councilExpectedDocTypes(): string[] {
+  const out = new Set<string>();
+  for (const council of COUNCILS) {
+    const specs = [...Object.values(council.services), ...Object.values(council.prc)];
+    for (const spec of specs) {
+      for (const doc of spec?.documents ?? []) {
+        if (doc.owner === "firm" || doc.docClass === "output") continue;
+        out.add(doc.type);
+      }
+    }
+  }
+  return Array.from(out);
+}
+
+/**
+ * The authored groups, plus anything a council asks for that they missed.
+ *
+ * 🔴 THE POINT IS THAT THIS CANNOT FALL BEHIND. "What we normally need" is
+ * generated from the council registry; this dropdown was hand-written; so every
+ * document added to a council since the list was typed became something the
+ * portal told an attorney to bring and then gave them nowhere to put. Zewn,
+ * 2026-09-02: "please make sure all the doc types listed in 'what you normally
+ * need' are also line items in the 'what is it' doc type section for doc
+ * uploads."
+ *
+ * Curated grouping is still worth having, so the authored list stays and the
+ * leftovers are appended under their own heading rather than the whole thing
+ * being derived. A new council document lands in "Asked for by a council" until
+ * somebody files it properly — visible and usable on the day it is added, which
+ * is the half that matters.
+ */
+function buildGroups(): SupportingDocGroup[] {
+  const covered = new Set([...AUTHORED_GROUPS.flatMap((g) => g.types), ...NAMED_DOC_TYPES]);
+  const leftovers = councilExpectedDocTypes().filter((t) => !covered.has(t));
+  if (leftovers.length === 0) return AUTHORED_GROUPS;
+
+  // Before "Anything else", which stays last: `other` is where you land when
+  // nothing fits, so it has to be read after everything that might.
+  const head = AUTHORED_GROUPS.slice(0, -1);
+  const tail = AUTHORED_GROUPS[AUTHORED_GROUPS.length - 1];
+  return [...head, { label: "Asked for by a council", types: leftovers.sort() }, tail];
+}
+
+export const SUPPORTING_DOC_GROUPS: SupportingDocGroup[] = buildGroups();
 
 export const SUPPORTING_DOC_TYPES: string[] = SUPPORTING_DOC_GROUPS.flatMap((g) => g.types);
 

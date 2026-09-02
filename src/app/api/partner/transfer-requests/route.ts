@@ -118,6 +118,81 @@ export async function POST(request: Request) {
       { status: 409 }
     );
   }
+  // 088 — the party detail. A trimmed list of strings, and two JSONB arrays.
+  //
+  // ⚠️ SERVER-SIDE COMPLETENESS IS NOT OPTIONAL. The form checks the same rule
+  // and prints a friendlier sentence, but the form is a convenience; this and
+  // 088's CHECK constraints are what actually hold. Jukka's reason for the
+  // fields is verification — staff compare what was typed against the FICA
+  // documents — and a request that arrives half-filled cannot be verified, so
+  // it must not become `pending`.
+  const emails = (key: string): string[] => {
+    const v = body[key];
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((x) => (typeof x === "string" ? x.trim() : ""))
+      .filter((x) => x !== "");
+  };
+  const directors = (key: string) => {
+    const v = body[key];
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((d) => {
+        const row = (d ?? {}) as Record<string, unknown>;
+        const pick = (k: string) => (typeof row[k] === "string" ? (row[k] as string).trim() : "");
+        return {
+          name: pick("name"),
+          id_number: pick("id_number"),
+          cell: pick("cell"),
+          email: pick("email"),
+        };
+      })
+      // A director with no name at all is an empty row somebody opened and left.
+      .filter((d) => d.name !== "");
+  };
+
+  const party = (role: "seller" | "buyer") => ({
+    name: str(`${role}_name`),
+    email: str(`${role}_email`),
+    cell: str(`${role}_cell`),
+    entityType: str(`${role}_entity_type`),
+    idNumber: str(`${role}_id_number`),
+    registrationNo: str(`${role}_registration_no`),
+  });
+
+  if (!isDraft) {
+    if (!str("municipality")) {
+      return NextResponse.json(
+        { message: "Choose the council — we cannot say what is needed without it." },
+        { status: 400 }
+      );
+    }
+    for (const role of ["seller", "buyer"] as const) {
+      const p = party(role);
+      // Unnamed is allowed and always was: firms supply what they know
+      // (2026-08-11). Half-named is what changed.
+      if (!p.name) continue;
+      const Role = role === "seller" ? "Seller" : "Buyer";
+      const missing: string[] = [];
+      if (!p.email) missing.push(`${Role} email`);
+      if (!p.cell) missing.push(`${Role} cell`);
+      if (!p.entityType) missing.push(`${Role} type`);
+      else if (p.entityType === "natural_person" && !p.idNumber) {
+        missing.push(`${Role} ID number`);
+      } else if (p.entityType !== "natural_person" && !p.registrationNo) {
+        missing.push(
+          p.entityType === "trust" ? `${Role} trust (IT) number` : `${Role} registration number`
+        );
+      }
+      if (missing.length) {
+        return NextResponse.json(
+          { message: `Still needed before we can open this transfer: ${missing.join(", ")}.` },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   const fields = {
     property_description: propertyDescription,
     municipality: str("municipality"),
@@ -125,9 +200,19 @@ export async function POST(request: Request) {
     seller_name: str("seller_name"),
     seller_email: str("seller_email"),
     seller_cell: str("seller_cell"),
+    seller_entity_type: str("seller_entity_type"),
+    seller_id_number: str("seller_id_number"),
+    seller_registration_no: str("seller_registration_no"),
+    seller_extra_emails: emails("seller_extra_emails"),
+    seller_directors: directors("seller_directors"),
     buyer_name: str("buyer_name"),
     buyer_email: str("buyer_email"),
     buyer_cell: str("buyer_cell"),
+    buyer_entity_type: str("buyer_entity_type"),
+    buyer_id_number: str("buyer_id_number"),
+    buyer_registration_no: str("buyer_registration_no"),
+    buyer_extra_emails: emails("buyer_extra_emails"),
+    buyer_directors: directors("buyer_directors"),
     notes: str("notes"),
     status: isDraft ? "draft" : "pending",
   };
@@ -137,10 +222,28 @@ export async function POST(request: Request) {
   // `status = 'draft'` on the OLD row, so the database — not this route — is
   // what stops a firm editing a request it has already submitted, or pulling a
   // decided one back to draft.
+  // 🔴 A RETURNED REQUEST CANNOT GO BACK TO `draft`. 089's coherence check says a
+  // draft has no reviewer and no transfer, and a request sent back for changes
+  // has both — it was reviewed, and since 083 its draft transfer exists. So
+  // "Save as draft" on a returned request keeps it in `changes_requested`, which
+  // is the truth anyway: it is still with the firm, still unsent, and staff can
+  // still see that they are waiting on it.
+  let savedStatus = fields.status;
+  if (draftId && isDraft) {
+    const { data: existing } = await supabase
+      .from("transfer_requests")
+      .select("status")
+      .eq("id", draftId)
+      .maybeSingle();
+    if ((existing as { status?: string } | null)?.status === "changes_requested") {
+      savedStatus = "changes_requested";
+    }
+  }
+
   const { data, error } = draftId
     ? await supabase
         .from("transfer_requests")
-        .update(fields)
+        .update({ ...fields, status: savedStatus })
         .eq("id", draftId)
         .select("id")
         .single()
@@ -208,6 +311,20 @@ export async function POST(request: Request) {
         property_description: propertyDescription,
         municipality: str("municipality"),
         notes: str("notes"),
+        // The parties as typed, so the draft transfer opens with its seller and
+        // buyer already on it (2026-09-02) instead of asking for them twice.
+        seller_name: fields.seller_name,
+        seller_email: fields.seller_email,
+        seller_cell: fields.seller_cell,
+        seller_entity_type: fields.seller_entity_type,
+        seller_id_number: fields.seller_id_number,
+        seller_registration_no: fields.seller_registration_no,
+        buyer_name: fields.buyer_name,
+        buyer_email: fields.buyer_email,
+        buyer_cell: fields.buyer_cell,
+        buyer_entity_type: fields.buyer_entity_type,
+        buyer_id_number: fields.buyer_id_number,
+        buyer_registration_no: fields.buyer_registration_no,
       },
       suggestedReference,
       auth.userId,

@@ -25,7 +25,11 @@ export default async function PartnerMatters({
   const { data, count } = await applyMatterFilters(
     supabase
       .from("matters")
-      .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, updated_at, clients(full_name, business_name), services(code, name)", {
+      // property_transfers is embedded so the card can name the transaction the
+      // matter belongs to (2026-09-02). RLS scopes the embed the same way it
+      // scopes the transfer itself, so one the firm cannot see comes back null
+      // and the chip simply does not render.
+      .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, updated_at, clients(full_name, business_name), services(code, name), property_transfers(id, reference)", {
         count: "exact",
       }),
     filters
@@ -33,6 +37,7 @@ export default async function PartnerMatters({
   type PartnerMatterRow = Matter & {
     service_subtype?: string | null;
     services?: { code?: string | null; name?: string | null } | null;
+    property_transfers?: { id?: string | null; reference?: string | null } | null;
   };
   const serviceLabel = (m: PartnerMatterRow) => [m.services?.name, m.service_subtype].filter(Boolean).join(": ");
   const matters = (data as PartnerMatterRow[] | null) ?? [];
@@ -53,7 +58,7 @@ export default async function PartnerMatters({
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="page-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Matters</h1>
           <p className="mt-2.5 text-[15px] font-medium text-ink-3">{total} matter{total === 1 ? "" : "s"}</p>
@@ -88,7 +93,11 @@ export default async function PartnerMatters({
               matter={m}
               href={`/partner/matters/${m.id}`}
               unread={unread.has(m.id)}
-              showStage
+              // No stage and no status for a firm (2026-09-02). Both report OUR
+              // file's workflow state; the phase stepper above says where the
+              // work is, which is the question they opened the page with.
+              showStatus={false}
+              transferHrefBase="/partner/transfers"
             />
           ))}
         </ul>

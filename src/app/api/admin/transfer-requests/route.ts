@@ -40,15 +40,26 @@ export async function POST(request: Request) {
   const id = (body.id ?? "").trim();
   const action = (body.action ?? "").trim();
   if (!id) return NextResponse.json({ message: "id is required" }, { status: 400 });
-  if (action !== "approve" && action !== "decline") {
-    return NextResponse.json({ message: "action must be approve or decline" }, { status: 400 });
+  // 089 — three answers, not two. "Send back" is the one Jukka asked for:
+  // "we can temporarily decline their request and give a reason to say that
+  // information is not reflecting correctly."
+  if (action !== "approve" && action !== "decline" && action !== "return") {
+    return NextResponse.json(
+      { message: "action must be approve, decline or return" },
+      { status: 400 }
+    );
   }
 
   const admin = createAdminClient();
 
   const { data: req } = await admin
     .from("transfer_requests")
-    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id")
+    // The party columns are selected since 2026-09-02 so a request lodged before
+    // the draft flow shipped still opens with its seller and buyer captured when
+    // approval builds the transfer. One string literal, not a concatenation:
+    // supabase-js infers the row type from the literal, and splitting it drops
+    // every field to `GenericStringError`.
+    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id, seller_name, seller_email, seller_cell, seller_entity_type, seller_id_number, seller_registration_no, buyer_name, buyer_email, buyer_cell, buyer_entity_type, buyer_id_number, buyer_registration_no")
     .eq("id", id)
     .maybeSingle();
   if (!req) return NextResponse.json({ message: "Request not found" }, { status: 404 });
@@ -57,6 +68,43 @@ export async function POST(request: Request) {
   }
 
   const now = new Date().toISOString();
+
+  // ── Send it back for changes (089) ────────────────────────────────────────
+  //
+  // NOT a decline. The request stays alive, the firm can edit it, and it comes
+  // back to the same queue. Jukka's example is a typed ID number that does not
+  // match the certified copy — "let's say they put in a six instead of a nine".
+  // Staff who can simply fix it should approve instead; this is for what only
+  // the firm can answer.
+  if (action === "return") {
+    const reason = (body.decline_reason ?? "").trim();
+    if (!reason) {
+      return NextResponse.json(
+        { message: "Say what needs correcting — the firm sees this and acts on it." },
+        { status: 400 }
+      );
+    }
+    const { error } = await admin
+      .from("transfer_requests")
+      .update({
+        status: "changes_requested",
+        reviewed_by: auth.callerId,
+        reviewed_at: now,
+        decline_reason: reason,
+      })
+      .eq("id", id);
+    if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+
+    await notifyUsers([req.requested_by], {
+      type: "transfer_request",
+      title: "Transfer request needs a correction",
+      body: reason,
+      // Straight into the form, already loaded, rather than to a list they then
+      // have to search. Resuming a returned request is the whole point of it.
+      link: `/partner/transfers/new?draft=${id}`,
+    });
+    return NextResponse.json({ ok: true, status: "changes_requested" });
+  }
 
   if (action === "decline") {
     const reason = (body.decline_reason ?? "").trim();

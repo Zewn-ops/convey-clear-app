@@ -17,7 +17,7 @@ export default async function PartnerClients() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Your clients</h1>
+      <h1 className="page-header text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Your clients</h1>
 
       <Table>
         <THead>

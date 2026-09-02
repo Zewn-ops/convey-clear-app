@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
 import PhaseProgress from "@/components/ui/PhaseProgress";
@@ -49,6 +50,8 @@ export type MatterCardRow = {
   updated_at?: string | null;
   clients?: { full_name?: string | null; business_name?: string | null } | null;
   services?: { code?: string | null; name?: string | null } | null;
+  /** The transaction this matter belongs to, where it belongs to one (029). */
+  property_transfers?: { id?: string | null; reference?: string | null } | null;
 };
 
 export default function MatterCard({
@@ -56,12 +59,33 @@ export default function MatterCard({
   href,
   unread = false,
   showStage = false,
+  showStatus = true,
+  transferHrefBase,
   index,
 }: {
   matter: MatterCardRow;
   href: string;
   unread?: boolean;
   showStage?: boolean;
+  /**
+   * The status pill. Off for attorneys (2026-09-02).
+   *
+   * Zewn: "remove the stage and status for attorneys here." Both answer a
+   * ConveyClear question rather than theirs — `matters.status` is the workflow
+   * state of OUR file (new / open / won / lost), and a firm reading "Won" beside
+   * their own instruction learns nothing about their transaction. The phase
+   * stepper directly above says where the work actually is, which is what they
+   * came for.
+   */
+  showStatus?: boolean;
+  /**
+   * Where a linked property transfer lives, e.g. "/partner/transfers". Pass it
+   * and the card carries the transaction the matter sits under — Zewn, the same
+   * day: "also add the linked property transfer somewhere." A matter title now
+   * carries the transfer REFERENCE (2026-09-01), so without this the card shows
+   * a code with nothing to click.
+   */
+  transferHrefBase?: string;
   /** 1-based position in the whole result set, continuing across pages. */
   index?: number;
 }) {
@@ -83,6 +107,7 @@ export default function MatterCard({
 
   const open = workdaysSince(m.created_at);
   const seen = relativeDays(m.updated_at);
+  const transferRef = m.property_transfers?.reference?.trim() || null;
   const stalled = open !== null && open > STALLED_WORKDAYS;
   const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
 
@@ -128,7 +153,7 @@ export default function MatterCard({
         {/* "Status:" is carried because the word alone is ambiguous on a card
             that also badges parties and document states — "New" could be a new
             matter or a new document until the label says which. */}
-        {m.status && (
+        {showStatus && m.status && (
           <StatusPill tone={tone}>
             <span className="font-normal opacity-80">Status:</span>{" "}
             {MATTER_STATUS_LABELS[m.status as MatterStatus] ?? m.status}
@@ -169,7 +194,28 @@ export default function MatterCard({
         )}
         {stage && <MetaChip label="Stage" value={stage} />}
         {seen && <MetaChip label="Last update" value={seen} />}
-        {m.created_at && <MetaChip label="Opened" value={formatDate(m.created_at)} />}
+        {/* The transaction this matter sits under. Since 2026-09-01 the matter
+            TITLE carries the transfer reference, so without a way through, the
+            card shows a code and no way to follow it. */}
+        {transferRef &&
+          (transferHrefBase && m.property_transfers?.id ? (
+            <Link
+              href={`${transferHrefBase}/${m.property_transfers.id}`}
+              className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+            >
+              <MetaChip label="Transfer" value={transferRef} icon={<Building2 className="h-3.5 w-3.5" />} />
+            </Link>
+          ) : (
+            <MetaChip label="Transfer" value={transferRef} icon={<Building2 className="h-3.5 w-3.5" />} />
+          ))}
+        {/* ONE time fact, not two. Zewn, 2026-09-02: "remove how many days its
+            been open or remove the date opened … leave only one of them on the
+            list pages." Elapsed time wins where there is one — it is a state of
+            affairs, where a date is a lookup — and the date fills in only where
+            there is not. Both stay on the matter page. */}
+        {open === null && m.created_at && (
+          <MetaChip label="Opened" value={formatDate(m.created_at)} />
+        )}
       </div>
     </li>
   );

@@ -11,7 +11,7 @@ import {
   type RawTransferParty,
 } from "@/lib/transfer-parties";
 import DetailFields from "@/components/ui/DetailFields";
-import { formatDate, municipalityLabel, formatRands } from "@/lib/utils";
+import { formatDate, formatDateTime, municipalityLabel, formatRands } from "@/lib/utils";
 import {
   isStaffRole,
   isAdminRole,
@@ -156,8 +156,13 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
       // The requester relation is named explicitly: transfer_requests has TWO
       // FKs to users (requested_by and reviewed_by), so an unqualified
       // users(...) is ambiguous and PostgREST refuses it.
+      // 088's party detail is here because VERIFICATION is what it is for. Jukka,
+      // 2026-09-02: "we can have our staff double check that the details that
+      // they typed in is actually corresponding with their supporting documents.
+      // If not, we can temporarily decline their request." That check happens on
+      // this card, against the FICA documents below it.
       .select(
-        "id, suggested_reference, property_description, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, created_at, details_dismissed_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email, phone)"
+        "id, suggested_reference, property_description, seller_name, seller_email, seller_cell, seller_entity_type, seller_id_number, seller_registration_no, seller_extra_emails, seller_directors, buyer_name, buyer_email, buyer_cell, buyer_entity_type, buyer_id_number, buyer_registration_no, buyer_extra_emails, buyer_directors, notes, created_at, details_dismissed_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email, phone)"
       )
       .eq("transfer_id", id)
       .maybeSingle(),
@@ -354,9 +359,9 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
         <Link href="/admin/property-transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All property transfers
         </Link>
-        <div className="flex items-start justify-between gap-4">
+        <div className="page-header flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-action">{transfer.reference}</h1>
+            <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{transfer.reference}</h1>
             <p className="text-sm text-ink-3 mt-1">
               {transfer.property_description || "No property description"}
               {transfer.municipality ? ` · ${municipalityLabel(transfer.municipality)}` : ""}
@@ -497,8 +502,10 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
               ]}
               extra={[
                 { label: "Matters linked", value: String(linked.length) },
-                { label: "Opened", value: formatDate(transfer.created_at) },
-                { label: "Last updated", value: formatDate(transfer.updated_at) },
+                // With the time — see the partner page. Jukka asked for both,
+                // and staff read the same card.
+                { label: "Opened", value: formatDateTime(transfer.created_at) },
+                { label: "Last updated", value: formatDateTime(transfer.updated_at) },
                 { label: "Notes", value: transfer.notes, wide: true },
               ]}
             />

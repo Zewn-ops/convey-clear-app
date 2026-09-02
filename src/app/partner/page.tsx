@@ -72,11 +72,11 @@ export default async function PartnerOverview({
     municipality?: string | null;
     service_subtype?: string | null;
     services?: { code?: string | null; name?: string | null } | null;
+    property_transfers?: { id?: string | null; reference?: string | null } | null;
   };
 
   let matters: PartnerMatterRow[] = [];
   let transfers: PropertyTransfer[] = [];
-  const matterCounts = new Map<string, number>();
   let progressById = new Map<string, TransferProgress>();
 
   // Only the side being shown is fetched. The counts above are cheap
@@ -93,23 +93,20 @@ export default async function PartnerOverview({
 
     if (transfers.length) {
       const tIds = transfers.map((t) => t.id);
-      // Two queries for the whole list, not two per card — the same shape the
-      // transfers page uses, so a card reads identically in both places.
-      const [{ data: linked }, { data: svcRows }] = await Promise.all([
-        supabase.from("matters").select("transfer_id").in("transfer_id", tIds),
-        supabase.from("transfer_services").select(TRANSFER_PROGRESS_SELECT).in("transfer_id", tIds),
-      ]);
-      (linked ?? []).forEach((m) => {
-        const tid = (m as { transfer_id: string | null }).transfer_id;
-        if (tid) matterCounts.set(tid, (matterCounts.get(tid) ?? 0) + 1);
-      });
+      // One query for the whole list, not one per card — the same shape the
+      // transfers page uses, so a card reads identically in both places. The
+      // matter-count query went with the chip it fed (2026-09-02).
+      const { data: svcRows } = await supabase
+        .from("transfer_services")
+        .select(TRANSFER_PROGRESS_SELECT)
+        .in("transfer_id", tIds);
       progressById = transferProgressById(svcRows, tIds);
     }
   } else {
     const { data } = await supabase
       .from("matters")
       .select(
-        "id, title, current_phase, status, municipality, service_subtype, created_at, updated_at, clients(full_name, business_name), services(code, name)"
+        "id, title, current_phase, status, municipality, service_subtype, created_at, updated_at, clients(full_name, business_name), services(code, name), property_transfers(id, reference)"
       )
       .in("status", ["open", "on_hold"])
       .order("created_at", { ascending: false })
@@ -139,13 +136,20 @@ export default async function PartnerOverview({
   const actionLink =
     "inline-flex items-center gap-2 rounded border border-line px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors duration-150 ease-out hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-canvas";
 
+  // Deliberately larger than a chip. Zewn, 2026-09-02: "make the selection
+  // between prop trfs and matters a bit bigger so it draws more attention." It
+  // is the control that changes the whole page — tiles, heading and list — and
+  // at 12px in a grey tray it read as a filter someone had already set.
   const tab = (active: boolean) =>
-    "rounded-md px-3 py-1 text-xs font-medium transition-colors " +
-    (active ? "bg-surface text-ink shadow-chip" : "text-ink-3 hover:text-ink-2");
+    "rounded-lg px-4 py-2 text-[14px] font-semibold transition-colors " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action " +
+    (active
+      ? "bg-surface text-ink shadow"
+      : "text-ink-3 hover:bg-surface/60 hover:text-ink-2");
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-col gap-4">
+      <div className="page-header flex flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
@@ -162,7 +166,7 @@ export default async function PartnerOverview({
               links, not state, so the choice survives a refresh and a shared
               URL without a line of client JavaScript. */}
           <div
-            className="flex items-center gap-1 rounded-lg bg-raised p-0.5"
+            className="flex items-center gap-1 rounded-xl bg-raised p-1 ring-1 ring-inset ring-line"
             role="tablist"
             aria-label="Show transfers or matters"
           >
@@ -256,7 +260,6 @@ export default async function PartnerOverview({
                   key={t.id}
                   transfer={t}
                   href={`/partner/transfers/${t.id}`}
-                  matterCount={matterCounts.get(t.id) ?? 0}
                   progress={progressById.get(t.id)}
                 />
               ))}
@@ -283,6 +286,9 @@ export default async function PartnerOverview({
                 matter={m}
                 href={`/partner/matters/${m.id}`}
                 unread={unread.has(m.id)}
+                // A firm reads the phase, not our workflow status (2026-09-02).
+                showStatus={false}
+                transferHrefBase="/partner/transfers"
               />
             ))}
           </ul>

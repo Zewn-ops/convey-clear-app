@@ -36,6 +36,90 @@ export interface RequestRow {
   property_description: string | null;
   municipality: string | null;
   notes: string | null;
+  /**
+   * The parties as the attorney typed them (055, extended by 088). Optional on
+   * the type because a request may legitimately carry none — firms supply what
+   * they know — not because a caller may skip selecting the columns.
+   */
+  seller_name?: string | null;
+  seller_email?: string | null;
+  seller_cell?: string | null;
+  seller_entity_type?: string | null;
+  seller_id_number?: string | null;
+  seller_registration_no?: string | null;
+  buyer_name?: string | null;
+  buyer_email?: string | null;
+  buyer_cell?: string | null;
+  buyer_entity_type?: string | null;
+  buyer_id_number?: string | null;
+  buyer_registration_no?: string | null;
+}
+
+/**
+ * The seller and the buyer, from what the firm typed into its request.
+ *
+ * Zewn, 2026-09-02: "if i entered the details of the buyer and seller when
+ * creating the prop trf request then the buyer and seller parties should auto
+ * populate." Until now they did not — the request captured six fields that one
+ * card on the admin page displayed and nothing ever acted on, so an attorney who
+ * filled them in still opened a transfer whose parties read "Not linked yet".
+ *
+ * 🔴 THEY ARE CAPTURES, NOT CLIENTS, and that is the design rather than a
+ * shortcut. Creation moved behind ConveyClear at Meeting 2 (§84) precisely so
+ * one vetted client database is maintained and one person does not become three;
+ * minting a `clients` row out of a firm's free text is the thing that decision
+ * forbids. 050's inline capture is the shape that fits — a named party on the
+ * transfer, marked "captured, not a client record", which staff resolve to a
+ * real client once they know which one it is.
+ *
+ * ⚠️ ENTITY TYPE FALLS BACK to `natural_person`, and only as a fallback. 088
+ * added the question to the request form — Jukka: "if they select the seller,
+ * they need to have three options. Is it an individual, a business, or a trust?"
+ * — so a request lodged since then states it. Requests lodged BEFORE it do not,
+ * the capture CHECK requires a value, and a natural person is the common case; a
+ * wrong fallback costs one edit on a row already flagged as unresolved, whereas
+ * dropping the party costs re-typing everything the attorney gave us.
+ *
+ * The name lands in `full_name` for a person and `business_name` for a company
+ * or a trust, because that is how 050 stores an inline capture and how every
+ * display path reads one back.
+ */
+function partiesFromRequest(req: RequestRow) {
+  const clean = (v: string | null | undefined) => {
+    const t = (v ?? "").trim();
+    return t === "" ? null : t;
+  };
+
+  return (["seller", "buyer"] as const)
+    .map((role) => {
+      const isSeller = role === "seller";
+      const entityType =
+        clean(isSeller ? req.seller_entity_type : req.buyer_entity_type) ?? "natural_person";
+      const isPerson = entityType === "natural_person";
+      const name = clean(isSeller ? req.seller_name : req.buyer_name);
+      return {
+        role,
+        entity_type: entityType,
+        name,
+        full_name: isPerson ? name : null,
+        business_name: isPerson ? null : name,
+        email: clean(isSeller ? req.seller_email : req.buyer_email),
+        cell: clean(isSeller ? req.seller_cell : req.buyer_cell),
+        id_number: isPerson
+          ? clean(isSeller ? req.seller_id_number : req.buyer_id_number)
+          : null,
+        registration_no: isPerson
+          ? null
+          : clean(isSeller ? req.seller_registration_no : req.buyer_registration_no),
+      };
+    })
+    // A name is what the capture constraint requires and what makes the row
+    // worth having: an email address with nobody attached to it is not a party.
+    .filter((p) => p.name !== null)
+    .map(({ name: _name, ...p }) => ({
+      ...p,
+      notes: "Captured from the firm's transfer request — not yet a client record.",
+    }));
 }
 
 export type BuildResult =
@@ -111,6 +195,34 @@ export async function createTransferFromRequest(
       transferId: transfer.id,
       activityType: "system",
       body: "Conveyancing attorney set to the requesting firm, from their transfer request.",
+      authorId: callerId,
+      authorLabel: "ConveyClear",
+    });
+  }
+
+  // The seller and the buyer the firm typed in. Same best-effort reasoning as
+  // the attorney party above: the transfer exists and is accessible, which is
+  // what was asked for. Inserted one at a time so a bad seller row does not cost
+  // the buyer — the two are independent facts.
+  const captured = partiesFromRequest(req);
+  for (const p of captured) {
+    const { error } = await admin.from("transfer_parties").insert({
+      transfer_id: transfer.id,
+      ...p,
+    });
+    if (error) {
+      console.error(
+        `[transfer-from-request] transfer ${transfer.id}: the ${p.role} from the request was not captured: ${error.message}`
+      );
+    }
+  }
+  if (captured.length) {
+    await logTransferActivity(admin, {
+      transferId: transfer.id,
+      activityType: "system",
+      body:
+        `${captured.map((p) => (p.role === "seller" ? "Seller" : "Buyer")).join(" and ")} ` +
+        "captured from the firm's transfer request. Not yet linked to a client record.",
       authorId: callerId,
       authorLabel: "ConveyClear",
     });

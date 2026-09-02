@@ -94,15 +94,25 @@ const PARTNER_STATUS_ORDER = ["needed", "already_done", "not_applicable"];
 // amber. The tones are named by MEANING rather than colour, so "action" is the
 // blue one and "waiting" the amber — see components/ui/StatusPill.tsx, where the
 // fills are contrast-measured against white text.
+//
+// 🔴 AMBER MOVED 2026-09-02, from not-applicable onto not-specified. Zewn,
+// looking at seven grey "Not specified" lines: "change not specified to yellow
+// so they know it needs to be selected."
+//
+// Amber can only mean one thing on one list, so the two swapped rather than
+// doubling up: NOT SPECIFIED is the unanswered state — nobody has told us
+// anything and the line is waiting on the reader — while NOT APPLICABLE is a
+// decision already taken that needs nothing further, which is what neutral says
+// everywhere else in this portal.
 const STATUS_TONE: Record<string, StatusTone> = {
-  not_specified: "neutral",
+  not_specified: "waiting",
   needed: "action",
   // Both finished states are green — to anyone reading the list, "done" is
   // "done", and the distinction between who did it belongs in the label rather
   // than in a colour nobody would decode.
   completed: "ok",
   already_done: "ok",
-  not_applicable: "waiting",
+  not_applicable: "neutral",
 };
 
 /**
@@ -114,11 +124,11 @@ const STATUS_TONE: Record<string, StatusTone> = {
  * before changing any fill). If a tone moves there, move it here too.
  */
 const SELECT_TONE: Record<string, string> = {
-  not_specified: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
+  not_specified: "bg-waiting-fill text-white",
   needed: "bg-action-fill text-white",
   completed: "bg-ok-fill text-white",
   already_done: "bg-ok-fill text-white",
-  not_applicable: "bg-waiting-fill text-white",
+  not_applicable: "bg-raised text-ink-2 ring-1 ring-inset ring-line",
 };
 
 const statusSelectClass = (status: string) =>
@@ -136,7 +146,10 @@ const statusSelectClass = (status: string) =>
  */
 const chevronClass = (status: string) =>
   "pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 opacity-70 " +
-  (status === "not_specified" ? "text-ink-2" : "text-white");
+  // Follows the FILL, not one named status: not-applicable is the neutral one
+  // since 2026-09-02, and a chevron left behind reads as invisible white on a
+  // pale pill.
+  (status === "not_applicable" ? "text-ink-2" : "text-white");
 
 export interface ServiceRow {
   id: string;
@@ -236,6 +249,8 @@ export default function TransferServices({
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  /** Whether the "+" has been opened into its list of services. */
+  const [picking, setPicking] = useState(false);
   const [draft, setDraft] = useState("");
 
   // Staff get the full vocabulary, the firm a narrowed one, everyone else a
@@ -268,11 +283,39 @@ export default function TransferServices({
   const optionsFor = (status: string) =>
     statusOptions.includes(status) ? statusOptions : [status, ...statusOptions];
 
-  const top = rows.filter((r) => !r.parent_id).sort((a, b) => a.position - b.position);
+  const allTop = rows.filter((r) => !r.parent_id).sort((a, b) => a.position - b.position);
   const childrenOf = (id: string) => rows.filter((r) => r.parent_id === id);
 
+  /**
+   * 🔴 THE FIRM SEES WHAT IT ASKED FOR, PLUS A WAY TO ASK FOR MORE.
+   *
+   * Jukka, in person 2026-09-02, on the seven-line list: "I'm going to tell you
+   * straight what I don't like … the way a service is requested for by an
+   * attorney. It's not clear enough. We need to have like a service action
+   * button of some sort … Let's say you put a plus here. Like one massive plus.
+   * And if they were to click that plus, then they can select a list of
+   * services."
+   *
+   * Zewn, agreeing: "Instead of showing all the services and then choosing
+   * whether it needs to be done or not … you click a plus sign and you choose
+   * which ones you need."
+   *
+   * The seven lines still EXIST — 063 instantiates them and staff work the full
+   * checklist. What changed is that an untouched line is not a question put to
+   * the attorney; it is an absence. Seven dropdowns reading "Not specified" made
+   * choosing look like correcting, which is why nobody chose.
+   *
+   * ⚠️ STAFF STILL SEE EVERYTHING. `canManage` is the whole checklist, because
+   * ConveyClear's job is to know what has not been decided. This is a change to
+   * how the FIRM is asked, not to what the transfer holds.
+   */
+  const unspecified = allTop.filter((r) => r.status === "not_specified");
+  const top = canManage ? allTop : allTop.filter((r) => r.status !== "not_specified");
+
   // Outstanding prerequisites, for the advisory note on Change of Ownership.
-  const outstanding = top
+  // Over ALL lines, not the visible ones: the municipal sequence is true whether
+  // or not the firm has asked us for the service yet.
+  const outstanding = allTop
     .filter((r) => COO_PREREQUISITES.includes(r.service_code as never) && r.status === "needed")
     .map((r) => serviceLabel(r.service_code));
 
@@ -445,6 +488,20 @@ export default function TransferServices({
   }
 
   return (
+    <>
+    {/* Nothing chosen yet, for a firm that may choose. The empty state IS the
+        invitation — a list of seven greyed rows was the thing Jukka said reads
+        as noise rather than as a question. */}
+    {!canManage && canMark && top.length === 0 && (
+      <div className="px-5 py-8 text-center">
+        <p className="text-sm font-medium text-ink">No services requested yet</p>
+        <p className="mx-auto mt-1 max-w-sm text-xs text-ink-3">
+          Tell us what this transaction needs. You can add more at any time, and
+          ConveyClear will come back to you about anything else it spots.
+        </p>
+      </div>
+    )}
+
     <ul className="divide-y divide-line">
       {top.map((r) => {
         const code = r.service_code ?? "";
@@ -562,13 +619,35 @@ export default function TransferServices({
               )}
             </div>
 
+            {/* What marking a line "already done" actually COSTS, said once,
+                beside the line it applies to.
+
+                Zewn, 2026-09-02: "for already done, please make a small note
+                letting them know that this means conveyclear will not be doing
+                that service for them or something along those lines." The
+                marker is not a status report — it is an instruction, and the two
+                read identically on a dropdown. Shown only to whoever can set it
+                (staff and the marking firm): a client can neither choose it nor
+                act on the sentence.
+
+                Same reasoning applies to "not applicable", which has the same
+                consequence by a different route, so it says so too. */}
+            {mayPickStatus && (r.status === "already_done" || r.status === "not_applicable") && (
+              <p className="mt-2 pl-6 text-xs text-ink-3">
+                {r.status === "already_done"
+                  ? "Marked as handled elsewhere — ConveyClear will not do this one for you."
+                  : "Marked as not needed on this transaction — ConveyClear will not do this one for you."}{" "}
+                Change the marker if that is wrong.
+              </p>
+            )}
+
             {/* §114, shown and not enforced. Deliberately advisory wording: it
                 reports the municipal reality, it does not claim the portal is
                 stopping anyone. */}
             {isCoo && outstanding.length > 0 && (
               <p className="mt-2 pl-6 text-xs text-ink-3">
-                Municipal sequence: {outstanding.join(", ")} normally clear{" "}
-                {outstanding.length === 1 ? "s" : ""} before change of ownership.
+                Municipal sequence: {outstanding.join(", ")} normally{" "}
+                {outstanding.length === 1 ? "clears" : "clear"} before change of ownership.
               </p>
             )}
 
@@ -873,5 +952,79 @@ export default function TransferServices({
         );
       })}
     </ul>
+
+    {/* 🔴 THE PLUS. Jukka drew it on his own screen: "Let's say you put a plus
+        here. Like one massive plus. And if they were to click that plus, then
+        they can select a list of services."
+
+        It sets the marker to `needed`, which is precisely what asking for a
+        service means — so this is a new way to reach an existing action, not a
+        new state. 071's trigger still decides what a firm may write; this only
+        offers the one value it is allowed.
+
+        Staff do not get it: they already see every line, and adding one they can
+        see would do nothing. */}
+    {!canManage && canMark && unspecified.length > 0 && (
+      <div className="border-t border-line px-5 py-4">
+        {picking ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+              What do you need on this transaction?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {unspecified.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={busy === r.id}
+                  onClick={async () => {
+                    const ok = await call(
+                      {
+                        url: "/api/transfer-services",
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: r.id, status: "needed" }),
+                      },
+                      r.id
+                    );
+                    if (ok) {
+                      toast.success(`${serviceLabel(r.service_code)} requested.`);
+                      // Stay open: asking for one service is the common case,
+                      // asking for three in a row is the next most common.
+                      setOpen((prev) => new Set(prev).add(r.id));
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2
+                             text-[13.5px] font-medium text-ink transition-colors
+                             hover:border-action hover:text-action disabled:opacity-50"
+                >
+                  <Plus className="h-3.5 w-3.5" /> {serviceLabel(r.service_code)}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPicking(false)}
+              className="text-xs font-semibold text-ink-3 hover:text-ink"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-line
+                       px-4 py-4 text-[14px] font-semibold text-ink-2 transition-colors
+                       hover:border-action hover:bg-action-tint hover:text-action
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          >
+            <Plus className="h-5 w-5" />
+            {top.length === 0 ? "Choose the services you need" : "Add a service"}
+          </button>
+        )}
+      </div>
+    )}
+    </>
   );
 }

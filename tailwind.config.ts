@@ -39,6 +39,10 @@ const config: Config = {
         "ok-fill": "var(--cc-ok-fill)",
         "danger-fill": "var(--cc-danger-fill)",
         chrome: "var(--cc-chrome)",
+        // The text colour that belongs ON chrome. The token has existed since
+        // the 2026-08-05 regeneration; only `chrome` itself was ever exposed to
+        // Tailwind, so anything sitting on the navy had to hardcode white.
+        "on-chrome": "var(--cc-on-chrome)",
         navy: {
           50: "#eef1f9",
           100: "#d5dcf0",

@@ -124,25 +124,24 @@ export default async function PartnerTransfersPage({
     periodFacet() as Facet,
   ];
 
-  const counts = new Map<string, number>();
   let progressById = new Map<string, TransferProgress>();
   if (transfers.length) {
     const ids = transfers.map((t) => t.id);
-    // Two queries for the whole page, not two per card. RLS scopes both.
-    const [{ data: linked }, { data: svcRows }] = await Promise.all([
-      supabase.from("matters").select("transfer_id").in("transfer_id", ids),
-      supabase.from("transfer_services").select(TRANSFER_PROGRESS_SELECT).in("transfer_id", ids),
-    ]);
-    (linked ?? []).forEach((m) => {
-      const tid = (m as { transfer_id: string | null }).transfer_id;
-      if (tid) counts.set(tid, (counts.get(tid) ?? 0) + 1);
-    });
+    // One query for the whole page, not one per card. RLS scopes it.
+    //
+    // The matter-count query that stood beside this one is GONE along with the
+    // chip it fed (2026-09-02): a firm reads a transfer through its service
+    // lines, so counting matters here bought a number nobody reads.
+    const { data: svcRows } = await supabase
+      .from("transfer_services")
+      .select(TRANSFER_PROGRESS_SELECT)
+      .in("transfer_id", ids);
     progressById = transferProgressById(svcRows, ids);
   }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex items-start justify-between gap-4">
+      <div className="page-header flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Property transfers</h1>
           {/* The TOTAL, not the page — `transfers.length` caps at the page size. */}
@@ -249,7 +248,6 @@ export default async function PartnerTransfersPage({
                   key={t.id}
                   transfer={t}
                   href={`/partner/transfers/${t.id}`}
-                  matterCount={counts.get(t.id) ?? 0}
                   progress={progressById.get(t.id)}
                 />
               ))}

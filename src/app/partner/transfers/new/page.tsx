@@ -35,11 +35,17 @@ export default async function RequestTransferPage({
     const supabase = await createClient();
     const { data } = await supabase
       .from("transfer_requests")
+      // 088's party detail comes back too, so resuming a draft restores the
+      // entity type, the identifying number, the extra emails and the directors
+      // rather than silently dropping half of what was typed.
       .select(
-        "id, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes"
+        "id, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, seller_entity_type, seller_id_number, seller_registration_no, seller_extra_emails, seller_directors, buyer_name, buyer_email, buyer_cell, buyer_entity_type, buyer_id_number, buyer_registration_no, buyer_extra_emails, buyer_directors, notes"
       )
       .eq("id", draftId)
-      .eq("status", "draft")
+      // 089 — a returned request resumes through the same form. RLS already
+      // decides whether this firm may edit it; the status filter here only keeps
+      // an approved or declined request from being reopened as a draft.
+      .in("status", ["draft", "changes_requested"])
       .maybeSingle();
     draft = (data as TransferRequestDraft | null) ?? null;
   }
