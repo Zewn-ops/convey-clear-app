@@ -34,6 +34,16 @@ import {
 } from "@/types";
 import { ArrowLeft, FileText } from "lucide-react";
 
+/**
+ * The record's own name in the tab.
+ *
+ * Every detail page fell through to the ROOT metadata, so an ADMIN looking at a
+ * property transfer had a tab reading "ConveyClear -- Client Portal" (found
+ * 2026-09-02). Staff keep several of these open at once; a tab that names the
+ * portal rather than the record cannot be told from its neighbours.
+ */
+export const metadata = { title: "Matter \u2014 ConveyClear Partner" };
+
 export default async function PartnerMatterDetail({ params }: { params: { id: string } }) {
   const supabase = await createClient();
 
