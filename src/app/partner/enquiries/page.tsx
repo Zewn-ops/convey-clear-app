@@ -29,7 +29,7 @@ export default async function PartnerEnquiries() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div>
+      <div className="page-header">
         <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Enquiries</h1>
         <p className="mt-2.5 text-[15px] font-medium text-ink-3">Ask ConveyClear about a matter — the team is notified and will respond here.</p>
       </div>

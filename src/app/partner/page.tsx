@@ -149,7 +149,7 @@ export default async function PartnerOverview({
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-col gap-4">
+      <div className="page-header flex flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">

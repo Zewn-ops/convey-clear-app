@@ -130,7 +130,13 @@ export type ServiceCode = (typeof SERVICE_ORDER)[number];
  */
 export const SERVICE_LABELS: Record<ServiceCode, string> = {
   EBP: "Existing Building Plans",
-  COC: "Certificates",
+  // 🔴 "Certificates" NAMED THE WRONG CERTIFICATE. Jukka, in person 2026-09-02:
+  // "certificates are going to give them the indication that it's rate clearance
+  // certificate. So you need to rename that to COC — just short COC." An
+  // attorney scanning seven lines for the rates clearance CERTIFICATE stopped at
+  // this one, which is compliance: electrical, gas, building standards. The
+  // acronym is what the profession says out loud and cannot be read as the RCC.
+  COC: "COC",
   MAD: "Municipal Account Dispute",
   PRC: "Property Rates Clearance",
   COO: "Change of Ownership",

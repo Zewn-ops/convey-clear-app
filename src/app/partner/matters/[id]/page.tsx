@@ -159,7 +159,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         {partnerTransferId ? matter.property_transfers?.reference ?? "Property transfer" : "Back to matters"}
       </Link>
 
-      <div className="flex items-start justify-between">
+      <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{matter.title || clientDisplayName(client) || "Matter"}</h1>
           <div className="mt-4 flex flex-wrap gap-2">

@@ -13,7 +13,7 @@ import {
 import DetailFields from "@/components/ui/DetailFields";
 import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
-import { formatDate, municipalityLabel, formatRands } from "@/lib/utils";
+import { formatDateTime, municipalityLabel, formatRands } from "@/lib/utils";
 import {
   clientDisplayName,
   TRANSFER_STATUS_LABELS,
@@ -273,7 +273,7 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
         <Link href="/partner/transfers" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink mb-4">
           <ArrowLeft className="h-4 w-4" /> All property transfers
         </Link>
-        <div className="flex items-start justify-between gap-4">
+        <div className="page-header flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{transfer.reference}</h1>
             <p className="mt-2.5 text-[15px] font-medium text-ink-3">
@@ -418,8 +418,13 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
                 // can be available to all, its just one number which is purchase
                 // price."
                 { label: "Purchase price", value: formatRands(transfer.purchase_price) },
-                { label: "Opened", value: formatDate(transfer.created_at) },
-                { label: "Last updated", value: formatDate(transfer.updated_at) },
+                // 🔴 WITH THE TIME, not just the date. Jukka, 2026-09-02:
+                // "Matters linked, opened — can we put the time here? … And also
+                // with last updated, that's important." Two transfers opened on
+                // the same day are indistinguishable without it, and "last
+                // updated: 2 September" answers nothing on the day itself.
+                { label: "Opened", value: formatDateTime(transfer.created_at) },
+                { label: "Last updated", value: formatDateTime(transfer.updated_at) },
                 { label: "Property", value: transfer.property_description, wide: true },
               ]}
             />

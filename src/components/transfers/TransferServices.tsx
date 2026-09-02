@@ -249,6 +249,8 @@ export default function TransferServices({
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  /** Whether the "+" has been opened into its list of services. */
+  const [picking, setPicking] = useState(false);
   const [draft, setDraft] = useState("");
 
   // Staff get the full vocabulary, the firm a narrowed one, everyone else a
@@ -281,11 +283,39 @@ export default function TransferServices({
   const optionsFor = (status: string) =>
     statusOptions.includes(status) ? statusOptions : [status, ...statusOptions];
 
-  const top = rows.filter((r) => !r.parent_id).sort((a, b) => a.position - b.position);
+  const allTop = rows.filter((r) => !r.parent_id).sort((a, b) => a.position - b.position);
   const childrenOf = (id: string) => rows.filter((r) => r.parent_id === id);
 
+  /**
+   * 🔴 THE FIRM SEES WHAT IT ASKED FOR, PLUS A WAY TO ASK FOR MORE.
+   *
+   * Jukka, in person 2026-09-02, on the seven-line list: "I'm going to tell you
+   * straight what I don't like … the way a service is requested for by an
+   * attorney. It's not clear enough. We need to have like a service action
+   * button of some sort … Let's say you put a plus here. Like one massive plus.
+   * And if they were to click that plus, then they can select a list of
+   * services."
+   *
+   * Zewn, agreeing: "Instead of showing all the services and then choosing
+   * whether it needs to be done or not … you click a plus sign and you choose
+   * which ones you need."
+   *
+   * The seven lines still EXIST — 063 instantiates them and staff work the full
+   * checklist. What changed is that an untouched line is not a question put to
+   * the attorney; it is an absence. Seven dropdowns reading "Not specified" made
+   * choosing look like correcting, which is why nobody chose.
+   *
+   * ⚠️ STAFF STILL SEE EVERYTHING. `canManage` is the whole checklist, because
+   * ConveyClear's job is to know what has not been decided. This is a change to
+   * how the FIRM is asked, not to what the transfer holds.
+   */
+  const unspecified = allTop.filter((r) => r.status === "not_specified");
+  const top = canManage ? allTop : allTop.filter((r) => r.status !== "not_specified");
+
   // Outstanding prerequisites, for the advisory note on Change of Ownership.
-  const outstanding = top
+  // Over ALL lines, not the visible ones: the municipal sequence is true whether
+  // or not the firm has asked us for the service yet.
+  const outstanding = allTop
     .filter((r) => COO_PREREQUISITES.includes(r.service_code as never) && r.status === "needed")
     .map((r) => serviceLabel(r.service_code));
 
@@ -458,6 +488,20 @@ export default function TransferServices({
   }
 
   return (
+    <>
+    {/* Nothing chosen yet, for a firm that may choose. The empty state IS the
+        invitation — a list of seven greyed rows was the thing Jukka said reads
+        as noise rather than as a question. */}
+    {!canManage && canMark && top.length === 0 && (
+      <div className="px-5 py-8 text-center">
+        <p className="text-sm font-medium text-ink">No services requested yet</p>
+        <p className="mx-auto mt-1 max-w-sm text-xs text-ink-3">
+          Tell us what this transaction needs. You can add more at any time, and
+          ConveyClear will come back to you about anything else it spots.
+        </p>
+      </div>
+    )}
+
     <ul className="divide-y divide-line">
       {top.map((r) => {
         const code = r.service_code ?? "";
@@ -908,5 +952,79 @@ export default function TransferServices({
         );
       })}
     </ul>
+
+    {/* 🔴 THE PLUS. Jukka drew it on his own screen: "Let's say you put a plus
+        here. Like one massive plus. And if they were to click that plus, then
+        they can select a list of services."
+
+        It sets the marker to `needed`, which is precisely what asking for a
+        service means — so this is a new way to reach an existing action, not a
+        new state. 071's trigger still decides what a firm may write; this only
+        offers the one value it is allowed.
+
+        Staff do not get it: they already see every line, and adding one they can
+        see would do nothing. */}
+    {!canManage && canMark && unspecified.length > 0 && (
+      <div className="border-t border-line px-5 py-4">
+        {picking ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+              What do you need on this transaction?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {unspecified.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={busy === r.id}
+                  onClick={async () => {
+                    const ok = await call(
+                      {
+                        url: "/api/transfer-services",
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: r.id, status: "needed" }),
+                      },
+                      r.id
+                    );
+                    if (ok) {
+                      toast.success(`${serviceLabel(r.service_code)} requested.`);
+                      // Stay open: asking for one service is the common case,
+                      // asking for three in a row is the next most common.
+                      setOpen((prev) => new Set(prev).add(r.id));
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2
+                             text-[13.5px] font-medium text-ink transition-colors
+                             hover:border-action hover:text-action disabled:opacity-50"
+                >
+                  <Plus className="h-3.5 w-3.5" /> {serviceLabel(r.service_code)}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPicking(false)}
+              className="text-xs font-semibold text-ink-3 hover:text-ink"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-line
+                       px-4 py-4 text-[14px] font-semibold text-ink-2 transition-colors
+                       hover:border-action hover:bg-action-tint hover:text-action
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          >
+            <Plus className="h-5 w-5" />
+            {top.length === 0 ? "Choose the services you need" : "Add a service"}
+          </button>
+        )}
+      </div>
+    )}
+    </>
   );
 }

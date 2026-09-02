@@ -4,6 +4,7 @@ import { isPartnerRole } from "@/types";
 import { createClient } from "@/lib/supabase/server";
 import PartnerNav from "@/components/partner/PartnerNav";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import PortalFooter from "@/components/ui/PortalFooter";
 
 export default async function PartnerLayout({
   children,
@@ -34,7 +35,12 @@ export default async function PartnerLayout({
       <div className="flex flex-col flex-1 md:ml-64">
         <PartnerNav firmName={firmName} variant="mobile" isFirmAdmin={isFirmAdmin} />
         <NotificationBell base="/partner" />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        {/* pb-32: Zewn, 2026-09-02 — "add a bit of padding to the bottom of
+            the pages. around 100-150px otherwise it feels squished." The last
+            card on a long page used to end a few pixels above the viewport
+            floor, which reads as the page having been cut off. */}
+        <main className="flex-1 p-4 pb-32 md:p-6 md:pb-36">{children}</main>
+        <PortalFooter />
       </div>
     </div>
   );

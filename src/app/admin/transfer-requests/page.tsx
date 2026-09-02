@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 // (2026-08-06) moved creation behind ConveyClear; this is where those asks land.
 interface RequestRow {
   id: string;
-  status: "pending" | "approved" | "declined";
+  status: "pending" | "changes_requested" | "approved" | "declined";
   property_description: string;
   municipality: string | null;
   suggested_reference: string | null;
@@ -87,7 +87,12 @@ export default async function TransferRequestsPage() {
 
   const rows = (data as RequestRow[] | null) ?? [];
   const pending = rows.filter((r) => r.status === "pending");
-  const decided = rows.filter((r) => r.status !== "pending");
+  // 089 — sent back, and not yet returned. NOT "decided": nothing was decided,
+  // we asked a question and are waiting for the answer. Filed with the decided
+  // list would bury it; filed with pending would put it in a queue staff work
+  // through, when the ball is with the firm.
+  const awaitingFirm = rows.filter((r) => r.status === "changes_requested");
+  const decided = rows.filter((r) => r.status === "approved" || r.status === "declined");
 
   return (
     <div className="space-y-6">
@@ -170,6 +175,41 @@ export default async function TransferRequestsPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* 089 — with the firm, waiting on them. Between the queue and the decided
+          list because that is where it sits in time: read, answered, not
+          finished. The reason is shown because it is what we asked for, and
+          staff chasing a slow firm need it in front of them. */}
+      {awaitingFirm.length > 0 && (
+        <Card className="space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">
+              Sent back for corrections
+            </p>
+            <p className="mt-1 text-xs text-ink-3">
+              Waiting on the firm. It returns to the queue above when they resend it.
+            </p>
+          </div>
+          <div className="divide-y divide-line">
+            {awaitingFirm.map((r) => (
+              <div key={r.id} className="flex items-start justify-between gap-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-ink">{r.property_description}</p>
+                  <p className="text-xs text-ink-3">
+                    {[r.firms?.name ?? "Unknown firm", requesterLabel(r), formatDateTime(r.created_at)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                  {r.decline_reason && (
+                    <p className="mt-1 text-xs text-required">We asked for: {r.decline_reason}</p>
+                  )}
+                </div>
+                <Badge label="With the firm" variant="warning" />
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {decided.length > 0 && (

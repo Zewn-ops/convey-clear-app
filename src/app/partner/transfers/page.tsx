@@ -141,7 +141,7 @@ export default async function PartnerTransfersPage({
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex items-start justify-between gap-4">
+      <div className="page-header flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">Property transfers</h1>
           {/* The TOTAL, not the page — `transfers.length` caps at the page size. */}

@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 
 type RequestRow = {
   id: string;
-  status: "draft" | "pending" | "approved" | "declined";
+  status: "draft" | "pending" | "changes_requested" | "approved" | "declined";
   property_description: string | null;
   municipality: string | null;
   suggested_reference: string | null;
@@ -45,12 +45,19 @@ type RequestRow = {
 const TONE: Record<RequestRow["status"], StatusTone> = {
   draft: "neutral",
   pending: "waiting",
+  // 089 — the firm is the blocker here, which is what `required` means in this
+  // portal's vocabulary. `pending` is amber because WE are; this is not the same
+  // state wearing a different word.
+  changes_requested: "required",
   approved: "ok",
   declined: "danger",
 };
 
 const LABEL: Record<RequestRow["status"], string> = {
   draft: "Draft",
+  // Says what to DO, not what happened. "Temporarily declined" was Jukka's
+  // phrase for the mechanism; what the attorney needs is the instruction.
+  changes_requested: "Needs your correction",
   // "With ConveyClear" rather than "Pending", which reads as though the firm
   // still has something to do. The waiting tone means somebody else is the
   // blocker (DESIGN.md's orange/amber split) and the words should agree.
@@ -72,7 +79,9 @@ export default async function TransferRequestsPage() {
     .order("created_at", { ascending: false });
 
   const rows = (data as RequestRow[] | null) ?? [];
-  const open = rows.filter((r) => r.status === "draft" || r.status === "pending");
+  const open = rows.filter(
+    (r) => r.status === "draft" || r.status === "pending" || r.status === "changes_requested"
+  );
   const settled = rows.filter((r) => r.status === "approved" || r.status === "declined");
 
   const title = (r: RequestRow) =>
@@ -92,7 +101,9 @@ export default async function TransferRequestsPage() {
               // which also reads "Saved" off updated_at.
               r.status === "draft"
                 ? `Saved ${formatDate(r.updated_at)}`
-                : `Sent ${formatDate(r.created_at)}`,
+                : r.status === "changes_requested"
+                  ? `Sent back ${formatDate(r.updated_at)}`
+                  : `Sent ${formatDate(r.created_at)}`,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -100,12 +111,13 @@ export default async function TransferRequestsPage() {
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <StatusPill tone={TONE[r.status]}>{LABEL[r.status]}</StatusPill>
-          {r.status === "draft" && (
+          {(r.status === "draft" || r.status === "changes_requested") && (
             <Link
               href={`/partner/transfers/new?draft=${r.id}`}
               className="inline-flex items-center gap-1 text-xs font-semibold text-action hover:underline"
             >
-              <FileEdit className="h-3.5 w-3.5" /> Finish
+              <FileEdit className="h-3.5 w-3.5" />{" "}
+              {r.status === "draft" ? "Finish" : "Correct and resend"}
             </Link>
           )}
           {r.status === "approved" && r.transfer_id && (
@@ -124,6 +136,20 @@ export default async function TransferRequestsPage() {
           ask. Rendered even when the reason is blank, because "declined with no
           reason recorded" is itself the answer and hiding it would send them
           back to the phone. */}
+      {/* 089 — the correction, in the same place a decline is explained, because
+          it is the same question: what is ConveyClear telling us? */}
+      {r.status === "changes_requested" && (
+        <div className="mt-3">
+          <Callout tone="required" label="What needs correcting">
+            {r.decline_reason?.trim() || (
+              <span className="text-ink-3">
+                No detail was recorded. Ask ConveyClear — this should not happen.
+              </span>
+            )}
+          </Callout>
+        </div>
+      )}
+
       {r.status === "declined" && (
         <div className="mt-3">
           <Callout tone="required" label="Why it was declined">

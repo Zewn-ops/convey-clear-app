@@ -91,6 +91,10 @@ export async function POST(request: Request) {
   // Resolve / create client
   let clientId = body.client_id ?? null;
   let clientName = "";
+  // The firm the CLIENT belongs to, where it has one. Kept in scope because the
+  // matter is stamped with a firm below and a standalone matter takes it from
+  // here.
+  let clientFirmId: string | null = null;
   if (clientId) {
     const { data: c } = await admin
       .from("clients")
@@ -104,6 +108,7 @@ export async function POST(request: Request) {
     // transfer is readable by the firm that owns it — so a matter for another
     // firm's client cannot be created inside it.
     const clientFirm = (c?.business_partner_id as string | null) ?? null;
+    clientFirmId = clientFirm;
     if (transferFirm && clientFirm && clientFirm !== transferFirm) {
       return NextResponse.json(
         {
@@ -211,6 +216,21 @@ export async function POST(request: Request) {
     service_subtype: isPrc ? subtype : null,
     current_owner_id: me?.id ?? null,
     transfer_id: transferId,
+    // 🔴 NEVER WRITTEN UNTIL 2026-09-02, and the omission is why a matter
+    // created inside a transfer did not reach that firm's Matters list — watched
+    // live by Jukka, who reloaded twice waiting for it.
+    //
+    // `can_access_matter` reached a firm three ways and a matter born here
+    // satisfied none of them: this column was null, the client carries no firm
+    // (ConveyClear owns the client database, so a firm does not claim a client
+    // by typing a name), and nobody had subscribed. 087 adds the branch that
+    // repairs every EXISTING row by reading the transfer's grant; this line
+    // makes new rows true in themselves, so the answer stops depending on a join
+    // through a grants table.
+    //
+    // Falls back to the client's own firm for a standalone matter, and stays
+    // null when neither knows — an honest null rather than a guess.
+    business_partner_id: transferFirm ?? clientFirmId,
   }).select("id").single();
   if (mErr) return NextResponse.json({ message: mErr.message }, { status: 400 });
 

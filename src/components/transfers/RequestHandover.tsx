@@ -33,6 +33,21 @@ export interface HandoverRequest {
   buyer_name: string | null;
   buyer_email: string | null;
   buyer_cell: string | null;
+  // 088 — what staff CHECK against the FICA documents. Jukka, 2026-09-02: "we
+  // can have our staff double check that the details that they typed in is
+  // actually corresponding with their supporting documents … let's say they put
+  // in a six instead of a nine, we can fix that and approve it." That comparison
+  // is only possible if the typed number is on the screen beside the document.
+  seller_entity_type?: string | null;
+  buyer_entity_type?: string | null;
+  seller_id_number?: string | null;
+  buyer_id_number?: string | null;
+  seller_registration_no?: string | null;
+  buyer_registration_no?: string | null;
+  seller_extra_emails?: string[] | null;
+  buyer_extra_emails?: string[] | null;
+  seller_directors?: HandoverDirector[] | null;
+  buyer_directors?: HandoverDirector[] | null;
   notes: string | null;
   created_at: string;
   details_dismissed_at: string | null;
@@ -44,16 +59,39 @@ export interface HandoverRequest {
   requester?: { full_name: string | null; email: string | null; phone: string | null } | null;
 }
 
+export interface HandoverDirector {
+  name?: string | null;
+  id_number?: string | null;
+  cell?: string | null;
+  email?: string | null;
+}
+
+const ENTITY_LABEL: Record<string, string> = {
+  natural_person: "Individual",
+  business: "Business",
+  trust: "Trust",
+};
+
 function Party({
   label,
   name,
   email,
   cell,
+  entityType,
+  idNumber,
+  registrationNo,
+  extraEmails,
+  directors,
 }: {
   label: string;
   name: string | null;
   email: string | null;
   cell: string | null;
+  entityType?: string | null;
+  idNumber?: string | null;
+  registrationNo?: string | null;
+  extraEmails?: string[] | null;
+  directors?: HandoverDirector[] | null;
 }) {
   return (
     <div className="min-w-0">
@@ -72,6 +110,15 @@ function Party({
               <Mail className="h-3 w-3 shrink-0" /> {email}
             </a>
           )}
+          {(extraEmails ?? []).map((addr) => (
+            <a
+              key={addr}
+              href={`mailto:${addr}`}
+              className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-action hover:underline"
+            >
+              <Mail className="h-3 w-3 shrink-0" /> {addr}
+            </a>
+          ))}
           {cell && (
             <a
               href={`tel:${cell.replace(/\s/g, "")}`}
@@ -79,6 +126,41 @@ function Party({
             >
               <Phone className="h-3 w-3 shrink-0" /> {cell}
             </a>
+          )}
+          {/* The identifying number, and what kind of thing it identifies. This
+              is the line a staff member reads off the certified ID or the CIPC
+              document — so it is monospaced and selectable rather than pretty:
+              the six-instead-of-a-nine case is why it is here at all. */}
+          {(entityType || idNumber || registrationNo) && (
+            <p className="mt-1 text-xs text-ink-3">
+              {entityType ? ENTITY_LABEL[entityType] ?? entityType : "Type not given"}
+              {(idNumber || registrationNo) && (
+                <>
+                  {" · "}
+                  <span className="mono select-all text-ink-2">{idNumber || registrationNo}</span>
+                </>
+              )}
+            </p>
+          )}
+          {(directors ?? []).length > 0 && (
+            <div className="mt-2 space-y-1 border-l-2 border-line pl-2.5">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                Directors
+              </p>
+              {(directors ?? []).map((d, i) => (
+                <p key={i} className="text-xs text-ink-2">
+                  {d.name || "Unnamed"}
+                  {d.id_number && (
+                    <>
+                      {" · "}
+                      <span className="mono select-all">{d.id_number}</span>
+                    </>
+                  )}
+                  {d.cell && ` · ${d.cell}`}
+                  {d.email && ` · ${d.email}`}
+                </p>
+              ))}
+            </div>
           )}
         </>
       ) : (
@@ -177,12 +259,22 @@ export default function RequestHandover({ request }: { request: HandoverRequest 
           name={request.seller_name}
           email={request.seller_email}
           cell={request.seller_cell}
+          entityType={request.seller_entity_type}
+          idNumber={request.seller_id_number}
+          registrationNo={request.seller_registration_no}
+          extraEmails={request.seller_extra_emails}
+          directors={request.seller_directors}
         />
         <Party
           label="Buyer"
           name={request.buyer_name}
           email={request.buyer_email}
           cell={request.buyer_cell}
+          entityType={request.buyer_entity_type}
+          idNumber={request.buyer_id_number}
+          registrationNo={request.buyer_registration_no}
+          extraEmails={request.buyer_extra_emails}
+          directors={request.buyer_directors}
         />
       </div>
 

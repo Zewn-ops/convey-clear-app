@@ -21,6 +21,41 @@
   }
 }
 
+@layer components {
+  /**
+   * A page title that stays with you.
+   *
+   * Zewn, 2026-09-02: "can we also make the title headers sticky so it stays
+   * with you as you scroll the page." On a transfer page the reference IS the
+   * context — scroll to the documents and you have lost which transaction you
+   * are looking at, which is exactly when an attorney is deciding what to
+   * upload.
+   *
+   * It cancels the <main> padding with negative margins and re-applies it, so
+   * the bar spans the full width and nothing shows through the gap at the edges
+   * as content slides under it. The translucent ground plus a blur is what keeps
+   * it legible over whatever is passing beneath.
+   */
+  .page-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -1rem -1rem 0;
+    padding: 1rem 1rem 0.75rem;
+    background: color-mix(in srgb, var(--cc-canvas) 88%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  @media (min-width: 768px) {
+    .page-header {
+      margin: -1.5rem -1.5rem 0;
+      padding: 1.5rem 1.5rem 0.75rem;
+    }
+  }
+
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
