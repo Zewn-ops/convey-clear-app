@@ -7,7 +7,7 @@
 // certificate. Not three alternatives.
 import { COO_DOC_LABELS } from "./coo-docs";
 import { TRANSFER_DOC_LABELS } from "./transfer-doc-types";
-import { councilServiceSpec } from "./councils";
+import { councilServiceSpec, COUNCIL_DOC_LABELS } from "./councils";
 
 export interface PrcSubtype {
   code: "RCF" | "RCC" | "RCA";
@@ -268,17 +268,35 @@ export const PRC_DOC_LABELS: Record<string, string> = {
   proof_of_payment_figures: "Proof of Payment (Application Fee)",
 };
 
-// One label lookup across the COO, PRC and transfer-supporting doc types, with a
-// humanised fallback. Safe in server components (no client-only imports).
+// One label lookup across the COO, PRC, transfer-supporting and COUNCIL doc
+// types, with a humanised fallback. Safe in server components (no client-only
+// imports).
 //
 // Order matters where a code appears twice: COO and PRC win over the transfer
 // map, so a `proof_of_payment_figures` keeps the name it has had since June and
 // only codes nobody else claims are named here.
+//
+// 🔴 COUNCIL_DOC_LABELS WAS MISSING FROM THIS CHAIN, and its own header said so:
+// "▶ Phase 5 folds these into docLabel()'s chain alongside COO_DOC_LABELS and
+// PRC_DOC_LABELS, so there is one lookup rather than four." Phase 5 shipped and
+// that never happened.
+//
+// The cost was exactly the complaint that started this work. Zewn, 2026-09-02:
+// "when i search statement in the doc upload it gives me municipal account
+// statement only. what about the other types of statements?" The rates and
+// utilities statements were added to the picker the same day — but their labels
+// came back from the TITLECASE FALLBACK as "Rates Account Invoice", losing the
+// "/ Statement" half the council registry gives them, so the search still found
+// one of three. Confirmed by typing "statement" into the live picker.
+//
+// LAST in the chain, so nothing already named is renamed: these ten codes are
+// claimed by none of the three maps above (checked), so this is purely additive.
 export function docLabel(docType: string): string {
   return (
     COO_DOC_LABELS[docType] ??
     PRC_DOC_LABELS[docType] ??
     TRANSFER_DOC_LABELS[docType] ??
+    COUNCIL_DOC_LABELS[docType] ??
     docType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
   );
 }
