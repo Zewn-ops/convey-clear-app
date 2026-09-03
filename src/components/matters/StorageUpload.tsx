@@ -11,7 +11,17 @@ const MAX_SIZE = 10 * 1024 * 1024;
 
 // Direct-to-Storage upload: mints a signed upload URL, uploads the file straight
 // to Supabase Storage from the browser (bypassing Vercel's 4.5 MB body limit),
-// then records the documents row. Used by staff/partner on a matter.
+// then records the documents row.
+//
+// 🔴 NOW A SLOT UPLOAD ONLY. It used to be the general "Upload document" button
+// on both matter pages, where it filed everything as `other` with no party and
+// no name the uploader had seen — MatterUploadPanel replaced it there on
+// 2026-09-04.
+//
+// It stays here because InPlaceIntake is the case it is right for: the checklist
+// already KNOWS the document type and whose slot it is, so asking again would be
+// asking a question that has been answered. The panel is for a document arriving
+// without a slot to land in.
 export default function StorageUpload({
   matterId,
   documentType = "other",

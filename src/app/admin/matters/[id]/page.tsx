@@ -47,7 +47,7 @@ import {
   type Pipeline,
 } from "@/lib/pipelines";
 import { normalisePrcStage, prcStageLabel, PRC_SUBTYPES } from "@/lib/prc-docs";
-import StorageUpload from "@/components/matters/StorageUpload";
+import MatterUploadPanel from "@/components/matters/MatterUploadPanel";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
 import SubmitButton from "@/components/ui/SubmitButton";
@@ -668,6 +668,17 @@ export default async function AdminMatterDetailPage({
     docsByClass[resolveDocClass(matter.municipality, d.document_type ?? "", role as PartyRole)].push(d);
   }
 
+  // The parties, in the shape the upload panel asks "whose is it?" with.
+  const uploadParties = parties.map((p) => ({
+    id: p.id,
+    role: p.role,
+    name:
+      p.business_name?.trim() ||
+      p.full_name?.trim() ||
+      [p.first_name, p.last_name].filter(Boolean).join(" ").trim() ||
+      p.role.replace(/_/g, " "),
+  }));
+
   const docRow = (doc: MatterDocument) => {
     // Approval gate state (042/043/044). approved_at set = released; disapproved_at
     // set = rejected (held, has a reason); neither = pending an admin decision.
@@ -1033,7 +1044,6 @@ export default async function AdminMatterDetailPage({
             <h2 className="font-semibold text-ink flex items-center gap-2"><FileText className="h-4 w-4 text-sky-700" /> Documents ({documents.length})</h2>
             <div className="flex flex-wrap items-center gap-3">
               {documents.length > 0 && <CouncilPackButton matterId={id} />}
-              <StorageUpload matterId={id} />
             </div>
           </div>
 
@@ -1097,6 +1107,29 @@ export default async function AdminMatterDetailPage({
                 </ul>
               </div>
             )}
+
+            {/* 🔴 THE SAME THREE QUESTIONS AS THE TRANSFER PANEL. This was a bare
+                button that filed every hand-uploaded document as `other`,
+                unnamed by the uploader and attached to no party — which is a
+                large part of why "Other documents" above is not only historic.
+                The class is resolved from (council, type, party role), so a type
+                nobody picks and a party nobody names can only ever land in the
+                fallback.
+
+                Staff get it as well as the firm (§5.13): one upload behaviour,
+                or the two matter pages file the same document two ways again,
+                which is the drift this card was rebuilt to end. */}
+            <div className="border-t border-line pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">
+                Add a document
+              </p>
+              <MatterUploadPanel
+                matterId={id}
+                parties={uploadParties}
+                municipality={matter.municipality}
+                nameSubject={matter.title ?? null}
+              />
+            </div>
 
           </div>
         </Card>

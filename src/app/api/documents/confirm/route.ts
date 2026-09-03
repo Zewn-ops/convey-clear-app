@@ -29,6 +29,8 @@ export async function POST(request: Request) {
     storage_path?: string;
     document_type?: string;
     file_name?: string;
+    /** An uploader-chosen name, from the panel's Rename control. */
+    display_name?: string;
     mime_type?: string;
     size_bytes?: number;
     matter_party_id?: string;
@@ -70,15 +72,25 @@ export async function POST(request: Request) {
   // rather than "A4 - 1.pdf". Best-effort: a naming failure must not cost the
   // user an upload that has already reached storage.
   let displayName = body.file_name || null;
-  try {
-    displayName = await canonicalDocumentName(admin, {
-      matterId: matter_id,
-      matterPartyId,
-      documentType,
-      originalFileName: body.file_name || null,
-    });
-  } catch (e) {
-    console.error("[documents/confirm] canonical naming failed", e);
+  // 🔴 AN OVERRIDE WINS, and is the only thing that does. The matter upload panel
+  // shows the canonical name live and turns it into an input behind a pencil, so
+  // the discipline holds by default and anyone with a reason to deviate still
+  // can — the same bargain the transfer panel struck (2026-08-28). Without this
+  // the panel would show a name it could not actually save.
+  const override = (body.display_name ?? "").trim();
+  if (override) {
+    displayName = override;
+  } else {
+    try {
+      displayName = await canonicalDocumentName(admin, {
+        matterId: matter_id,
+        matterPartyId,
+        documentType,
+        originalFileName: body.file_name || null,
+      });
+    } catch (e) {
+      console.error("[documents/confirm] canonical naming failed", e);
+    }
   }
 
   const row = {
