@@ -26,6 +26,18 @@ interface RequestRow {
   buyer_name: string | null;
   buyer_email: string | null;
   buyer_cell: string | null;
+  // 088 — what staff CHECK against the FICA documents, on the screen where the
+  // approve / send back / decline decision is actually taken.
+  seller_entity_type: string | null;
+  buyer_entity_type: string | null;
+  seller_id_number: string | null;
+  buyer_id_number: string | null;
+  seller_registration_no: string | null;
+  buyer_registration_no: string | null;
+  seller_extra_emails: string[] | null;
+  buyer_extra_emails: string[] | null;
+  seller_directors: { name?: string | null; id_number?: string | null; cell?: string | null; email?: string | null }[] | null;
+  buyer_directors: { name?: string | null; id_number?: string | null; cell?: string | null; email?: string | null }[] | null;
   notes: string | null;
   decline_reason: string | null;
   transfer_id: string | null;
@@ -44,7 +56,49 @@ function requesterLabel(r: RequestRow): string | null {
   return u.full_name?.trim() || u.email || null;
 }
 
-function Party({ label, name, email, cell }: { label: string; name: string | null; email: string | null; cell: string | null }) {
+/**
+ * 🔴 THE VERIFICATION HAPPENS ON THIS SCREEN. Jukka, 2026-09-02: "we can have our
+ * staff double check that the details that they typed in is actually
+ * corresponding with their supporting documents. If not, we can temporarily
+ * decline their request … Or let's say they put in a six instead of a nine, we
+ * can fix that and we can just approve it."
+ *
+ * 088 collected the entity type, the identifying number and the directors, and
+ * they were put on the RequestHandover card — which lives on the TRANSFER page,
+ * not here. The approve / send back / decline buttons are here. A staff member
+ * cannot compare a number they cannot see, so the number belongs beside the
+ * decision (found by walking the queue, 2026-09-02).
+ *
+ * The number is monospaced and selectable: the six-instead-of-a-nine case is the
+ * whole reason it is on screen.
+ */
+const ENTITY_LABEL: Record<string, string> = {
+  natural_person: "Individual",
+  business: "Business",
+  trust: "Trust",
+};
+
+function Party({
+  label,
+  name,
+  email,
+  cell,
+  entityType,
+  idNumber,
+  registrationNo,
+  extraEmails,
+  directors,
+}: {
+  label: string;
+  name: string | null;
+  email: string | null;
+  cell: string | null;
+  entityType?: string | null;
+  idNumber?: string | null;
+  registrationNo?: string | null;
+  extraEmails?: string[] | null;
+  directors?: { name?: string | null; id_number?: string | null; cell?: string | null; email?: string | null }[] | null;
+}) {
   return (
     <div>
       <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">{label}</p>
@@ -53,6 +107,40 @@ function Party({ label, name, email, cell }: { label: string; name: string | nul
           <p className="text-sm text-ink">{name}</p>
           {(email || cell) && (
             <p className="text-xs text-ink-3">{[email, cell].filter(Boolean).join(" · ")}</p>
+          )}
+          {(extraEmails ?? []).length > 0 && (
+            <p className="text-xs text-ink-3">{(extraEmails ?? []).join(" · ")}</p>
+          )}
+          {(entityType || idNumber || registrationNo) && (
+            <p className="mt-1 text-xs text-ink-3">
+              {entityType ? ENTITY_LABEL[entityType] ?? entityType : "Type not given"}
+              {(idNumber || registrationNo) && (
+                <>
+                  {" · "}
+                  <span className="mono select-all text-ink-2">{idNumber || registrationNo}</span>
+                </>
+              )}
+            </p>
+          )}
+          {(directors ?? []).length > 0 && (
+            <div className="mt-1.5 space-y-0.5 border-l-2 border-line pl-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                Directors
+              </p>
+              {(directors ?? []).map((d, i) => (
+                <p key={i} className="text-xs text-ink-3">
+                  {d.name || "Unnamed"}
+                  {d.id_number && (
+                    <>
+                      {" · "}
+                      <span className="mono select-all text-ink-2">{d.id_number}</span>
+                    </>
+                  )}
+                  {d.cell && ` · ${d.cell}`}
+                  {d.email && ` · ${d.email}`}
+                </p>
+              ))}
+            </div>
           )}
         </>
       ) : (
@@ -75,7 +163,7 @@ export default async function TransferRequestsPage() {
     // to users (requested_by and reviewed_by), so an unqualified users(...) is
     // ambiguous and PostgREST refuses it.
     .select(
-      "id, status, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, buyer_name, buyer_email, buyer_cell, notes, decline_reason, transfer_id, created_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email)"
+      "id, status, property_description, municipality, suggested_reference, seller_name, seller_email, seller_cell, seller_entity_type, seller_id_number, seller_registration_no, seller_extra_emails, seller_directors, buyer_name, buyer_email, buyer_cell, buyer_entity_type, buyer_id_number, buyer_registration_no, buyer_extra_emails, buyer_directors, notes, decline_reason, transfer_id, created_at, firms(name), requester:users!transfer_requests_requested_by_fkey(full_name, email)"
     )
     // 078 — a firm's unfinished draft is not a request. RLS already hides it
     // from staff entirely; this is defence in depth alongside it, and it says
@@ -158,8 +246,28 @@ export default async function TransferRequestsPage() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 pt-3 border-t border-line">
-                <Party label="Seller" name={r.seller_name} email={r.seller_email} cell={r.seller_cell} />
-                <Party label="Buyer" name={r.buyer_name} email={r.buyer_email} cell={r.buyer_cell} />
+                <Party
+                  label="Seller"
+                  name={r.seller_name}
+                  email={r.seller_email}
+                  cell={r.seller_cell}
+                  entityType={r.seller_entity_type}
+                  idNumber={r.seller_id_number}
+                  registrationNo={r.seller_registration_no}
+                  extraEmails={r.seller_extra_emails}
+                  directors={r.seller_directors}
+                />
+                <Party
+                  label="Buyer"
+                  name={r.buyer_name}
+                  email={r.buyer_email}
+                  cell={r.buyer_cell}
+                  entityType={r.buyer_entity_type}
+                  idNumber={r.buyer_id_number}
+                  registrationNo={r.buyer_registration_no}
+                  extraEmails={r.buyer_extra_emails}
+                  directors={r.buyer_directors}
+                />
               </div>
 
               {r.notes && (
