@@ -126,7 +126,14 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     progress: serviceProgress(r.status, r.matters ?? null, "client", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
-  const transferRollup = transferProgress(serviceRows);
+  // Counts the list the CLIENT sees, for the reason the partner page's does: a
+  // buyer or seller is shown only the services that have been asked for, so a
+  // denominator of seven sat above a list of two on their own screen. Same fix,
+  // same day, second page — staff keep seven, because unanswered lines are their
+  // job to notice.
+  const transferRollup = transferProgress(
+    serviceRows.filter((r) => r.status !== "not_specified")
+  );
 
   return (
     <div className="space-y-6">
@@ -134,7 +141,7 @@ export default async function ClientTransferDetail({ params }: { params: Promise
         <ArrowLeft className="h-4 w-4" /> Back to my transfers
       </Link>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="page-header flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
             {transfer.property_description || transfer.reference}
