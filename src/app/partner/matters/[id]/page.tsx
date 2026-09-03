@@ -20,7 +20,7 @@ import { buildFicaSubjects } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { getPipeline } from "@/lib/pipelines";
-import { formatDate } from "@/lib/utils";
+import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
@@ -175,7 +175,12 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
         <div>
           <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{matter.title || clientDisplayName(client) || "Matter"}</h1>
           <div className="mt-4 flex flex-wrap gap-2">
-            {matter.municipality && <MetaChip label="Council" value={matter.municipality} />}
+            {/* Spelled out. This chip printed the raw code — "Council COT" — while
+                every other surface says "City of Tshwane"; the 2026-06-22 note
+                bans abbreviations in matter subtext for exactly this reason. */}
+            {matter.municipality && (
+              <MetaChip label="Council" value={municipalityLabel(matter.municipality)} />
+            )}
             {(() => {
               const open = workdaysSince(matter.created_at);
               return open === null ? null : (
@@ -190,17 +195,13 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
             {matter.partner_file_ref && <MetaChip label="Your ref" value={matter.partner_file_ref} />}
           </div>
         </div>
-        {matter.status && (
-          <StatusPill
-            tone={
-              ({ new: "waiting", open: "action", on_hold: "waiting", won: "ok", lost: "danger", archived: "neutral" } as Record<string, StatusTone>)[
-                matter.status
-              ] ?? "neutral"
-            }
-          >
-            {MATTER_STATUS_LABELS[matter.status as MatterStatus]}
-          </StatusPill>
-        )}
+        {/* 🔴 NO STATUS PILL. Zewn, 2026-09-02: "remove the stage and status for
+            attorneys here." That was said of the matters LIST, and the cards
+            lost it the same day — but the detail page kept it, so opening a
+            matter put "New" back on screen. It is the same fact: `matters.status`
+            is the workflow state of OUR file, and a firm reading "New" beside
+            their own instruction learns nothing about their transaction. The
+            phase stepper below says where the work actually is. */}
       </div>
 
       {/* Two columns, in the transfer page's shape and for its reasons (§5.13 —

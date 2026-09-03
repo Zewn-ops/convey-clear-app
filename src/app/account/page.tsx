@@ -54,12 +54,20 @@ export default async function AccountPage() {
             .maybeSingle()
         ).data as { name: string | null; partner_type: string | null } | null)
       : null;
-    // "Attorney" unless the firm says otherwise — an estate agency on the same
-    // role should not be called one (059, §112).
+    // 🔴 THE RAW COLUMN IS NOT A LABEL. This printed "conveyancer" in lower
+    // case, because `firms.partner_type` holds attorney | conveyancer |
+    // law_firm | estate_agent | other and anything that was not literally
+    // "attorney" fell through to the raw value (found on the account page,
+    // 2026-09-02). Zewn asked for "attorney and which firm they are from", and a
+    // conveyancer IS an attorney — the column is recording what KIND of firm,
+    // not whether they practise law. Only an estate agency is genuinely not one
+    // (059, §112).
     const kind =
-      firmName?.partner_type && firmName.partner_type !== "attorney"
-        ? firmName.partner_type.replace(/_/g, " ")
-        : "Attorney";
+      firmName?.partner_type === "estate_agent"
+        ? "Estate agent"
+        : firmName?.partner_type === "other"
+          ? "Firm"
+          : "Attorney";
     subtitleRole = [kind, firmName?.name].filter(Boolean).join(" · ");
   }
   const notifySound = meRow?.notify_sound !== false;
