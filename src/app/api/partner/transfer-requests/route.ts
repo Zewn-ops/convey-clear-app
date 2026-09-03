@@ -289,10 +289,29 @@ export async function POST(request: Request) {
     savedStatus = "changes_requested";
   }
 
+  // 🔴 RESENDING CLEARS THE PREVIOUS OUTCOME, and it has to.
+  //
+  // 089 says a `pending` request has `reviewed_at IS NULL` — a request in the
+  // queue has not been decided. A request being RESENT was decided once, when it
+  // was sent back, so writing `pending` over it violated the constraint:
+  //
+  //     new row for relation "transfer_requests" violates check constraint
+  //     "transfer_requests_outcome_coherent"
+  //
+  // Found by doing the round trip. The constraint is right and the data was
+  // wrong: this request genuinely has no outcome any more. It is back in the
+  // queue, nobody has judged the corrected version, and a reviewer opening it
+  // must not see the reason it was returned last time presented as a live
+  // decision. The send-back was answered; that is what answering means.
+  const clearOutcome =
+    !isDraft && existing?.status === "changes_requested"
+      ? { reviewed_at: null, reviewed_by: null, decline_reason: null }
+      : {};
+
   const { data, error } = draftId
     ? await supabase
         .from("transfer_requests")
-        .update({ ...fields, status: savedStatus })
+        .update({ ...fields, ...clearOutcome, status: savedStatus })
         .eq("id", draftId)
         .select("id")
         .single()
