@@ -117,7 +117,43 @@ export async function POST(request: Request) {
         .maybeSingle()
     : { data: null };
   const existing = existingRow as { status?: string; transfer_id?: string | null } | null;
-  const ownTransferId = existing?.transfer_id ?? null;
+
+  // 🔴 THE LINK IS OFTEN MISSING, so owning a transfer cannot be judged by the
+  // column alone. 078's CHECK refused `pending` + `transfer_id` until 090 fixed
+  // it, and the route only logged the failure — so every request submitted
+  // before then has a real draft transfer and a NULL link. `tst1234tst` is one:
+  // exempting by column left it clashing with its own transfer and refusing the
+  // resend anyway, which is what the first attempt at this fix missed.
+  //
+  // So fall back to the same recovery the admin approve route already performs:
+  // a DRAFT transfer of THIS firm carrying THIS reference is the one this
+  // request produced. Scoped tightly — another firm's transfer with a colliding
+  // reference must still be a 409, and an already-open transfer must not be
+  // silently re-adopted.
+  let ownTransferId = existing?.transfer_id ?? null;
+  if (!ownTransferId && draftId && suggestedReference) {
+    const { data: orphan } = await adminRead
+      .from("property_transfers")
+      .select("id")
+      .ilike("reference", suggestedReference)
+      .eq("business_partner_id", auth.partnerId)
+      .eq("status", "draft")
+      .maybeSingle();
+    ownTransferId = (orphan as { id: string } | null)?.id ?? null;
+    // Repair the row while we are here, so the next reader does not have to
+    // rediscover it. Best-effort: the resend matters more than the bookkeeping.
+    if (ownTransferId) {
+      const { error: relinkError } = await createAdminClient()
+        .from("transfer_requests")
+        .update({ transfer_id: ownTransferId })
+        .eq("id", draftId);
+      if (relinkError) {
+        console.error(
+          `[transfer-requests] request ${draftId} could not be re-linked to its transfer ${ownTransferId}: ${relinkError.message}`
+        );
+      }
+    }
+  }
 
   let clashQuery = suggestedReference && !isDraft
     ? adminRead
