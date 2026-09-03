@@ -49,7 +49,7 @@ export default async function ClientPropertiesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="page-header">
         <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">
           My properties
         </h1>
