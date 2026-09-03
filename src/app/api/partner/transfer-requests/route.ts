@@ -102,13 +102,33 @@ export async function POST(request: Request) {
   // clash would defeat the point. Submission still checks, which is the moment
   // it matters.
   const adminRead = createAdminClient();
-  const { data: clash } = suggestedReference && !isDraft
-    ? await adminRead
+
+  // 🔴 THE ROW BEING EDITED, read before anything judges it. A request that has
+  // been SENT BACK (089) already owns the transfer it created on its first
+  // submission (083) — so the clash check below would find that transfer, call it
+  // a collision, and refuse the resend with a 409. The firm was told "Needs your
+  // correction", corrected it, and could never send it back. Found by walking the
+  // round trip, 2026-09-02.
+  const { data: existingRow } = draftId
+    ? await supabase
+        .from("transfer_requests")
+        .select("status, transfer_id")
+        .eq("id", draftId)
+        .maybeSingle()
+    : { data: null };
+  const existing = existingRow as { status?: string; transfer_id?: string | null } | null;
+  const ownTransferId = existing?.transfer_id ?? null;
+
+  let clashQuery = suggestedReference && !isDraft
+    ? adminRead
         .from("property_transfers")
         .select("id")
         .ilike("reference", suggestedReference)
-        .limit(1)
-        .maybeSingle()
+    : null;
+  // A transfer this request already owns is not a clash with itself.
+  if (clashQuery && ownTransferId) clashQuery = clashQuery.neq("id", ownTransferId);
+  const { data: clash } = clashQuery
+    ? await clashQuery.limit(1).maybeSingle()
     : { data: null };
   if (clash) {
     return NextResponse.json(
@@ -229,15 +249,8 @@ export async function POST(request: Request) {
   // is the truth anyway: it is still with the firm, still unsent, and staff can
   // still see that they are waiting on it.
   let savedStatus = fields.status;
-  if (draftId && isDraft) {
-    const { data: existing } = await supabase
-      .from("transfer_requests")
-      .select("status")
-      .eq("id", draftId)
-      .maybeSingle();
-    if ((existing as { status?: string } | null)?.status === "changes_requested") {
-      savedStatus = "changes_requested";
-    }
+  if (draftId && isDraft && existing?.status === "changes_requested") {
+    savedStatus = "changes_requested";
   }
 
   const { data, error } = draftId
@@ -301,7 +314,10 @@ export async function POST(request: Request) {
   // asked for. If the build fails, approval still creates the transfer the old
   // way — createTransferFromRequest is the same function on both paths.
   let draftTransferId: string | null = null;
-  if (!isDraft && suggestedReference) {
+  // `!ownTransferId`: a resent request already has its draft transfer, and
+  // building another would collide on the unique reference index — logged and
+  // swallowed, but a wasted round trip and a confusing log line either way.
+  if (!isDraft && suggestedReference && !ownTransferId) {
     const built = await createTransferFromRequest(
       createAdminClient(),
       {
