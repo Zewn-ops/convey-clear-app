@@ -807,9 +807,20 @@ export default function TransferServices({
                     link below). Strict, because the admin page omits the prop
                     entirely and must not be caught by it. */}
                 {!isClientView && !r.prc_subtype && r.status === "needed" && (
-                  <p className="text-xs text-required">
-                    Rates clearance needs a stage — an application, figures or a
-                    certificate. Until one is chosen, this line shows no progress.
+                  // 🔴 SAY IT TO THE PERSON WHO CAN ACT ON IT. The stage picker
+                  // is staff-only, so the original sentence — "until one is
+                  // chosen, this line shows no progress" — reached an attorney
+                  // as a fault they had no control to fix. Found immediately
+                  // after the "+" shipped (2026-09-02): asking for a rates
+                  // clearance is now one click, and this was the next thing on
+                  // the screen.
+                  //
+                  // Staff keep the warning, because they are the ones holding
+                  // it up. The firm gets a statement of what happens next.
+                  <p className={canManage ? "text-xs text-required" : "text-xs text-ink-3"}>
+                    {canManage
+                      ? "Rates clearance needs a stage — an application, figures or a certificate. Until one is chosen, this line shows no progress."
+                      : "ConveyClear will confirm which stage this is — the application, the figures or the certificate — and progress appears here once they do."}
                   </p>
                 )}
               </div>
