@@ -1127,7 +1127,10 @@ export default async function AdminMatterDetailPage({
                 matterId={id}
                 parties={uploadParties}
                 municipality={matter.municipality}
-                nameSubject={matter.title ?? null}
+                propertyDescription={
+                  (matter as unknown as { property_description?: string | null })
+                    .property_description ?? null
+                }
               />
             </div>
 
