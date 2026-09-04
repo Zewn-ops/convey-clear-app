@@ -64,15 +64,19 @@ export default function MatterUploadPanel({
   matterId,
   parties = [],
   municipality = null,
-  nameSubject = null,
+  propertyDescription = null,
 }: {
   matterId: string;
   /** The matter's parties, for "whose is it". Empty on a single-client matter. */
   parties?: UploadParty[];
   /** Decides which of input / supporting / output this document files under. */
   municipality?: string | null;
-  /** What the document is ABOUT — the matter's property or its title. */
-  nameSubject?: string | null;
+  /**
+   * The matter's `property_description` — what the server falls back to when no
+   * party is chosen. Named for the column on purpose: this value has to BE that
+   * column, not something close to it, or the preview stops being true.
+   */
+  propertyDescription?: string | null;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -87,14 +91,27 @@ export default function MatterUploadPanel({
 
   const party = parties.find((p) => p.id === partyId) ?? null;
 
+  // 🔴 THIS MUST MIRROR `canonicalDocumentName` EXACTLY, because the server is
+  // what actually names the file. The first version did not, and the preview
+  // lied on the very first upload: it promised
+  //   "Municipal Account Statement — COT_COO_THABO MOLEFE_ERF 1234 MENLO PARK — …"
+  // and the row was saved as
+  //   "Municipal Account Statement — 2026-09-04.pdf"
+  // Found by uploading one file, 2026-09-04.
+  //
+  // The server's rule (resolveDocumentSubject) is: the chosen PARTY'S NAME, else
+  // the matter's `property_description`, else nothing — and no qualifier at all.
+  // A matter document is about a person or a property; the role is already in
+  // the party column beside it, and the matter title repeats what the page
+  // heading says.
+  //
+  // A preview that is merely plausible is worse than none: it is the thing the
+  // uploader will believe, and the Rename control turns it into what they save.
+  const subject = party ? party.name : propertyDescription;
   const generated = file
     ? buildDocumentName({
         documentType: type,
-        // The party's ROLE, not their name: "Certified ID — Seller — ERF 1234"
-        // reads as a document, where the name would repeat what the party column
-        // already says. Matches the transfer panel exactly.
-        qualifier: party ? party.role.replace(/_/g, " ") : null,
-        subject: nameSubject,
+        subject,
         originalFileName: file.name,
       })
     : "";

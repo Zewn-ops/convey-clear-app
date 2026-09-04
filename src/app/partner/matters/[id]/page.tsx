@@ -51,7 +51,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
+    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, property_description, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -460,7 +460,10 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                   // carries the property (COT_RCF_<ref>_ERF 3456 LONEHILL), so
                   // it is the honest subject here; the transfer's property
                   // description is not on this row.
-                  nameSubject={matter.title ?? null}
+                  propertyDescription={
+                  (matter as unknown as { property_description?: string | null })
+                    .property_description ?? null
+                }
                 />
                 <p className="mt-2 text-xs text-ink-3">
                   ConveyClear reviews what you upload before it reaches the buyer or seller.
