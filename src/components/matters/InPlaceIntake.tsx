@@ -7,6 +7,7 @@ import ReuseTransferDoc from "@/components/matters/ReuseTransferDoc";
 import { cooSharedDocs, cooPartyDocs, partyRoleOrder, type CooEntity, type CooDocRule } from "@/lib/coo-docs";
 import { prcStageDocs, prcStageLabel, docLabel } from "@/lib/prc-docs";
 import { toggleDocUnavailable } from "@/lib/actions/intake";
+import { councilServiceSpec } from "@/lib/councils";
 import {
   composeFullName,
   type MatterParty,
@@ -51,6 +52,59 @@ interface Group {
   missingParty?: boolean;
   /** A PRC matter with no stage recorded — the list below is a guess (§5.8). */
   stageMissing?: boolean;
+}
+
+
+/**
+ * The COUNCIL'S own requirements for this service, as slots.
+ *
+ * 🔴 TWO LISTS ANSWERED ONE QUESTION. "What we normally need" is generated from
+ * the council registry (the transcribed sheets, lib/councils); this checklist was
+ * built from `coo-docs` / `prc-docs`, which predate it. So the rail told an
+ * attorney a COT change of ownership needs eight things and the checklist beside
+ * it offered four — Zewn, 2026-09-04: "for 'what we normally need' for all the
+ * matters, can we make pre existing line items on the matter pages doc upload
+ * section in the input docs?"
+ *
+ * ⚠️ THE TWO LISTS GENUINELY DISAGREE, and this UNIONS them rather than picking a
+ * winner, because picking one would silently stop asking for real documents:
+ *
+ *   · only the registry has the meter readings and the representative's
+ *     certified ID (COT's COO sheet)
+ *   · only coo-docs has the COR 14.3, the trust letter of authority and the
+ *     seller's electrical COC
+ *
+ * Neither contains the other, and which is right is a question for Jukka — the
+ * registry is transcribed from his sheets, coo-docs from the 2026-06 SOPs. A
+ * union asks for a document that may not be needed; picking wrong stops asking
+ * for one that is. Nothing here is required (Jukka: "we're not going to make any
+ * of it required"), so the union is the cheap error.
+ *
+ * ▶ Resolve with Jukka, then delete whichever source loses. §3.6 is the record of
+ *   what guessing at a document list costs.
+ *
+ * OUTPUT documents and FIRM-owned ones are excluded: what ConveyClear produces is
+ * not what anyone uploads here, and the firm's own papers autofill from its
+ * record (§11.3).
+ */
+function registrySlots(
+  municipality: string | null,
+  serviceCode: string,
+  stage: string | null,
+  owners: readonly ("matter" | "seller" | "buyer")[]
+): CooDocRule[] {
+  const spec = councilServiceSpec(municipality, serviceCode, stage as never);
+  if (!spec) return [];
+  return spec.documents
+    .filter((d) => d.docClass !== "output" && d.owner !== "firm")
+    .filter((d) => owners.includes(d.owner as "matter" | "seller" | "buyer"))
+    .map((d) => ({ docType: d.type, optional: d.optional }));
+}
+
+/** Union by document type — the existing slot's own flags win. */
+function mergeSlots(base: CooDocRule[], extra: CooDocRule[]): CooDocRule[] {
+  const seen = new Set(base.map((s) => s.docType));
+  return [...base, ...extra.filter((s) => !seen.has(s.docType))];
 }
 
 export default function InPlaceIntake({
@@ -102,7 +156,7 @@ export default function InPlaceIntake({
       title: "Matter documents",
       subtitle: "Collected once for the transfer",
       partyId: null,
-      slots: cooSharedDocs(),
+      slots: mergeSlots(cooSharedDocs(), registrySlots(municipality, "COO", null, ["matter"])),
       vaultDocs: vaultFor(matterClientId),
     });
     for (const p of sorted) {
@@ -111,7 +165,10 @@ export default function InPlaceIntake({
         title: partyLabel(p),
         subtitle: ROLE_LABELS[p.role] ?? p.role,
         partyId: p.id,
-        slots: cooPartyDocs(p.role, toCooEntity(p.entity_type), municipality),
+        slots: mergeSlots(
+          cooPartyDocs(p.role, toCooEntity(p.entity_type), municipality),
+          registrySlots(municipality, "COO", null, [p.role as "seller" | "buyer"])
+        ),
         vaultDocs: vaultFor(p.client_id),
       });
     }
@@ -127,10 +184,19 @@ export default function InPlaceIntake({
         key: `missing-${role}`,
         title: role === "seller" ? "Seller" : "Buyer",
         subtitle: ROLE_LABELS[role] ?? role,
-        // No party row means no (matter, party, type) key to file against, so the
-        // slots stay empty and the section prompts for capture instead.
+        // 🔴 THE LIST IS SHOWN, THE BUTTONS ARE NOT. No party row means no
+        // (matter, party, type) key to file against — an upload here would land
+        // unattached and count toward nobody. But hiding the rows entirely is
+        // what made a COT change of ownership offer four documents when the rail
+        // beside it named eight, and left an attorney with no idea the other
+        // four even existed until somebody was captured.
+        //
+        // So the side's requirements are listed, greyed, under the prompt that
+        // says how to unlock them. They are deliberately absent from the
+        // required COUNT below: a document that cannot be uploaded must not make
+        // the checklist look further from done than it is.
         partyId: null,
-        slots: [],
+        slots: registrySlots(municipality, "COO", null, [role]),
         vaultDocs: [],
         missingParty: true,
       });
@@ -149,7 +215,10 @@ export default function InPlaceIntake({
         seller ? ROLE_LABELS[seller.role] ?? seller.role : "Seller / applicant",
       ].join(" · "),
       partyId: seller?.id ?? null,
-      slots: prcStageDocs(stage, seller?.entity_type ?? "natural_person", municipality),
+      slots: mergeSlots(
+        prcStageDocs(stage, seller?.entity_type ?? "natural_person", municipality),
+        registrySlots(municipality, "PRC", stage, ["matter", "seller"])
+      ),
       vaultDocs: vaultFor(seller?.client_id ?? matterClientId),
       // Rendered as a prompt rather than silently falling back: the fallback
       // IS the RCF list, and showing it unlabelled is how a rates clearance
@@ -173,6 +242,9 @@ export default function InPlaceIntake({
   let required = 0;
   let done = 0;
   for (const g of groups) {
+    // A side with no party captured cannot be filed against, so its rows are
+    // shown but never counted — see the note where those groups are built.
+    if (g.missingParty) continue;
     for (const s of g.slots) {
       if (s.optional) continue;
       required++;
@@ -279,8 +351,8 @@ export default function InPlaceIntake({
             <p className="px-4 py-3 text-sm text-ink-3">
               No {g.title.toLowerCase()} captured on this matter yet. Add their
               details in <span className="font-medium text-ink-2">Parties</span> above
-              (or send the client the onboarding link) and this side&apos;s document
-              slots appear here.
+              (or send the client the onboarding link) to file
+              {g.slots.length > 0 ? " the documents below" : " this side's documents"}.
             </p>
           )}
           {/* §5.8 — a rates clearance without a stage. Said plainly, because
@@ -313,6 +385,24 @@ export default function InPlaceIntake({
               const transferOpts = transferDocs
                 .filter((t) => t.document_type === s.docType)
                 .map((t) => ({ id: t.id, file_name: t.file_name }));
+              // Locked: listed so the requirement is visible, without controls
+              // that would file the document against nobody.
+              if (g.missingParty) {
+                return (
+                  <li
+                    key={s.docType}
+                    className="flex items-center gap-3 px-4 py-2.5 opacity-55"
+                  >
+                    <Circle className="h-4 w-4 shrink-0 text-ink-3" />
+                    <p className="min-w-0 flex-1 truncate text-sm text-ink-3">
+                      {docLabel(s.docType)}
+                      {s.optional && <span className="ml-1.5 text-xs">(optional)</span>}
+                    </p>
+                    <span className="shrink-0 text-xs text-ink-3">Capture the party first</span>
+                  </li>
+                );
+              }
+
               return (
                 <li key={s.docType} className="flex items-center gap-3 px-4 py-2.5">
                   {doc ? (
