@@ -13,13 +13,15 @@ import MatterFeed, { type MatterActivity } from "@/components/matters/MatterFeed
 import ExpectedDocuments from "@/components/transfers/ExpectedDocuments";
 import { getMatterEnquiries } from "@/lib/enquiries";
 import PipelineProgress from "@/components/matters/PipelineProgress";
-import StorageUpload from "@/components/matters/StorageUpload";
+import MatterUploadPanel from "@/components/matters/MatterUploadPanel";
 import InPlaceIntake from "@/components/matters/InPlaceIntake";
 import InPlaceFica from "@/components/matters/InPlaceFica";
 import { buildFicaSubjects } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
 import { getPipeline } from "@/lib/pipelines";
+import { resolveDocClass, type PartyRole } from "@/lib/doc-classes";
+import { DOC_CLASSES, DOC_CLASS_LABELS, DOC_CLASS_HINTS } from "@/lib/councils";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
   clientDisplayName,
@@ -130,6 +132,32 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   // that too — it refuses those fields from a partner, it doesn't just hide them.
   const ficaSubjects = await buildFicaSubjects(supabase, matterClientId, parties);
 
+  // Documents grouped by class, with the SAME resolver the admin page uses.
+  // §5.13 — the two matter pages change together, and a deed search must not be
+  // filed one way for staff and another for the firm.
+  const partyRoleById = new Map<string, string>();
+  for (const p of parties) partyRoleById.set(p.id, p.role);
+  const docsByClass: Record<string, typeof docs> = {
+    input: [], supporting: [], output: [], other: [],
+  };
+  for (const d of docs) {
+    const role = d.matter_party_id ? partyRoleById.get(d.matter_party_id) ?? null : null;
+    docsByClass[
+      resolveDocClass(matter.municipality, d.document_type ?? "", role as PartyRole)
+    ].push(d);
+  }
+
+  // The parties, in the shape the upload panel asks "whose is it?" with.
+  const uploadParties = parties.map((p) => ({
+    id: p.id,
+    role: p.role,
+    name:
+      p.business_name?.trim() ||
+      p.full_name?.trim() ||
+      [p.first_name, p.last_name].filter(Boolean).join(" ").trim() ||
+      p.role.replace(/_/g, " "),
+  }));
+
   const activities = (actData as MatterActivity[] | null) ?? [];
 
   // The shared enquiry thread on this matter (#3). RLS gives the firm its own
@@ -212,185 +240,254 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
           where it has got to, the parties, their details, the documents. Right is
           REFERENCE and the conversation — short cards that would otherwise wedge
           themselves between two pieces of work. */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+      {/* 🔴 THE SAME SHAPE AS THE ADMIN MATTER PAGE. Zewn, 2026-09-04: "the
+          attorney matter page doesnt look quite right. please make it look more
+          like the admin matter page."
+
+          §5.13 is the standing reason: these two surfaces drift whenever only
+          one is edited, and they have three times. So the section ORDER is now
+          the admin page's, card for card — client details and consent, then the
+          parties, then where the work has got to, then one documents box holding
+          the three classes with the capture checklist inside Input. The right
+          rail carries what is reference rather than work.
+
+          What legitimately differs is only what a firm may SEE and DO: no
+          council portal details, no internal card, no approval controls on a
+          document, and the client-facing phase names on the pipeline. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
-      {/* Parent property transfer, when this matter belongs to one (read-only). */}
-      <MatterTransferCard
-        matterId={params.id}
-        transfer={matter.property_transfers ?? null}
-        basePath="/partner/transfers"
-      />
-
-      {/* Pipeline progress (client-facing view) */}
-      {pipeline && (
-        <Card>
-          <PipelineProgress
-            pipeline={pipeline}
-            currentPhase={matter.current_phase}
-            currentStage={(matter as unknown as { current_stage?: string | null }).current_stage ?? null}
-            audience="client"
+          {/* Client details + consent. `contact` folds in what used to be a
+              separate "Client" card in the right rail — the admin page dropped
+              that duplicate on 2026-09-01 ("this is also duplicated data in 2
+              sections please fix") and this page still had it: one card naming
+              the client, and another opening by naming the same client and
+              saying what was missing from their record. */}
+          <InPlaceFica
+            matterId={params.id}
+            subjects={ficaSubjects}
+            isStaff={false}
+            municipality={matter.municipality}
+            serviceCode={serviceCode}
+            prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
+            contact={
+              client
+                ? {
+                    name: clientDisplayName(client),
+                    email: client.primary_email ?? null,
+                    cell: client.primary_cell ?? null,
+                  }
+                : null
+            }
           />
-        </Card>
-      )}
 
-      {/* Council decision (e.g. COT Decision: Memo Approved/Delayed/Rejected) */}
-      {decisionLabel && (
-        <Callout tone="waiting" label="Council decision">
-          <span className="text-[17px] font-semibold text-ink">{decisionLabel}</span>
-        </Callout>
-      )}
+          {/* Parties (COO buyer/seller etc.) — nothing for a single-client matter. */}
+          <PartiesCard
+            parties={parties}
+            matterId={params.id}
+            ficaSubjects={ficaSubjects}
+            isStaff={false}
+            municipality={matter.municipality}
+            serviceCode={serviceCode}
+            prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
+          />
 
-      {/* Council rates account number (read-only for partners) */}
-      {typeof sd.rates_account_no === "string" && sd.rates_account_no && (
-        <Card>
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">Rates account number</p>
-          <p className="mt-1 text-[17px] font-semibold tabular-nums text-ink">{sd.rates_account_no}</p>
-        </Card>
-      )}
+          {/* Where the work has got to. Client-facing phase names: a firm must
+              never be shown our internal vocabulary. */}
+          {pipeline && (
+            <Card>
+              <PipelineProgress
+                pipeline={pipeline}
+                currentPhase={matter.current_phase}
+                currentStage={(matter as unknown as { current_stage?: string | null }).current_stage ?? null}
+                audience="client"
+              />
+            </Card>
+          )}
 
-      {/* 🔴 THE "OPEN UPLOAD FORM" BLOCK IS GONE (2026-09-02). Zewn: "i dont see
-          a reason for the upload form anymore since we are doing all of that
-          inline."
-          It minted an onboarding token and opened /onboard in a new tab — the
-          route the attorney needed before capture existed on this page. Since
-          the in-place work below (client details and consent, then the
-          service-aware document checklist) they can do all of it here, and a
-          button that opens a second, differently-shaped form for the same job is
-          two answers to one question.
-          PartnerDocUpload and /api/partner/onboarding-link both REMAIN: the
-          admin "Collect FICA" control still mints links, and /onboard is still
-          the unauthenticated path a CLIENT uses. This only stops offering it to
-          an attorney who is already standing in front of the fields. */}
+          {decisionLabel && (
+            <Callout tone="waiting" label="Council decision">
+              <span className="text-[17px] font-semibold text-ink">{decisionLabel}</span>
+            </Callout>
+          )}
 
-      {/* Parties (COO buyer/seller) — renders nothing for single-client matters */}
-      {/* Party FICA moved INTO the party card (see PartiesCard). Passing the
-          subjects here keeps the partner's capture where staff's now is, rather
-          than silently removing it when InPlaceFica stopped rendering parties. */}
-      <PartiesCard
-        parties={parties}
-        matterId={params.id}
-        ficaSubjects={ficaSubjects}
-        isStaff={false}
-        municipality={matter.municipality}
-        serviceCode={serviceCode}
-        prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
-      />
+          {typeof sd.rates_account_no === "string" && sd.rates_account_no && (
+            <Card>
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">
+                Rates account number
+              </p>
+              <p className="mt-1 text-[17px] font-semibold tabular-nums text-ink">{sd.rates_account_no}</p>
+            </Card>
+          )}
 
-      {/* In-place FICA — client details + consent, without an onboarding link. */}
-      <InPlaceFica
-        matterId={params.id}
-        subjects={ficaSubjects}
-        isStaff={false}
-        municipality={matter.municipality}
-        serviceCode={serviceCode}
-        prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
-      />
+          {/* ── Documents ───────────────────────────────────────────────────
+              🔴 WAS SPLIT BY WHO SENT IT — "Your / client uploads" against
+              "ConveyClear uploads" — which is not a question anyone asks of a
+              file. The admin page moved to input · supporting · output on
+              2026-09-01 and this one did not, so the same deed search was filed
+              one way for staff and another for the firm. Now both resolve the
+              class the same way, from the council registry for this (council,
+              service, stage).
 
-      {/* In-place intake — service-aware required-document checklist + upload.
-          Partners upload on the client's behalf and may mark an optional document
-          "not available"; without that, partner-side intake progress could never
-          reach complete. toggleDocUnavailable authorises the firm itself.
-          Renders null for non-COO/PRC. */}
-      <InPlaceIntake
-        matterId={matter.id}
-        serviceCode={serviceCode}
-        serviceSubtype={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
-        parties={parties}
-        documents={docs}
-        municipality={matter.municipality}
-        unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
-        canManage
-        vaultByClient={vaultByClient}
-        matterClientId={matterClientId}
-        transferDocs={transferDocs}
-      />
+              The capture checklist lives INSIDE Input documents rather than in a
+              box of its own, for the reason it does on the admin page: what a
+              service requires and what has been filed against it are one
+              subject, and two boxes listed the same file twice. */}
+          <Card padding="none">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+              <h2 className="flex items-center gap-2 font-semibold text-ink">
+                <FileText className="h-4 w-4 text-action" /> Documents ({docs.length})
+              </h2>
+            </div>
 
-      {/* 🔴 DOCUMENTS ARE THE WIDE THING NOW. Zewn: "please also expand the
-          documents section a bit more." It shared a two-up row with the client
-          card, so file names truncated at half a column while a four-line
-          contact card sat beside them doing nothing with the space. The client
-          card moves to the right rail, where a short reference card belongs. */}
-      {/* 🔴 DOCUMENTS ARE THE WIDE THING NOW. Zewn, 2026-09-02: "please also
-          expand the documents section a bit more." They shared a two-up row with
-          the client card, so file names truncated at half a column while a
-          four-line contact card sat beside them using none of the space. The
-          client card has moved to the right rail, where a short reference card
-          belongs, and the documents get the whole left column. */}
-      <div className="grid grid-cols-1 gap-6">
-        {/* Documents — your / client uploads vs ConveyClear uploads (note 29) */}
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Documents</h2>
-            <StorageUpload matterId={matter.id} />
-          </div>
-          {docs.length === 0 ? (
-            <p className="text-sm text-ink-3">No documents yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {([
-                { title: "Your / client uploads", list: docs.filter((d) => ["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
-                { title: "ConveyClear uploads", list: docs.filter((d) => !["client", "attorney"].includes((d as { uploaded_by?: string | null }).uploaded_by ?? "")) },
-              ] as const).map((grp) => (
-                <div key={grp.title}>
-                  <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-ink-3">{grp.title} ({grp.list.length})</p>
-                  {grp.list.length === 0 ? (
-                    <p className="text-sm text-ink-3">None.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {grp.list.map((d) => (
-                        <li key={d.id} className="flex items-center gap-2 text-sm">
-                          <FileText className="h-4 w-4 text-ink-3 shrink-0" />
-                          <span className="flex-1 text-ink-2 truncate">{d.file_name || d.document_type}</span>
+            <div className="space-y-5 px-5 py-4">
+              {DOC_CLASSES.map((cls) => (
+                <div key={cls}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+                    {DOC_CLASS_LABELS[cls]} ({docsByClass[cls].length})
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-3">{DOC_CLASS_HINTS[cls]}</p>
+
+                  {cls === "input" && (
+                    <div className="mt-3">
+                      <InPlaceIntake
+                        bare
+                        matterId={matter.id}
+                        serviceCode={serviceCode}
+                        serviceSubtype={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
+                        parties={parties}
+                        documents={docs}
+                        municipality={matter.municipality}
+                        unavailable={Array.isArray(sd.docs_unavailable) ? (sd.docs_unavailable as string[]) : []}
+                        canManage
+                        vaultByClient={vaultByClient}
+                        matterClientId={matterClientId}
+                        transferDocs={transferDocs}
+                      />
+                    </div>
+                  )}
+
+                  {docsByClass[cls].length > 0 ? (
+                    <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
+                      {docsByClass[cls].map((d) => (
+                        <li key={d.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                          <FileText className="h-4 w-4 shrink-0 text-ink-3" />
+                          <span className="min-w-0 flex-1 truncate text-ink-2">
+                            {d.file_name || d.document_type}
+                          </span>
                           {d.storage_path && signedUrls[d.storage_path] ? (
-                            <a href={signedUrls[d.storage_path]} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs font-semibold text-action hover:underline">View</a>
+                            <a
+                              href={signedUrls[d.storage_path]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 text-xs font-semibold text-action hover:underline"
+                            >
+                              View
+                            </a>
                           ) : d.drive_file_id ? (
-                            <a href={`https://drive.google.com/file/d/${d.drive_file_id}/view`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs font-semibold text-action hover:underline">View</a>
+                            <a
+                              href={`https://drive.google.com/file/d/${d.drive_file_id}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 text-xs font-semibold text-action hover:underline"
+                            >
+                              View
+                            </a>
                           ) : null}
                           {d.verified && <StatusPill tone="ok">Verified</StatusPill>}
                         </li>
                       ))}
                     </ul>
+                  ) : (
+                    <p className="mt-2 rounded-lg border border-dashed border-line px-3 py-3 text-sm text-ink-3">
+                      None yet
+                    </p>
                   )}
                 </div>
               ))}
-            </div>
-          )}
-        </Card>
-      </div>
 
+              {/* Anything the council registry does not name, including every
+                  document filed before the classes existed. Its own heading
+                  rather than a silent home in "supporting". */}
+              {docsByClass.other.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+                    Other documents ({docsByClass.other.length})
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-3">
+                    Not named in {municipalityLabel(matter.municipality)}&apos;s requirements for this
+                    service, or filed before documents were split into classes.
+                  </p>
+                  <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
+                    {docsByClass.other.map((d) => (
+                      <li key={d.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                        <FileText className="h-4 w-4 shrink-0 text-ink-3" />
+                        <span className="min-w-0 flex-1 truncate text-ink-2">
+                          {d.file_name || d.document_type}
+                        </span>
+                        {d.storage_path && signedUrls[d.storage_path] && (
+                          <a
+                            href={signedUrls[d.storage_path]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 text-xs font-semibold text-action hover:underline"
+                          >
+                            View
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 🔴 THE UPLOAD ASKS THREE QUESTIONS NOW. Zewn, 2026-09-04: "add
+                  in the doc type and naming for document uploads like we have on
+                  the prop trf page." It was a bare button that filed everything
+                  as `other`, unnamed and party-less — which is why so much of
+                  this matter's history sits under "Other documents". The class
+                  is resolved from (council, type, party role), so a type nobody
+                  picks and a party nobody names can only ever resolve to the
+                  fallback. */}
+              <div className="border-t border-line pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">
+                  Add a document
+                </p>
+                <MatterUploadPanel
+                  matterId={matter.id}
+                  parties={uploadParties}
+                  municipality={matter.municipality}
+                  // What the document is ABOUT. The matter's own title already
+                  // carries the property (COT_RCF_<ref>_ERF 3456 LONEHILL), so
+                  // it is the honest subject here; the transfer's property
+                  // description is not on this row.
+                  nameSubject={matter.title ?? null}
+                />
+                <p className="mt-2 text-xs text-ink-3">
+                  ConveyClear reviews what you upload before it reaches the buyer or seller.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         <div className="min-w-0 space-y-6">
-          {/* The client, as a reference card rather than half a work row. */}
-          {client && (
-            <Card>
-              <h2 className="mb-4 text-[19px] font-semibold tracking-[-0.015em] text-ink">Client</h2>
-              <dl className="space-y-2.5 text-[14px]">
-                <div className="flex justify-between gap-3"><dt className="text-ink-3">Name</dt><dd className="text-right text-ink">{clientDisplayName(client)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-ink-3">Type</dt><dd className="text-right text-ink">{client?.entity_type?.replace("_", " ") || "—"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-ink-3">Email</dt><dd className="min-w-0 break-all text-right text-ink">{client?.primary_email || "—"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-ink-3">Cell</dt><dd className="text-right text-ink">{client?.primary_cell || "—"}</dd></div>
-              </dl>
-            </Card>
-          )}
+          {/* The transaction this matter belongs to — reference, as on the admin
+              page, where it also leads the right rail. */}
+          <MatterTransferCard
+            matterId={params.id}
+            transfer={matter.property_transfers ?? null}
+            basePath="/partner/transfers"
+          />
 
           {/* What this council asks for, for THIS service — the same generated
-              list the transfer page carries, narrowed to the one matter. Zewn,
-              2026-09-02: "drag through the list of 'what we normally need' for
-              this specific matter so the attorneys can see that aswell." */}
+              list the transfer page carries, narrowed to the one matter. */}
           <ExpectedDocuments
             municipality={matter.municipality}
             serviceCode={serviceCode}
             prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
           />
 
-          {/* 🔴 ONE CARD, TWO TABS — the Activity card that used to sit above
-              this is gone. Zewn, 2026-09-02: "merge the activity and conversation
-              sections here." MatterFeed has carried an Activity tab since it was
-              built (the transfer page went through the same merge on 08-27);
-              this page simply never passed the rows to it and rendered its own
-              card instead. Two boxes, one question: what has happened here.
-
+          {/* One card, two tabs: the conversation and the lifecycle history.
               The activities are already filtered to lifecycle events by the
               query — a firm never sees a staff note (Jukka, 2026-06-16). */}
           <MatterFeed
