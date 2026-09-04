@@ -185,7 +185,15 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    // 🔴 NO WIDTH CAP, matching the admin matter page and both transfer pages.
+    // `max-w-4xl mx-auto` held this page at 896px while the shell already brings
+    // its own padding — so on a wide screen it sat as a narrow column with a
+    // third of the viewport empty on either side. The admin page dropped exactly
+    // this cap on 2026-09-01 for exactly this reason; the attorney page kept it
+    // through the 09-04 restructure, which is why it still "didn't look quite
+    // right" after the sections had been put in the admin's order (Zewn: "it
+    // takes up a thin strip and has a lot of space on either side").
+    <div className="space-y-6">
       {/* Back to the transfer when the matter belongs to one — that is where the
           user came from. Partners may read their own firm's transfers, so this
           link is always reachable for them. (The CLIENT dashboard deliberately
