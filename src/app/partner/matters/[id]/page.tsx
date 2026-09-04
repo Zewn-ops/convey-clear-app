@@ -51,7 +51,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, property_description, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
+    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
     .eq("id", params.id)
     .maybeSingle();
 
