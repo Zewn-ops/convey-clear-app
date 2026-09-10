@@ -15,6 +15,7 @@ import {
   ASSIGNABLE_ROLES_BY_SUPER,
   ROLE_LABELS,
   composeFullName,
+  firmTypeLabel,
   isSuperAdmin,
   type AppUser,
   type Firm,
@@ -357,7 +358,7 @@ export default function UserManager({
               <span key={p.id} className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm">
                 <Building2 className="h-3.5 w-3.5 text-ink-3" />
                 {p.name}
-                <span className="text-xs text-ink-3">{p.partner_type}</span>
+                <span className="text-xs text-ink-3">{firmTypeLabel(p.partner_type)}</span>
               </span>
             ))}
           </div>

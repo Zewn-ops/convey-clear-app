@@ -36,6 +36,11 @@ const MUNICIPALITY_NAMES: Record<string, string> = {
   COT: "City of Tshwane",
   COJ: "City of Johannesburg",
   COE: "City of Ekurhuleni",
+  // The new-transfer and request forms both offer "Other" as a council, and the
+  // code stored is OTHER. Unknown codes pass through unchanged below, which is
+  // right for a council we have not met — but OTHER is one we ship, so it was
+  // shipping shouted: "ERF 123 Smithfield Queens · OTHER".
+  OTHER: "Other",
 };
 export function municipalityLabel(code?: string | null): string {
   if (!code) return "—";

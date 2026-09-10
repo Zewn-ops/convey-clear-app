@@ -196,7 +196,12 @@ export default async function AdminFirmDetailPage({
       <Card padding="none" className="overflow-hidden">
         <div className="px-5 py-3 border-b border-line">
           <h2 className="text-sm font-semibold text-ink">Matters ({matters.length})</h2>
-          <p className="text-xs text-ink-3 mt-0.5">Most recent 25.</p>
+          {/* Only when the list is actually cut short. The query takes 25, so
+              "Most recent 25." sat above a list of eight and read as a claim
+              about the firm rather than about the query. */}
+          {matters.length >= 25 && (
+            <p className="text-xs text-ink-3 mt-0.5">Most recent 25.</p>
+          )}
         </div>
         <div className="divide-y divide-line">
           {matters.map((m) => (

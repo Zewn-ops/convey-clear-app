@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { isStaffRole } from "@/types";
+import { isStaffRole, entityTypeLabel } from "@/types";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import TransferRequestReview from "@/components/transfers/TransferRequestReview";
@@ -72,12 +72,6 @@ function requesterLabel(r: RequestRow): string | null {
  * The number is monospaced and selectable: the six-instead-of-a-nine case is the
  * whole reason it is on screen.
  */
-const ENTITY_LABEL: Record<string, string> = {
-  natural_person: "Individual",
-  business: "Business",
-  trust: "Trust",
-};
-
 function Party({
   label,
   name,
@@ -113,7 +107,7 @@ function Party({
           )}
           {(entityType || idNumber || registrationNo) && (
             <p className="mt-1 text-xs text-ink-3">
-              {entityType ? ENTITY_LABEL[entityType] ?? entityType : "Type not given"}
+              {entityType ? entityTypeLabel(entityType) : "Type not given"}
               {(idNumber || registrationNo) && (
                 <>
                   {" · "}

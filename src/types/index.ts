@@ -99,6 +99,39 @@ export const PHASE_LABELS: Record<MatterPhase, string> = {
   "4": "Quotation & Operations Handover",
 };
 
+/**
+ * How an entity type is written for a reader.
+ *
+ * The same three lines were copied into /admin/clients, its detail page and
+ * /admin/transfer-requests, while /partner/clients rendered the column raw and
+ * labelled a company "natural person". One map, so those four screens cannot
+ * drift and a fifth cannot start by pasting a fourth copy.
+ */
+export const ENTITY_TYPE_LABELS: Record<EntityType, string> = {
+  natural_person: "Individual",
+  business: "Business",
+  trust: "Trust",
+};
+
+export function entityTypeLabel(value?: string | null): string {
+  if (!value) return "—";
+  return ENTITY_TYPE_LABELS[value as EntityType] ?? value;
+}
+
+/** Firm types, as the create-firm form in UserManager offers them. */
+export const FIRM_TYPE_LABELS: Record<string, string> = {
+  law_firm: "Law Firm",
+  conveyancer: "Conveyancer",
+  attorney: "Attorney",
+  estate_agent: "Estate Agency",
+  other: "Other",
+};
+
+export function firmTypeLabel(value?: string | null): string {
+  if (!value) return "—";
+  return FIRM_TYPE_LABELS[value] ?? value;
+}
+
 export const MATTER_STATUS_LABELS: Record<MatterStatus, string> = {
   new: "New",
   open: "Open",

@@ -4,12 +4,13 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getInitials } from "@/lib/utils";
 import {
   isStaffRole,
   isAdminRole,
   clientDisplayName,
   MATTER_STATUS_LABELS,
+  entityTypeLabel,
   type Client,
   type ClientDocument,
   type Matter,
@@ -38,14 +39,11 @@ type MatterRow = Matter & {
 function matterStageLabel(m: MatterRow): string {
   if (!m.current_stage) return "No stage set";
   const pl = getPipeline(m.services?.code, m.municipality, m.service_subtype);
-  return pl ? stageLabel(pl, m.current_stage) : m.current_stage;
+  // stageLabel humanises a key it cannot place, pipeline or not — a rates
+  // clearance with no subtype has no pipeline by design, and used to fall
+  // through to the raw slug here.
+  return stageLabel(pl, m.current_stage);
 }
-
-const entityLabels: Record<string, string> = {
-  natural_person: "Individual",
-  business: "Business",
-  trust: "Trust",
-};
 
 function statusVariant(status: string): "info" | "success" | "danger" | "warning" | "gray" {
   const map: Record<string, "info" | "success" | "danger" | "warning" | "gray"> = {
@@ -162,12 +160,12 @@ export default async function AdminClientDetailPage({
         </Link>
         <div className="flex items-center gap-4">
           <div className="h-14 w-14 rounded-full bg-action-fill flex items-center justify-center text-white text-lg font-bold shrink-0">
-            {displayName.slice(0, 2).toUpperCase()}
+            {getInitials(displayName)}
           </div>
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.06] tracking-[-0.032em] text-ink">{displayName}</h1>
             <p className="text-sm text-ink-3">
-              {entityLabels[client.entity_type] ?? client.entity_type} · Added {formatDate(client.created_at)}
+              {entityTypeLabel(client.entity_type)} · Added {formatDate(client.created_at)}
             </p>
           </div>
         </div>
