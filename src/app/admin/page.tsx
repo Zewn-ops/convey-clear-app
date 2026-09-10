@@ -30,7 +30,8 @@ export default async function AdminPage() {
     { data: staleData },
     { count: openCount },
     { count: pendingRequests },
-    { count: pendingDocs },
+    { count: pendingMatterDocs },
+    { count: pendingTransferDocs },
     { data: linkedRows },
   ] = await Promise.all([
     // Oldest first: the question is which transaction has gone quiet, not which
@@ -44,10 +45,26 @@ export default async function AdminPage() {
       .limit(6),
     supabase.from("property_transfers").select("id", { count: "exact", head: true }).eq("status", "open"),
     supabase.from("transfer_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("documents").select("id", { count: "exact", head: true }).is("approved_at", null),
+    // The tile must count what /admin/approvals actually queues, and that queue
+    // is TWO tables — matter documents and transfer documents (lib/approvals.ts)
+    // — filtered to undecided, not merely unapproved. Counting one table said
+    // "11 Documents to review" over a queue holding 13, and a disapproved file
+    // would have been counted as waiting.
+    supabase
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .is("approved_at", null)
+      .is("disapproved_at", null),
+    supabase
+      .from("transfer_documents")
+      .select("id", { count: "exact", head: true })
+      .is("approved_at", null)
+      .is("disapproved_at", null),
     // Matter counts for the cards below, in one query rather than per row.
     supabase.from("matters").select("transfer_id").not("transfer_id", "is", null),
   ]);
+
+  const pendingDocs = (pendingMatterDocs ?? 0) + (pendingTransferDocs ?? 0);
 
   const stale = (staleData as PropertyTransfer[] | null) ?? [];
   const counts = new Map<string, number>();
@@ -115,7 +132,7 @@ export default async function AdminPage() {
           className="group rounded-xl bg-surface p-5 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line dark:hover:ring-action/40"
         >
           <FileCheck2 className="h-5 w-5 text-ink-3" />
-          <p className="mt-3 text-[26px] font-semibold tabular-nums tracking-[-0.025em] text-ink">{pendingDocs ?? 0}</p>
+          <p className="mt-3 text-[26px] font-semibold tabular-nums tracking-[-0.025em] text-ink">{pendingDocs}</p>
           <p className="mt-0.5 text-sm text-ink-2">Documents to review</p>
           <p className="mt-2 inline-flex items-center gap-1 text-xs text-ink-3 group-hover:text-action">
             Open approvals <ArrowRight className="h-3 w-3" />

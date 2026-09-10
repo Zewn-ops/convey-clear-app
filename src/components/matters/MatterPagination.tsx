@@ -35,14 +35,20 @@ export default function MatterPagination({
   return (
     <div className="flex items-center justify-between text-sm text-ink-3">
       <span>{total === 0 ? "No matters" : `Showing ${from}–${to} of ${total}`}</span>
-      <div className="flex gap-2">
-        <button type="button" disabled={!hasPrev} onClick={() => go(page - 1)} className={btn}>
-          Previous
-        </button>
-        <button type="button" disabled={!hasNext} onClick={() => go(page + 1)} className={btn}>
-          View more
-        </button>
-      </div>
+      {/* One page means nowhere to go. The buttons were disabled rather than
+          absent, which still reads as "there is more" under a line that has
+          just said there is not — "Showing 1–15 of 15" beside a Previous and a
+          View more. */}
+      {(hasPrev || hasNext) && (
+        <div className="flex gap-2">
+          <button type="button" disabled={!hasPrev} onClick={() => go(page - 1)} className={btn}>
+            Previous
+          </button>
+          <button type="button" disabled={!hasNext} onClick={() => go(page + 1)} className={btn}>
+            View more
+          </button>
+        </div>
+      )}
     </div>
   );
 }
