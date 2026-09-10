@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+export const metadata = { title: "Matter — ConveyClear" };
+
 /**
  * Clients do not see matters. See ../page.tsx for the decision.
  *
