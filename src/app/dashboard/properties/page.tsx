@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import { municipalityLabel } from "@/lib/utils";
+import { municipalityLabel, formatDateMedium } from "@/lib/utils";
 import { Building } from "lucide-react";
 
 export const metadata = { title: "My Properties — ConveyClear" };
@@ -32,7 +32,7 @@ interface Row {
 
 const soldOn = (iso: string | null) =>
   iso
-    ? new Date(iso).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" })
+    ? formatDateMedium(iso)
     : null;
 
 export default async function ClientPropertiesPage() {

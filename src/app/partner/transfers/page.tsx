@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import TransferCard from "@/components/transfers/TransferCard";
+import { formatDateNumeric } from "@/lib/utils";
 import EmptyState from "@/components/ui/EmptyState";
 import { TRANSFER_STATUS_LABELS, type PropertyTransfer } from "@/types";
 import { Plus, Building2, FileEdit, Inbox } from "lucide-react";
@@ -202,7 +203,7 @@ export default async function PartnerTransfersPage({
                           "Untitled request"}
                       </span>
                       <span className="block text-xs text-ink-3">
-                        Saved {new Date(d.updated_at).toLocaleDateString("en-ZA")}
+                        Saved {formatDateNumeric(d.updated_at)}
                       </span>
                     </span>
                   </span>

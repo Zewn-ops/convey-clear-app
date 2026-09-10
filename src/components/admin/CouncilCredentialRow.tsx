@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { formatDateNumeric } from "@/lib/utils";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export interface AdminCredentialRow {
@@ -56,7 +57,7 @@ export default function CouncilCredentialRow({ row }: { row: AdminCredentialRow 
         <p className="text-sm font-medium text-ink">{row.person}</p>
         <p className="text-xs text-ink-3">
           {row.municipality} · updated{" "}
-          {new Date(row.updated_at).toLocaleDateString("en-ZA")}
+          {formatDateNumeric(row.updated_at)}
         </p>
 
         {value ? (
