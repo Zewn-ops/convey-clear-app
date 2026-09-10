@@ -336,7 +336,10 @@ export default function TransferDocuments({
         {NAMED_DOC_TYPES.map((t) => {
           const held = presentNamed.has(t);
           const doc = current.find((d) => d.document_type === t && d.disapproved_at == null);
-          const pending = canManage && held && doc?.approved_at == null;
+          // 093 — a firm now sees its OWN pending upload, so the tile has to
+          // say so too. Before 093 no partner could see an unapproved row at
+          // all, which is why this was gated on canManage.
+          const pending = held && doc?.approved_at == null;
 
           /**
            * Re-uploading one of the five REPLACES it — it does not add a second.
@@ -719,11 +722,15 @@ function DocRow({
   remove: (id: string) => void;
   upload: (file: File, docType: string, replacesId?: string, role?: string | null) => void;
 }) {
-  // Approval gate (042/043/044), staff-facing only. Pending = held for an admin;
-  // disapproved = rejected with a reason. Both stay hidden from the partner firm;
-  // grey a pending row so staff see it is not out.
+  // Approval gate (042/043/044). Pending = held, not yet released to the buyer
+  // and seller; disapproved = rejected with a reason.
+  //
+  // 093 let a firm see its own upload before it is released, so the badge is no
+  // longer staff-only: whoever can see an unapproved row needs to know it is
+  // unapproved. A firm still cannot see anyone ELSE's pending upload, which is
+  // what 043 is protecting — that is enforced by the policy, not by this flag.
   const isDisapproved = d.disapproved_at != null;
-  const isPending = canManage && d.approved_at == null && !isDisapproved;
+  const isPending = d.approved_at == null && !isDisapproved;
 
   return (
       <li key={d.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 ${busy === d.id ? "opacity-50" : isPending ? "opacity-60" : ""}`}>
@@ -732,14 +739,19 @@ function DocRow({
           <p className="flex items-center gap-1.5 truncate text-sm font-medium text-ink">
             {docLabel(d.document_type)}
             {d.verified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" aria-label="Verified" />}
-            {/* canManage = staff/admin only, so the partner firm never sees
-                the internal review state. */}
+            {/* Shown to whoever can see the row. For staff that is the review
+                queue; for the firm that uploaded it, it is the answer to "did
+                my upload work, and can the client see it yet". */}
             {isPending && (
               <span
                 className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700"
-                title="Not released. Hidden from the partner firm until an admin approves it in Document Approvals."
+                title={
+                  canManage
+                    ? "Not released. Hidden from the buyer and seller until an admin approves it in Document Approvals."
+                    : "Received. ConveyClear is reviewing it; the buyer and seller cannot see it yet."
+                }
               >
-                Awaiting approval
+                {canManage ? "Awaiting approval" : "Awaiting review"}
               </span>
             )}
             {canManage && isDisapproved && (
