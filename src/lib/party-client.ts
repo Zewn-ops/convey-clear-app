@@ -101,10 +101,32 @@ export async function findOrCreateClientForParty(
 
   const firmId = opts.scopeToFirmId ?? null;
 
+  // The scope is "this firm's clients, PLUS the ones that belong to no firm".
+  //
+  // 🔴 WHY THE NULL HALF IS NOT A LEAK, and why leaving it out was a bug.
+  //   The scope exists so the service role, acting for a partner, cannot match
+  //   ANOTHER firm's client and render their name, email and cell onto the
+  //   referring firm's party card. A client with a NULL business_partner_id is
+  //   nobody's — ConveyClear owns the client database and a firm does not claim
+  //   a client by typing a name — so matching it discloses nothing about
+  //   another firm. The match still requires an exact hit on an ID number, a
+  //   registration number or an email, all of which the caller has just typed.
+  //
+  //   Leaving it out is what minted duplicates. Most client rows carry no firm,
+  //   so a scoped lookup could not see the record it was meant to find and
+  //   inserted a second one: on production 2026-09-10, Power Trust 160 existed
+  //   three times (two of them identical, same email, same cell, same day),
+  //   Thabo Molefe three times, Brookfield Props twice.
   const tryMatch = async (column: string, value: string) => {
     let q = supabase.from("clients").select("id").eq(column, value);
-    if (firmId) q = q.eq("business_partner_id", firmId);
-    const { data } = await q.limit(1).maybeSingle();
+    if (firmId) q = q.or(`business_partner_id.eq.${firmId},business_partner_id.is.null`);
+    // Deterministic, and the firm's own record wins: nullsFirst false puts a
+    // stamped row ahead of an unowned one when both match. Without an order,
+    // which of the two came back was down to the planner.
+    const { data } = await q
+      .order("business_partner_id", { ascending: true, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
     return (data as { id: string } | null)?.id ?? null;
   };
 
