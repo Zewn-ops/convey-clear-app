@@ -34,8 +34,19 @@ export default function TransferProgressBar({
    */
   showDots?: boolean;
 }) {
-  // Nothing to measure. Say nothing rather than draw an empty bar, which reads
-  // as "no progress" when it means "no checklist".
+  // Nothing chosen yet, but the checklist is there and waiting. Since only
+  // chosen services are counted (2026-09-11), this is what a brand-new transfer
+  // looks like — and drawing nothing at all would make the most common state of
+  // a fresh transaction indistinguishable from a rendering failure. One quiet
+  // line, no bar, because there is genuinely no progress to show.
+  if (progress.total === 0 && progress.awaitingChoice) {
+    return showLabel ? (
+      <p className="text-xs text-ink-3">{progress.label}</p>
+    ) : null;
+  }
+
+  // No checklist at all (a transfer predating 063). Say nothing rather than draw
+  // an empty bar, which reads as "no progress" when it means "no checklist".
   if (progress.total === 0) return null;
 
   const { percent, complete, label } = progress;
