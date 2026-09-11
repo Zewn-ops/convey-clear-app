@@ -48,6 +48,15 @@ interface Group {
   partyId: string | null;
   slots: CooDocRule[];
   vaultDocs: ClientDocument[]; // this group's client's reusable vault docs
+  /**
+   * Which side of the transaction this group is, where it is one.
+   *
+   * Used to pick the transfer-level documents offered against its slots: a
+   * transfer document carries its own party_role (067), and without this the
+   * seller's Certified ID slot offered the buyer's certified ID as well as the
+   * seller's — and so did the buyer's.
+   */
+  partyRole?: "seller" | "buyer" | null;
   /** A side of the transaction with no party row captured yet (COO). */
   missingParty?: boolean;
   /** A PRC matter with no stage recorded — the list below is a guess (§5.8). */
@@ -165,6 +174,7 @@ export default function InPlaceIntake({
         title: partyLabel(p),
         subtitle: ROLE_LABELS[p.role] ?? p.role,
         partyId: p.id,
+        partyRole: p.role === "seller" || p.role === "buyer" ? p.role : null,
         slots: mergeSlots(
           cooPartyDocs(p.role, toCooEntity(p.entity_type), municipality),
           registrySlots(municipality, "COO", null, [p.role as "seller" | "buyer"])
@@ -196,6 +206,7 @@ export default function InPlaceIntake({
         // required COUNT below: a document that cannot be uploaded must not make
         // the checklist look further from done than it is.
         partyId: null,
+        partyRole: role,
         slots: registrySlots(municipality, "COO", null, [role]),
         vaultDocs: [],
         missingParty: true,
@@ -215,6 +226,7 @@ export default function InPlaceIntake({
         seller ? ROLE_LABELS[seller.role] ?? seller.role : "Seller / applicant",
       ].join(" · "),
       partyId: seller?.id ?? null,
+      partyRole: "seller",
       slots: mergeSlots(
         prcStageDocs(stage, seller?.entity_type ?? "natural_person", municipality),
         registrySlots(municipality, "PRC", stage, ["matter", "seller"])
@@ -382,8 +394,21 @@ export default function InPlaceIntake({
               // service has NO shared group, so every slot is party-scoped and the
               // button could never appear. It also hid the electrical COC, which
               // sits on the seller's slot but describes the property.
+              //
+              // ...but WHOSE it is still matters. A transfer document carries
+              // its own party_role (067), and matching on type alone offered
+              // the buyer's certified ID on the seller's slot and the seller's
+              // on the buyer's — two files under one heading, both labelled
+              // "Certified ID", on both sides. A transfer document with NO
+              // party_role is about the transaction and stays offered
+              // everywhere, which is what keeps the electrical COC reachable
+              // from the seller's slot.
               const transferOpts = transferDocs
-                .filter((t) => t.document_type === s.docType)
+                .filter(
+                  (t) =>
+                    t.document_type === s.docType &&
+                    (!t.party_role || !g.partyRole || t.party_role === g.partyRole)
+                )
                 .map((t) => ({ id: t.id, file_name: t.file_name }));
               // Locked: listed so the requirement is visible, without controls
               // that would file the document against nobody.

@@ -180,7 +180,26 @@ export function SubjectSection({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const entity = client?.entity_type ?? "natural_person";
+  // The PARTY's entity type leads, not the linked client record's.
+  //
+  // 088 made entity type the thing that decides what a party is asked for — an
+  // ID number or a registration number, directors or none — and the party row is
+  // where the firm recorded it for THIS transaction. The client record is a
+  // reusable profile that may have been linked wrongly: on production 2026-09-10
+  // the buyer on J4500/LS is a business whose linked client is a natural person
+  // (matched on a shared email before that was disallowed), so this card read
+  // "INDIVIDUAL" and demanded an ID number directly beneath a party card saying
+  // "business".
+  //
+  // Falling back to the client's own type keeps the single-client matters — the
+  // ones with no party row at all — working exactly as before.
+  const entity = subject.partyEntity ?? client?.entity_type ?? "natural_person";
+  // Linked to a record of the wrong kind. The capture form is driven by the
+  // party above, but the mismatch is a data fault that outlives this screen, so
+  // it is named rather than quietly resolved.
+  const entityMismatch = Boolean(
+    client?.entity_type && subject.partyEntity && client.entity_type !== subject.partyEntity
+  );
   // §5.12 — the council may raise some of the optional extras to required for
   // THIS party, here. `councilPartyFieldKeys` returns nothing for a council
   // with no spec, or a party the sheet does not ask about, so the form is
@@ -319,6 +338,17 @@ export function SubjectSection({
           <p className="text-[11px] uppercase tracking-wide text-ink-3">
             {entity === "business" ? "Business" : entity === "trust" ? "Trust" : "Individual"}
           </p>
+          {entityMismatch && (
+            <p className="mt-1 text-[11px] text-waiting">
+              Linked to a client record filed as{" "}
+              {client?.entity_type === "business"
+                ? "a business"
+                : client?.entity_type === "trust"
+                  ? "a trust"
+                  : "an individual"}
+              . The party above is what this capture follows — ask ConveyClear to relink it.
+            </p>
+          )}
         </div>
         {/* Capturing client details + consent is the action on this card, so it
             reads as a button. As a plain text link it was routinely missed, and
