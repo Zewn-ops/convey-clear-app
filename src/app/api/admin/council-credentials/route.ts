@@ -20,7 +20,8 @@ export const runtime = "nodejs";
  *
  * So the list ships metadata only, and a value crosses the wire exactly when
  * an admin asks for that one credential. That also makes each reveal an event
- * that can be logged, which a client-side toggle can never be.
+ * that can be logged, which a client-side toggle can never be — and since 095
+ * it IS logged, in `credential_reveals`, before the value is returned.
  *
  * Admin tier only — not staff. `firm_council_credentials` has a single RLS
  * policy (074) and it is `app_is_admin()` for SELECT; this route re-checks in
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("firm_council_credentials")
-    .select("id, username_ciphertext, password_ciphertext, key_version")
+    .select("id, firm_id, user_id, municipality, username_ciphertext, password_ciphertext, key_version")
     .eq("id", id)
     .maybeSingle();
 
@@ -55,6 +56,50 @@ export async function GET(request: Request) {
   }
   if (!data) {
     return NextResponse.json({ message: "Not found." }, { status: 404 });
+  }
+
+  // 🔒 RECORD THE READING BEFORE RETURNING IT (095).
+  //
+  // The header above promised this and stopped short: "That also makes each
+  // reveal an event that can be logged, which a client-side toggle can never
+  // be." CAN BE — nothing wrote it and there was no table to write it to, so
+  // until 2026-09-11 every reveal of a live municipal password went unrecorded.
+  //
+  // Zewn, 2026-09-11, on what to tell firms: "let them know that only
+  // conveyclear members will be able to access the login details … we need the
+  // details secure but at the same time the CC members need access to it in
+  // order to do their work." That promise is only worth making if we can also
+  // say who looked — so the write happens FIRST, and a reveal that cannot be
+  // recorded does not happen.
+  const logged = await admin.from("credential_reveals").insert({
+    credential_id: data.id,
+    firm_id: data.firm_id,
+    credential_user_id: data.user_id,
+    municipality: data.municipality,
+    revealed_by: auth.callerId,
+  });
+  if (logged.error) {
+    // Deployed ahead of migration 095? The table is missing (42P01). Say so
+    // loudly and let the reveal through: staff work does not stop for a table
+    // that has not been created yet, and the window closes the moment the
+    // migration runs. Every OTHER failure refuses — an audit trail you can skip
+    // by making it fail is not an audit trail.
+    if (logged.error.code === "42P01") {
+      console.error(
+        "[council-credentials] REVEAL NOT LOGGED — credential_reveals is missing; run migration 095",
+        { credentialId: data.id, by: auth.callerId }
+      );
+    } else {
+      console.error("[council-credentials] reveal log failed", logged.error);
+      return NextResponse.json(
+        {
+          message:
+            "This login cannot be shown right now: the reveal could not be " +
+            "recorded, and we do not show one without recording it.",
+        },
+        { status: 503 }
+      );
+    }
   }
 
   try {

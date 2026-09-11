@@ -118,22 +118,29 @@ export default function CouncilLoginsCard({
         council portal login so ConveyClear can lodge on your behalf.
       </p>
 
-      {/* 🔴 WHO CAN READ IT IS NOT THE FIRM'S PROBLEM, and naming them made it
-          one. Zewn, 2026-09-02: "change this message a bit about the logins to
-          just say you can only enter it once and then it will be hidden, for
-          security purposes … dont mention cc admin or anything like that."
-          "Only ConveyClear administrators can read one" was written as
-          reassurance and lands as the opposite — it tells an attorney their
-          council password is legible to a named group of people. What they need
-          is the operating rule: enter it once, it is hidden after that.
+      {/* 🔴 THE PREVIOUS SENTENCE PROMISED SOMETHING THE PRODUCT DISPROVES.
+          It read: "a login is hidden as soon as it is saved and cannot be
+          displayed again." There is a Show button on the admin page, and it
+          works — so the one thing this card told an attorney about their council
+          password was the one thing that was not true.
 
-          Nothing about the storage changed: still AES-256-GCM at rest with the
-          key in the environment (074), still admin-tier read for the one
-          purpose. This is the sentence, not the policy. */}
-      <Callout tone="waiting" label="Entered once">
-        For security, a login is hidden as soon as it is saved and cannot be
-        displayed again. To change one, enter it again; to remove it, use the
-        bin.
+          That copy came from Zewn on 2026-09-02 ("dont mention cc admin or
+          anything like that"), written as reassurance. He reversed it on
+          2026-09-11, having seen the button: "let them know that only
+          conveyclear members will be able to access the login details. we need
+          the details secure but at the same time the CC members need access to
+          it in order to do their work."
+
+          So the card says what is actually the case. "Administrators", not
+          "members" or "staff", because that is what 074 enforces — app_is_admin,
+          not app_is_staff — and a security sentence that overstates who can look
+          is the same failure as one that understates it. The recording is the
+          part that makes it a promise rather than an admission (095). */}
+      <Callout tone="waiting" label="How your logins are held">
+        Stored encrypted, and hidden from this page once saved. ConveyClear
+        administrators can reveal one in order to lodge on your behalf, and every
+        reveal is recorded. To change a login, enter it again; to remove it, use
+        the bin.
       </Callout>
 
       {stored.length > 0 && (
