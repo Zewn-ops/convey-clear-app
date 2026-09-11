@@ -94,9 +94,9 @@ export default function MatterFeed({
     if (!body) return;
     setBusy(true);
     try {
-      // Reply into the newest existing thread; open one if there is none. The
-      // subject is not asked for — this is a chat — so a generated one is used
-      // for the places that still list enquiries by subject.
+      // Reply into the newest existing thread; open one if there is none. No
+      // subject is sent: this is a chat, and the route names the thread after
+      // the matter for the places that list enquiries by subject.
       const existing = threads[0]?.id ?? null;
       const res = existing
         ? await fetch("/api/enquiries/reply", {
@@ -107,7 +107,7 @@ export default function MatterFeed({
         : await fetch("/api/enquiries/matter", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ matter_id: matterId, subject: "Matter conversation", message: body }),
+            body: JSON.stringify({ matter_id: matterId, message: body }),
           });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.message ?? "Could not send");

@@ -34,17 +34,29 @@ export async function POST(request: Request) {
   const subject = (body.subject ?? "").trim();
   const message = (body.message ?? "").trim();
   if (!matterId) return NextResponse.json({ message: "matter_id is required" }, { status: 400 });
-  if (!subject) return NextResponse.json({ message: "A subject is required" }, { status: 400 });
   if (!message) return NextResponse.json({ message: "A message is required" }, { status: 400 });
 
   // Authorisation is the matter's own RLS: this read succeeds only if the caller
   // can access the matter (staff / owning firm / the client). No role branch.
   const { data: matter } = await supabase
     .from("matters")
-    .select("id, business_partner_id")
+    .select("id, business_partner_id, title")
     .eq("id", matterId)
     .maybeSingle();
   if (!matter) return NextResponse.json({ message: "Matter not found or access denied" }, { status: 403 });
+
+  // The matter conversation does not ask for a subject — it is a chat — so the
+  // client sent the literal string "Matter conversation". Every enquiry list is
+  // ordered by subject and shows nothing else, so the admin queue read three
+  // rows titled "Matter conversation" with no way to tell which matter each one
+  // was about without opening it.
+  //
+  // Named here rather than in the caller: the route already has the matter, and
+  // a title generated on the client is one more thing that can drift from what
+  // the record says. A caller that DOES supply a subject still wins — the
+  // standalone "New enquiry" form asks for one and means it.
+  const matterTitle = ((matter as { title: string | null }).title ?? "").trim();
+  const resolvedSubject = subject || (matterTitle ? `Matter conversation — ${matterTitle}` : "Matter conversation");
 
   const { data: me } = await supabase
     .from("users")
@@ -60,7 +72,7 @@ export async function POST(request: Request) {
       business_partner_id: (matter as { business_partner_id: string | null }).business_partner_id,
       matter_id: matterId,
       created_by: me?.id ?? null,
-      subject,
+      subject: resolvedSubject,
       message,
       status: "open",
       visibility: "shared",
