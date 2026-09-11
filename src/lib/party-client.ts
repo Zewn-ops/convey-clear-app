@@ -117,8 +117,21 @@ export async function findOrCreateClientForParty(
   //   inserted a second one: on production 2026-09-10, Power Trust 160 existed
   //   three times (two of them identical, same email, same cell, same day),
   //   Thabo Molefe three times, Brookfield Props twice.
+  // 🔴 AND NEVER ACROSS ENTITY TYPES. Email is the loose identifier of the
+  //   three, and a company, a trust and a person routinely share one — a
+  //   director uses their own address for the business, an attorney's for the
+  //   trust.
+  //
+  //   Without this, a BUSINESS party matched a NATURAL PERSON's client record on
+  //   email and was linked to it. On production 2026-09-10 the buyer on J4500/LS
+  //   reads "business · Brookfield Props (Pty) Ltd" in its party card and
+  //   "INDIVIDUAL … Missing: ID number" in the capture card directly beneath —
+  //   one party, two answers, because the two cards read different rows. A
+  //   company was being asked for an ID number it cannot have.
+  //
+  //   An identifier match still has to agree about WHAT the subject is.
   const tryMatch = async (column: string, value: string) => {
-    let q = supabase.from("clients").select("id").eq(column, value);
+    let q = supabase.from("clients").select("id").eq(column, value).eq("entity_type", entityType);
     if (firmId) q = q.or(`business_partner_id.eq.${firmId},business_partner_id.is.null`);
     // Deterministic, and the firm's own record wins: nullsFirst false puts a
     // stamped row ahead of an unowned one when both match. Without an order,
