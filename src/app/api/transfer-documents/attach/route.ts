@@ -113,6 +113,20 @@ export async function POST(request: Request) {
 
   const uploadedBy = isPartnerRole(role) ? "attorney" : "staff";
 
+  // 🔴 WHO attached it, as a real reference — not only the text category.
+  //
+  // This row was inserted without it until 2026-09-11, and the omission caused
+  // both symptoms found in the portal sweep. 042's gate decides on the user's
+  // ACTUAL role when it has a user id, and falls back to the text category when
+  // it does not; the fallback holds anything labelled 'staff'. So every
+  // attachment made by a runner — the whole point of the transfer hub, reusing
+  // one deed search across three matters — landed unattributed, was gated for an
+  // approval that was never meant to apply to it, and showed in the queue as
+  // "Unknown". An attorney's attachment was gated too, for the same reason: the
+  // label said 'staff' whenever a staff member clicked.
+  //
+  // /api/documents/confirm has always stamped this. This route is the other way
+  // a documents row is born, and it did not.
   const { data: doc, error } = await admin
     .from("documents")
     .insert({
@@ -127,6 +141,7 @@ export async function POST(request: Request) {
       size_bytes: tdoc.size_bytes,
       transfer_document_id,
       uploaded_by: uploadedBy,
+      uploaded_by_user_id: session?.profile?.id ?? null,
     })
     .select("id")
     .single();
