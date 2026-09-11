@@ -99,9 +99,26 @@ export interface CouncilServiceSpec {
 }
 
 /**
- * The seven services, in the canonical order (§11.1). Identical for every
- * council: the numbering on each handwritten sheet was the order that
- * discussion happened in, not data.
+ * The services on a transfer checklist, in the canonical order (§11.1).
+ * Identical for every council: the numbering on each handwritten sheet was the
+ * order that discussion happened in, not data.
+ *
+ * SEVEN UNTIL 2026-09-11, NINE SINCE. Zewn: *"add the extra services to the prop
+ * trf page … add the new ones to the service list and all should be good."* BC
+ * and PPM were seeded in 002 and reachable only through a client's "Request a
+ * service", so work a firm could ask us for had no line to ask for it on — it
+ * went under OTHER with a typed label, where it cannot be counted, filtered or
+ * given a process of its own.
+ *
+ * ⚠️ THIS IS SAFE ONLY BECAUSE UNCHOSEN LINES ARE INVISIBLE. Adding two codes
+ * here used to mean two more empty circles on every transfer ever created, which
+ * is exactly why the note under NON_TRANSFER_SERVICE_LABELS ruled it out. Now
+ * that only chosen services are counted, an existing transfer carrying seven
+ * lines and a new one carrying nine look identical to everyone; the only
+ * difference is that the firm's "+" offers two more things to ask for.
+ *
+ * BC and PPM sit ahead of OTHER, which stays last: it is the catch-all, and a
+ * catch-all in the middle of a list reads as a service.
  */
 export const SERVICE_ORDER = [
   "EBP",
@@ -110,6 +127,8 @@ export const SERVICE_ORDER = [
   "PRC",
   "COO",
   "REF",
+  "BC",
+  "PPM",
   "OTHER",
 ] as const;
 export type ServiceCode = (typeof SERVICE_ORDER)[number];
@@ -141,6 +160,8 @@ export const SERVICE_LABELS: Record<ServiceCode, string> = {
   PRC: "Property Rates Clearance",
   COO: "Change of Ownership",
   REF: "Refund",
+  BC: "Business Compliance",
+  PPM: "Pre-Paid Meter Conversion",
   OTHER: "Other",
 };
 
@@ -157,21 +178,23 @@ export const SERVICE_LABELS: Record<ServiceCode, string> = {
  * SURE EVERYTHING GETS COVERED."
  *
  * Covered means two things, and this is the first: every code a client can pick
- * renders as words. The second is that the work is representable on a transfer —
- * these are not lines of their own (the checklist instantiates the seven, and
- * adding to that would put a Business Compliance line on every property
- * transfer), so they attach under OTHER, which carries a free-text label for
- * exactly this.
+ * renders as words. The second is that the work is representable on a transfer.
  *
- * ⚠️ RCC and MAQ are LEGACY rows. RCC is now a stage of PRC (072/075), not a
- * service; MAQ predates MAD, which Zewn confirmed is the catch-all for the whole
- * class of account queries. Neither should be offered to new clients — that is a
- * data cleanup on the `services` table, not a code change, so they are labelled
- * here rather than pretended away.
+ * 🔴 BC AND PPM HAVE LEFT THIS MAP (2026-09-11). They used to sit here with the
+ * note "these are not lines of their own (the checklist instantiates the seven,
+ * and adding to that would put a Business Compliance line on every property
+ * transfer), so they attach under OTHER". That objection was correct and is now
+ * spent: unchosen lines draw nothing, so the two new codes cost an existing
+ * transfer nothing. They are in SERVICE_ORDER above, and a firm asks for them
+ * the same way it asks for anything else.
+ *
+ * ⚠️ RCC and MAQ are LEGACY rows and stay here. RCC is now a stage of PRC
+ * (072/075), not a service; MAQ predates MAD, which Zewn confirmed is the
+ * catch-all for the whole class of account queries. Neither should be offered to
+ * new clients — that is a data cleanup on the `services` table, not a code
+ * change, so they are labelled here rather than pretended away.
  */
 export const NON_TRANSFER_SERVICE_LABELS: Record<string, string> = {
-  BC: "Business Compliance",
-  PPM: "Pre-Paid Meter Conversion",
   MAQ: "Municipal Account Query (legacy — use Municipal Account Dispute)",
   RCC: "Rates Clearance Certificate (legacy — now a stage of Property Rates Clearance)",
 };
