@@ -11,6 +11,7 @@ import {
   type RawTransferParty,
 } from "@/lib/transfer-parties";
 import DetailFields from "@/components/ui/DetailFields";
+import Callout from "@/components/ui/Callout";
 import { workdaysSince } from "@/lib/elapsed";
 import { getPipeline, phaseLabel, stageLabel, isStageClientVisible } from "@/lib/pipelines";
 import { formatDateTime, municipalityLabel, formatRands } from "@/lib/utils";
@@ -33,6 +34,11 @@ import {
   LINKED_MATTER_SELECT,
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
+import {
+  TRANSFER_REVIEW_SELECT,
+  transferChip,
+  transferReviewById,
+} from "@/lib/transfer-review-state";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
@@ -276,6 +282,16 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
   // not been decided is their job, and the cards on both list pages keep it too —
   // they carry no list beside them to contradict. ▶ If the cards should follow,
   // that is one change in transferProgress and it moves what staff read.
+  // What this transfer's own request decided. A rejected or returned request
+  // leaves the transfer in `draft`, so without this the page says "awaiting
+  // approval" about a transaction nobody is waiting on.
+  const { data: reviewRows } = await supabase
+    .from("transfer_requests")
+    .select(TRANSFER_REVIEW_SELECT)
+    .eq("transfer_id", id);
+  const review = transferReviewById(reviewRows).get(id) ?? null;
+  const chip = transferChip(transfer.status, review);
+
   const transferRollup = transferProgress(
     serviceRows.filter((r) => r.status !== "not_specified")
   );
@@ -325,16 +341,25 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               })()}
             </div>
           </div>
-          <StatusPill
-            tone={
-              ({ draft: "waiting", open: "action", registered: "ok", cancelled: "danger", on_hold: "waiting", archived: "neutral" } as Record<string, StatusTone>)[
-                transfer.status
-              ] ?? "neutral"
-            }
-          >
-            {TRANSFER_STATUS_LABELS[transfer.status]}
-          </StatusPill>
+          <StatusPill tone={chip.tone}>{chip.label}</StatusPill>
       </div>
+
+      {/* 🔴 WHY IT WAS REJECTED, ON THE TRANSFER ITSELF.
+          Zewn, 2026-09-11: "dont remove or hide the prop trf" — so it stays in
+          the list and stays open, and the one sentence that says what happens
+          next has to be here rather than on the requests page. A red chip that
+          sends the reader somewhere else to find out why is a worse version of
+          hiding it. */}
+      {review && (
+        <Callout
+          tone="required"
+          label={review.state === "rejected" ? "Why this was rejected" : "What needs correcting"}
+        >
+          {review.reason ?? (
+            <span className="italic text-ink-3">No reason was recorded — ask ConveyClear.</span>
+          )}
+        </Callout>
+      )}
 
       {/* Two columns, in the admin page's order and for the same reasons: work
           on the left (parties, services, documents), reference detail on the

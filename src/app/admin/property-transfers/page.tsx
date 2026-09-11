@@ -11,6 +11,12 @@ import {
   transferProgressById,
   type TransferProgress,
 } from "@/lib/transfer-service-progress";
+import {
+  TRANSFER_REVIEW_SELECT,
+  transferChip,
+  transferReviewById,
+  type TransferReview,
+} from "@/lib/transfer-review-state";
 import { Plus, Building2 } from "lucide-react";
 import { formatDate, municipalityLabel } from "@/lib/utils";
 import {
@@ -138,17 +144,23 @@ export default async function AdminTransfersPage({
   // page rather than embedded aggregates per row.
   const counts = new Map<string, number>();
   let progressById = new Map<string, TransferProgress>();
+  let reviewById = new Map<string, TransferReview>();
   if (transfers.length) {
     const ids = transfers.map((t) => t.id);
-    const [{ data: linked }, { data: svcRows }] = await Promise.all([
+    const [{ data: linked }, { data: svcRows }, { data: reviewRows }] = await Promise.all([
       supabase.from("matters").select("transfer_id").in("transfer_id", ids),
       supabase.from("transfer_services").select(TRANSFER_PROGRESS_SELECT).in("transfer_id", ids),
+      // What each draft's request decided — staff read the same chip the firm
+      // does, so "Rejected" cannot mean one thing on one portal and another on
+      // the other.
+      supabase.from("transfer_requests").select(TRANSFER_REVIEW_SELECT).in("transfer_id", ids),
     ]);
     (linked ?? []).forEach((m) => {
       const tid = (m as { transfer_id: string | null }).transfer_id;
       if (tid) counts.set(tid, (counts.get(tid) ?? 0) + 1);
     });
     progressById = transferProgressById(svcRows, ids);
+    reviewById = transferReviewById(reviewRows);
   }
 
   return (
@@ -198,7 +210,10 @@ export default async function AdminTransfersPage({
                         </p>
                       </div>
                     </div>
-                    <Badge label={TRANSFER_STATUS_LABELS[t.status]} variant={statusVariant(t.status)} />
+                    {(() => {
+                      const chip = transferChip(t.status, reviewById.get(t.id));
+                      return <Badge label={chip.label} variant={chip.variant} />;
+                    })()}
                   </div>
 
                   <div className="mt-3.5 flex flex-wrap gap-2">

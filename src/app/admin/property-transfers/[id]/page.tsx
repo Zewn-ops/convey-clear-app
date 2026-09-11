@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import Callout from "@/components/ui/Callout";
 import TransferParties, { type PartyRow as TPartyRow, type PartyOption, type FirmContact } from "@/components/transfers/TransferParties";
 import {
   TRANSFER_PARTY_SELECT,
@@ -35,6 +36,11 @@ import {
   LINKED_MATTER_SELECT,
   type LinkedMatterShape,
 } from "@/lib/transfer-service-progress";
+import {
+  TRANSFER_REVIEW_SELECT,
+  transferChip,
+  transferReviewById,
+} from "@/lib/transfer-review-state";
 import RequestHandover, { type HandoverRequest } from "@/components/transfers/RequestHandover";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
@@ -350,6 +356,16 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   }));
   const transferRollup = transferProgress(serviceRows);
 
+  // What this transfer's request decided. Staff see the same chip the firm does
+  // — a transfer we rejected must not read "Draft — awaiting approval" on the
+  // screen where somebody would go looking for what happened to it.
+  const { data: reviewRows } = await supabase
+    .from("transfer_requests")
+    .select(TRANSFER_REVIEW_SELECT)
+    .eq("transfer_id", id);
+  const review = transferReviewById(reviewRows).get(id) ?? null;
+  const chip = transferChip(transfer.status, review);
+
   // Matters on this transfer that no service line is tracking. See the note on
   // the card below for why these have to be shown somewhere.
   const trackedMatterIds = new Set(
@@ -384,7 +400,7 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge label={TRANSFER_STATUS_LABELS[transfer.status]} variant={statusVariant(transfer.status)} />
+            <Badge label={chip.label} variant={chip.variant} />
             <Link
               href={`/admin/property-transfers/${id}/edit`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink-2 hover:bg-raised"
@@ -393,6 +409,17 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
             </Link>
           </div>
       </div>
+
+      {review && (
+        <Callout
+          tone="required"
+          label={review.state === "rejected" ? "This request was rejected" : "Sent back to the firm"}
+        >
+          {review.reason ?? (
+            <span className="italic text-ink-3">No reason was recorded.</span>
+          )}
+        </Callout>
+      )}
 
       {/* ── Two columns ────────────────────────────────────────────────────────
           Zewn, 2026-09-01: "we want parties and services at first and second as

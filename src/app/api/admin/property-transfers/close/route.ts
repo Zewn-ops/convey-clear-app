@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   // nothing a client was told. Declining the request is that path.
   if (transfer.status === "draft" && action !== "archive") {
     return NextResponse.json(
-      { message: "This transfer is still a draft — decline the request instead." },
+      { message: "This transfer is still a draft — reject the request instead." },
       { status: 409 }
     );
   }
