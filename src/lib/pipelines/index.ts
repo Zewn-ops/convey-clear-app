@@ -185,3 +185,45 @@ export const COUNCIL_WAIT_STAGE_KEYS: string[] = Array.from(
 export function isWaitingOnCouncil(stageKey?: string | null): boolean {
   return !!stageKey && COUNCIL_WAIT_STAGE_KEYS.includes(stageKey);
 }
+
+/**
+ * Every stage key that means "the ATTORNEY has the next move".
+ *
+ * The mirror of COUNCIL_WAIT_STAGE_KEYS, and the source of the yellow "!" on a
+ * service circle — Zewn, 2026-09-11: *"yellow with an exclimation mark if the
+ * attorneys need to attend to it"*, where *"the only real reason is incomplete
+ * documents."*
+ *
+ * 🔴 `documents_outstanding` IS LISTED BY NAME rather than only derived from
+ * config, and that is deliberate. The stage arrives with the process map
+ * transcribed on 2026-09-11 (`feat/cot-pipelines-from-jukka`) — it is on every
+ * service of every council there, and on NO pipeline before it. Deriving the set
+ * purely from `waitingOn` would mean the yellow state silently does nothing
+ * until somebody remembers to go back and mark six pipeline files on a branch
+ * that is not this one. Naming the key lets the two land in either order and
+ * still agree.
+ *
+ * Anything else that blocks on the firm should be marked `waitingOn: "firm"` in
+ * its own pipeline file rather than added here.
+ */
+export const FIRM_WAIT_STAGE_KEYS: string[] = Array.from(
+  new Set([
+    "documents_outstanding",
+    ...PIPELINES.flatMap((p) =>
+      p.phases.flatMap((ph) => ph.stages.filter((s) => s.waitingOn === "firm").map((s) => s.key))
+    ),
+  ])
+);
+
+/**
+ * Is this matter parked on something the firm has to do?
+ *
+ * ⚠️ This asks where the matter STANDS, not what its document checklist holds.
+ * A matter waits on the firm because staff moved it to Documents Outstanding,
+ * not because a slot is empty: the checklist can be short of a document nobody
+ * is blocked on, and a matter can be blocked on a document that has no slot. The
+ * stage is the deliberate statement; the checklist is the detail underneath it.
+ */
+export function isWaitingOnFirm(stageKey?: string | null): boolean {
+  return !!stageKey && FIRM_WAIT_STAGE_KEYS.includes(stageKey);
+}

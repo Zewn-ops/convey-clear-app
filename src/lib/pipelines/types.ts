@@ -42,7 +42,13 @@ export interface PipelineStage {
   //
   // Deliberately conservative: anything unmarked counts as ours. Over-surfacing
   // work is recoverable; silently parking a matter as "waiting" is not.
-  waitingOn?: "council";
+  //
+  // "firm" was added 2026-09-11 for the same distinction on the other side: a
+  // stage where the ATTORNEY has the next move. That is what turns a service
+  // circle yellow with an exclamation mark, and in practice it means Documents
+  // Outstanding — Zewn: "the only real reason is incomplete documents. if we
+  // dont have the documents we need in order to do the work we will reject."
+  waitingOn?: "council" | "firm";
   // When set, this stage is a DECISION POINT — staff pick one outcome, and some
   // outcomes require a one-of reason. Stored on the matter as
   // service_data.stage_outcome / service_data.stage_reason.
