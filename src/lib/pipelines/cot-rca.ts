@@ -1,5 +1,5 @@
 import type { Pipeline } from "./types";
-import { COUNCIL_ISSUES } from "./build";
+import { COUNCIL_ISSUES, COT_CLEARANCE_BLOCKERS } from "./build";
 
 // City of Tshwane — Property Rates Clearance, RCA (Rates Clearance Application).
 //
@@ -36,6 +36,22 @@ export const cotRca: Pipeline = {
       stages: [
         { key: "documents_received", name: "Documents Received", clientVisible: true, ownerRole: "staff_services" },
         { key: "documents_verified", name: "Documents Verified", clientVisible: true, ownerRole: "staff_services" },
+        {
+          // Map phase 2, every service: "Documents Outstanding", with the
+          // service's own document list nested under it.
+          //
+          // NO OUTCOMES, deliberately. The nested list is what is MISSING, and
+          // several documents are routinely missing at once — the RCA list even
+          // ends "Etc.". Modelling it as a one-of would force staff to name a
+          // single outstanding document and call that the answer. WHICH ones are
+          // outstanding is already tracked, per document and per party, by the
+          // matter's own checklist (InPlaceIntake, "5/8 required"); this stage
+          // records that the matter is parked waiting for them.
+          key: "documents_outstanding",
+          name: "Documents Outstanding",
+          clientVisible: true,
+          ownerRole: "staff_services",
+        },
       ],
     },
     {
@@ -44,7 +60,31 @@ export const cotRca: Pipeline = {
       clientName: "Application with the Council",
       clientVisible: true,
       stages: [
-        { key: "application_submitted", name: "Application Submitted to COT", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
+        {
+          // Map §2 records HOW the application was lodged — the council takes
+          // both, and which one it was decides who to chase and where.
+          key: "application_submitted",
+          name: "Application Lodged with Council",
+          clientVisible: true,
+          ownerRole: "staff_ops",
+          waitingOn: "council",
+          outcomes: [
+            { key: "lodged_manual", label: "Lodged manually", clientVisible: false },
+            { key: "lodged_electronic", label: "Lodged electronically", clientVisible: false },
+          ],
+        },
+        {
+          // Map §2/§3/§4 — "Clearance Blocked", one stage with five named
+          // causes, identical across RCA, RCF and RCC. Modelled as outcomes so
+          // the blocked matters can be counted by cause: "how many are sitting
+          // on estimated readings" is the question this stage exists to answer.
+          key: "clearance_blocked",
+          name: "Clearance Blocked",
+          clientVisible: true,
+          ownerRole: "staff_ops",
+          waitingOn: "council",
+          outcomes: COT_CLEARANCE_BLOCKERS,
+        },
         { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         {
           key: "cot_decision",
@@ -86,6 +126,14 @@ export const cotRca: Pipeline = {
         // The deliverable of an RCA is the account number itself — capture it on
         // the matter (Rates account number, below the pipeline card) and the
         // figures request has something to quote.
+        // ▶ ZEWN / JUKKA — THE ONE PLACE THE MAP AND THIS FILE DISAGREE.
+        //   Map §2 phase 4 reads "Rates Clearance Figures Issued / Uploaded" for
+        //   RCA. That is what §3 says for RCF, and an RCA does not produce
+        //   figures: it OPENS THE ACCOUNT that the figures are then requested
+        //   against, which is why the delivery below captures an account number.
+        //   Read as a copy-paste in the source document, so the existing
+        //   stages stand. If the RCA really does end with figures, this is two
+        //   lines to change and no migration — a matter stores its position.
         { key: "account_number_issued", name: "Account Number Issued", clientVisible: true, ownerRole: "staff_delivery" },
         { key: "account_details_sent", name: "Account Details Sent to Client", clientVisible: true, ownerRole: "staff_delivery" },
       ],
@@ -95,8 +143,9 @@ export const cotRca: Pipeline = {
       internalName: "Offboarding",
       clientVisible: false,
       stages: [
-        { key: "discuss_matter_with_client", name: "Discuss Matter with Client", clientVisible: false, ownerRole: "staff_delivery" },
-        { key: "matter_resolved", name: "Matter Resolved", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "invoice_issued", name: "Invoice Issued", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "payment_outstanding", name: "Payment Outstanding", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "payment_received", name: "Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
       ],
     },
   ],

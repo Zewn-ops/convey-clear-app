@@ -4,6 +4,8 @@ import { cotCoo } from "./cot-coo";
 import { cotRca } from "./cot-rca";
 import { cotRcf } from "./cot-rcf";
 import { cotRcc } from "./cot-rcc";
+import { cotEbp } from "./cot-ebp";
+import { cotRef } from "./cot-ref";
 import { buildCouncilPipelines, buildDefaultPipeline } from "./build";
 
 export * from "./types";
@@ -17,11 +19,20 @@ export * from "./types";
 //
 // Before 2026-09-01 this held COT only, so getPipeline() returned null for every
 // matter at the other two councils and their matters drew no phases at all.
+//
+// 2026-09-11: EBP and REF added for COT, from Jukka's process map ("Map Process
+// Services Breakdown"). COT had four of its six services mapped, so a City of
+// Tshwane building-plans or refund matter fell through to buildDefaultPipeline —
+// a generic rail plus a staff-only note saying we had not mapped the council.
+// The map covers all six, so COT is now complete and the default is a fallback
+// for services and councils we genuinely have not been given.
 export const PIPELINES: Pipeline[] = [
   cotCoo,
   cotRca,
   cotRcf,
   cotRcc,
+  cotEbp,
+  cotRef,
   ...buildCouncilPipelines("COE", "City of Ekurhuleni", "CoE"),
   ...buildCouncilPipelines("COJ", "City of Johannesburg", "CoJ"),
 ];
