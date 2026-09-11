@@ -1,4 +1,4 @@
-import type { Pipeline, StageReason } from "./types";
+import type { Pipeline, StageOutcome, StageReason } from "./types";
 
 /**
  * Pipeline builders — one shape, three councils.
@@ -105,15 +105,75 @@ export const ISSUES_BY_COUNCIL: Record<string, CouncilIssueVocabulary> = {
   COJ: { ...COUNCIL_ISSUES, certificateRejected: withHanging(COUNCIL_ISSUES.certificateRejected) },
 };
 
+/**
+ * Offboarding is BILLING, and it is the same three steps for every service at
+ * every council.
+ *
+ * Jukka's process map ("Map Process Services Breakdown", read 2026-09-11) writes
+ * Phase 5 identically under all six City of Tshwane services: Invoice Issued,
+ * Payment outstanding, Payment received. It replaces "Discuss Matter with
+ * Client / Matter Resolved", which described talking to the client rather than
+ * getting paid, and it takes invoicing OUT of Client Delivery — where
+ * `invoice_sent` and `proof_of_payment_received` used to sit, so that phase
+ * could not complete until the money had.
+ *
+ * Applied to the derived CoE and CoJ pipelines too, though the map is headed
+ * City of Tshwane: raising an invoice and being paid for it is ConveyClear's own
+ * process, and no council has a say in it. Everything in this file that IS the
+ * council's stays council-scoped.
+ */
 const OFFBOARDING = {
   key: "offboarding",
   internalName: "Offboarding",
   clientVisible: false,
   stages: [
-    { key: "discuss_matter_with_client", name: "Discuss Matter with Client", clientVisible: false, ownerRole: "staff_delivery" as const },
-    { key: "matter_resolved", name: "Matter Resolved", clientVisible: true, ownerRole: "staff_delivery" as const },
+    { key: "invoice_issued", name: "Invoice Issued", clientVisible: true, ownerRole: "staff_delivery" as const },
+    { key: "payment_outstanding", name: "Payment Outstanding", clientVisible: true, ownerRole: "staff_delivery" as const },
+    { key: "payment_received", name: "Payment Received", clientVisible: true, ownerRole: "staff_delivery" as const },
   ],
 };
+
+/**
+ * Why a clearance sits with the council and cannot move — City of Tshwane.
+ *
+ * Jukka's map lists these five under "Clearance Blocked" identically for RCA,
+ * RCF and RCC. They overlap the handwritten sheets' vocabulary (COUNCIL_ISSUES
+ * above, §2.2, confirmed by Zewn 2026-09-01) without matching it:
+ *
+ *   map                        sheet
+ *   Pending Approval           —
+ *   Billing Cycle Relapse      Billing
+ *   Pending Journal Adjustment Outstanding journals
+ *   Estimated Readings         Estimated readings
+ *   Unallocated Credit         —
+ *   —                          Wrong account
+ *   —                          Mistake on application
+ *
+ * Two keys are deliberately REUSED rather than renamed — pending_journals and
+ * estimated_readings — because they mean the same thing in both lists and a
+ * matter that stored one of them still renders. The three the map does not carry
+ * are not deleted from COUNCIL_ISSUES: that vocabulary still drives the decision
+ * stages, and a reason already recorded against a matter must not become an
+ * unresolvable key.
+ *
+ * ✅ ANSWERED, Zewn 2026-09-11: BOTH LISTS STAY, and they stay because they
+ *   answer two different questions. "one option is we are waiting for council to
+ *   respond or something and the other is what the council decided from it."
+ *
+ *     Clearance Blocked  → why we are WAITING on the council (this list)
+ *     COT Decision       → what the council DECIDED (COUNCIL_ISSUES, above)
+ *
+ *   Nothing is deleted, so no reason already recorded against a matter becomes
+ *   an unresolvable key. The stage names below carry the split so it reads off
+ *   the screen instead of needing this comment.
+ */
+export const COT_CLEARANCE_BLOCKERS: StageOutcome[] = [
+  { key: "pending_approval", label: "Pending approval", clientVisible: true },
+  { key: "billing_cycle_relapse", label: "Billing cycle relapse", clientVisible: true },
+  { key: "pending_journals", label: "Pending journal adjustment", clientVisible: true },
+  { key: "estimated_readings", label: "Estimated readings", clientVisible: true },
+  { key: "unallocated_credit", label: "Unallocated credit", clientVisible: true },
+];
 
 const TERMINAL = { key: "successful", name: "Successful", clientVisible: true };
 const PRE_PHASE = { key: "new_instruction", name: "New Instruction" };
@@ -153,9 +213,11 @@ export function buildCoo(municipality: string, councilName: string): Pipeline {
         internalName: "Client Delivery",
         clientVisible: false,
         stages: [
+          // Invoicing lives in OFFBOARDING now, for every council — see the
+          // note on that constant. It used to sit here as well, which would
+          // have billed the client twice on the rail the moment Offboarding
+          // became the billing phase.
           { key: "welcome_letter_uploaded", name: "Welcome Letter Uploaded", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "invoice_sent", name: "Invoice Sent", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "proof_of_payment_received", name: "Proof of Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
         ],
       },
       OFFBOARDING,
@@ -221,10 +283,18 @@ export function buildRca(municipality: string, councilName: string, short: strin
         internalName: "Client Delivery",
         clientVisible: false,
         stages: [
-          // The deliverable of an RCA is the account number itself — captured on
-          // the matter, so the figures request has something to quote.
-          { key: "account_number_issued", name: "Account Number Issued", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "account_details_sent", name: "Account Details Sent to Client", clientVisible: true, ownerRole: "staff_delivery" },
+          // An RCA ends with figures, at every council. Zewn, 2026-09-11: "RCA
+          // does end with figures. once we have gotten through the application
+          // we then get the figures." Applied to the derived councils for the
+          // same reason Offboarding was — §5.15 treats the three as one process
+          // with per-council issue lists, and an RCA that ended differently at
+          // CoE than at COT would be a divergence nobody asked for.
+          //
+          // The account number is still recorded: `account_opened` is an outcome
+          // of the decision stage above, which is where the council's answer
+          // belongs. Delivery is what we hand over.
+          { key: "figures_issued", name: "Rates Clearance Figures Issued", clientVisible: true, ownerRole: "staff_delivery" },
+          { key: "figures_uploaded", name: "Rates Clearance Figures Uploaded", clientVisible: true, ownerRole: "staff_delivery" },
         ],
       },
       OFFBOARDING,
@@ -289,8 +359,6 @@ export function buildRcf(municipality: string, councilName: string, short: strin
         clientVisible: false,
         stages: [
           { key: "memo_approved", name: "Memo Approved", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "invoice_sent", name: "Invoice Sent", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "proof_of_payment_received", name: "Proof of Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
         ],
       },
       OFFBOARDING,
@@ -346,8 +414,6 @@ export function buildRcc(municipality: string, councilName: string, short: strin
         clientVisible: false,
         stages: [
           { key: "certificate_approved", name: "Certificate Approved", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "invoice_sent", name: "Invoice Sent", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "proof_of_payment_received", name: "Proof of Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
         ],
       },
       OFFBOARDING,

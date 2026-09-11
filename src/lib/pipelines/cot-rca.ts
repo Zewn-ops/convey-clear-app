@@ -1,5 +1,5 @@
 import type { Pipeline } from "./types";
-import { COUNCIL_ISSUES } from "./build";
+import { COUNCIL_ISSUES, COT_CLEARANCE_BLOCKERS } from "./build";
 
 // City of Tshwane — Property Rates Clearance, RCA (Rates Clearance Application).
 //
@@ -13,14 +13,12 @@ import { COUNCIL_ISSUES } from "./build";
 // What is genuinely RCA-specific rather than copied:
 //   · the decision produces an ACCOUNT, not a memo — the outcome vocabulary is
 //     Account Opened / Application Delayed / Application Rejected;
-//   · the delivery phase ends when the rates account number is captured on the
-//     matter, because that number is what the RCF (the next stage) is applied
-//     for against;
 //   · there is no proof-of-payment step — opening an account is not billed to
 //     the client the way a memo is.
 //
-// ▶ CONFIRM WITH JUKKA. If COT runs RCA through different stages, this file is
-// the only thing that changes — a matter stores its position, not the tree.
+// ✅ CONFIRMED, 2026-09-11. Zewn: "RCA is like RCF but with extra steps so there
+// will be similarities." The extra steps are the application and the account;
+// the ending is the same, and the delivery phase below now says so.
 export const cotRca: Pipeline = {
   serviceCode: "PRC",
   municipality: "COT",
@@ -36,6 +34,22 @@ export const cotRca: Pipeline = {
       stages: [
         { key: "documents_received", name: "Documents Received", clientVisible: true, ownerRole: "staff_services" },
         { key: "documents_verified", name: "Documents Verified", clientVisible: true, ownerRole: "staff_services" },
+        {
+          // Map phase 2, every service: "Documents Outstanding", with the
+          // service's own document list nested under it.
+          //
+          // NO OUTCOMES, deliberately. The nested list is what is MISSING, and
+          // several documents are routinely missing at once — the RCA list even
+          // ends "Etc.". Modelling it as a one-of would force staff to name a
+          // single outstanding document and call that the answer. WHICH ones are
+          // outstanding is already tracked, per document and per party, by the
+          // matter's own checklist (InPlaceIntake, "5/8 required"); this stage
+          // records that the matter is parked waiting for them.
+          key: "documents_outstanding",
+          name: "Documents Outstanding",
+          clientVisible: true,
+          ownerRole: "staff_services",
+        },
       ],
     },
     {
@@ -44,11 +58,35 @@ export const cotRca: Pipeline = {
       clientName: "Application with the Council",
       clientVisible: true,
       stages: [
-        { key: "application_submitted", name: "Application Submitted to COT", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
+        {
+          // Map §2 records HOW the application was lodged — the council takes
+          // both, and which one it was decides who to chase and where.
+          key: "application_submitted",
+          name: "Application Lodged with Council",
+          clientVisible: true,
+          ownerRole: "staff_ops",
+          waitingOn: "council",
+          outcomes: [
+            { key: "lodged_manual", label: "Lodged manually", clientVisible: false },
+            { key: "lodged_electronic", label: "Lodged electronically", clientVisible: false },
+          ],
+        },
+        {
+          // Map §2/§3/§4 — "Clearance Blocked", one stage with five named
+          // causes, identical across RCA, RCF and RCC. Modelled as outcomes so
+          // the blocked matters can be counted by cause: "how many are sitting
+          // on estimated readings" is the question this stage exists to answer.
+          key: "clearance_blocked",
+          name: "Clearance Blocked — waiting on council",
+          clientVisible: true,
+          ownerRole: "staff_ops",
+          waitingOn: "council",
+          outcomes: COT_CLEARANCE_BLOCKERS,
+        },
         { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         {
           key: "cot_decision",
-          name: "COT Decision",
+          name: "COT Decision — council's answer",
           clientVisible: true,
           ownerRole: "staff_ops",
           outcomes: [
@@ -83,11 +121,29 @@ export const cotRca: Pipeline = {
       internalName: "Client Delivery",
       clientVisible: false,
       stages: [
-        // The deliverable of an RCA is the account number itself — capture it on
-        // the matter (Rates account number, below the pipeline card) and the
-        // figures request has something to quote.
-        { key: "account_number_issued", name: "Account Number Issued", clientVisible: true, ownerRole: "staff_delivery" },
-        { key: "account_details_sent", name: "Account Details Sent to Client", clientVisible: true, ownerRole: "staff_delivery" },
+        // ✅ THE MAP WAS RIGHT AND THIS FILE WAS WRONG. Zewn, 2026-09-11:
+        //   "RCA does end with figures. once we have gotten through the
+        //    application we then get the figures. RCA is like RCF but with extra
+        //    steps so there will be similarities"
+        //
+        // The note that stood here read Map §2 phase 4 — "Rates Clearance
+        // Figures Issued / Uploaded" under RCA — as a copy-paste from §3's RCF,
+        // reasoning that an RCA opens the account rather than producing figures.
+        // It does both: lodge → account opened → figures. The similarity to the
+        // RCF is the point, not an error in the source document.
+        //
+        // 🔴 THE ACCOUNT NUMBER IS NOT LOST. Opening the account is the
+        // COUNCIL'S ANSWER rather than our deliverable, so it stays where an
+        // answer belongs: the COT Decision stage in Operations already records
+        // "Account Opened" as an outcome. Delivery is what we hand over.
+        //
+        // The stage keys change with the names. Checked against production first
+        // (2026-09-11): no matter anywhere stands on account_number_issued or
+        // account_details_sent, so nothing is stranded. `figures_uploaded` is
+        // deliberately the SAME key the RCF uses — a key shared across pipelines
+        // means the same thing in both, which is exactly the case here.
+        { key: "figures_issued", name: "Rates Clearance Figures Issued", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "figures_uploaded", name: "Rates Clearance Figures Uploaded", clientVisible: true, ownerRole: "staff_delivery" },
       ],
     },
     {
@@ -95,8 +151,9 @@ export const cotRca: Pipeline = {
       internalName: "Offboarding",
       clientVisible: false,
       stages: [
-        { key: "discuss_matter_with_client", name: "Discuss Matter with Client", clientVisible: false, ownerRole: "staff_delivery" },
-        { key: "matter_resolved", name: "Matter Resolved", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "invoice_issued", name: "Invoice Issued", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "payment_outstanding", name: "Payment Outstanding", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "payment_received", name: "Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
       ],
     },
   ],

@@ -1,5 +1,5 @@
 import type { Pipeline } from "./types";
-import { COUNCIL_ISSUES } from "./build";
+import { COUNCIL_ISSUES, COT_CLEARANCE_BLOCKERS } from "./build";
 
 // City of Tshwane — Property Rates Clearance, RCC (Certificate). Vision Board
 // 2026-06-22. Same shape as RCF; the COT decision outcome = Certificate
@@ -19,6 +19,22 @@ export const cotRcc: Pipeline = {
       stages: [
         { key: "documents_received", name: "Documents Received", clientVisible: true, ownerRole: "staff_services" },
         { key: "documents_verified", name: "Documents Verified", clientVisible: true, ownerRole: "staff_services" },
+        {
+          // Map phase 2, every service: "Documents Outstanding", with the
+          // service's own document list nested under it.
+          //
+          // NO OUTCOMES, deliberately. The nested list is what is MISSING, and
+          // several documents are routinely missing at once — the RCA list even
+          // ends "Etc.". Modelling it as a one-of would force staff to name a
+          // single outstanding document and call that the answer. WHICH ones are
+          // outstanding is already tracked, per document and per party, by the
+          // matter's own checklist (InPlaceIntake, "5/8 required"); this stage
+          // records that the matter is parked waiting for them.
+          key: "documents_outstanding",
+          name: "Documents Outstanding",
+          clientVisible: true,
+          ownerRole: "staff_services",
+        },
       ],
     },
     {
@@ -27,11 +43,23 @@ export const cotRcc: Pipeline = {
       clientName: "Escalation in Progress",
       clientVisible: true,
       stages: [
-        { key: "escalated_with_cot", name: "Escalated with COT", clientVisible: false, ownerRole: "staff_ops", waitingOn: "council" },
+        { key: "escalated_with_cot", name: "Escalation Lodged with Council", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
+        {
+          // Map §2/§3/§4 — "Clearance Blocked", one stage with five named
+          // causes, identical across RCA, RCF and RCC. Modelled as outcomes so
+          // the blocked matters can be counted by cause: "how many are sitting
+          // on estimated readings" is the question this stage exists to answer.
+          key: "clearance_blocked",
+          name: "Clearance Blocked — waiting on council",
+          clientVisible: true,
+          ownerRole: "staff_ops",
+          waitingOn: "council",
+          outcomes: COT_CLEARANCE_BLOCKERS,
+        },
         { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         {
           key: "cot_decision",
-          name: "COT Decision",
+          name: "COT Decision — council's answer",
           clientVisible: true,
           ownerRole: "staff_ops",
           outcomes: [
@@ -55,9 +83,9 @@ export const cotRcc: Pipeline = {
       internalName: "Client Delivery",
       clientVisible: false,
       stages: [
-        { key: "certificate_approved", name: "Certificate Approved", clientVisible: true, ownerRole: "staff_delivery" },
-        { key: "invoice_sent", name: "Invoice Sent", clientVisible: true, ownerRole: "staff_delivery" },
-        { key: "proof_of_payment_received", name: "Proof of Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
+        // Map §4 phase 4. Key preserved; invoicing moved to Offboarding.
+        { key: "certificate_approved", name: "Rates Clearance Certificate Issued", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "certificate_uploaded", name: "Rates Clearance Certificate Uploaded", clientVisible: true, ownerRole: "staff_delivery" },
       ],
     },
     {
@@ -65,8 +93,9 @@ export const cotRcc: Pipeline = {
       internalName: "Offboarding",
       clientVisible: false,
       stages: [
-        { key: "discuss_matter_with_client", name: "Discuss Matter with Client", clientVisible: false, ownerRole: "staff_delivery" },
-        { key: "matter_resolved", name: "Matter Resolved", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "invoice_issued", name: "Invoice Issued", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "payment_outstanding", name: "Payment Outstanding", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "payment_received", name: "Payment Received", clientVisible: true, ownerRole: "staff_delivery" },
       ],
     },
   ],
