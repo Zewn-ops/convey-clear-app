@@ -63,7 +63,7 @@ const LABEL: Record<RequestRow["status"], string> = {
   // blocker (DESIGN.md's orange/amber split) and the words should agree.
   pending: "With ConveyClear",
   approved: "Opened",
-  declined: "Declined",
+  declined: "Rejected",
 };
 
 export default async function TransferRequestsPage() {
@@ -152,7 +152,7 @@ export default async function TransferRequestsPage() {
 
       {r.status === "declined" && (
         <div className="mt-3">
-          <Callout tone="required" label="Why it was declined">
+          <Callout tone="required" label="Why it was rejected">
             {r.decline_reason?.trim() || (
               <span className="text-ink-3">
                 No reason was recorded. Ask ConveyClear — this should not happen.
@@ -186,7 +186,7 @@ export default async function TransferRequestsPage() {
       {rows.length === 0 ? (
         <EmptyState title="No requests yet" icon={<Inbox className="h-6 w-6" />}>
           When you ask ConveyClear to open a transfer it appears here, with its
-          progress and — if it is declined — the reason.
+          progress and — if it is rejected — the reason.
         </EmptyState>
       ) : (
         <>

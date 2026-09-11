@@ -19,6 +19,11 @@ import {
   transferProgressById,
   type TransferProgress,
 } from "@/lib/transfer-service-progress";
+import {
+  TRANSFER_REVIEW_SELECT,
+  transferReviewById,
+  type TransferReview,
+} from "@/lib/transfer-review-state";
 
 export const metadata = { title: "Property Transfers — ConveyClear Partner" };
 export const dynamic = "force-dynamic";
@@ -125,6 +130,7 @@ export default async function PartnerTransfersPage({
   ];
 
   let progressById = new Map<string, TransferProgress>();
+  let reviewById = new Map<string, TransferReview>();
   if (transfers.length) {
     const ids = transfers.map((t) => t.id);
     // One query for the whole page, not one per card. RLS scopes it.
@@ -137,6 +143,15 @@ export default async function PartnerTransfersPage({
       .select(TRANSFER_PROGRESS_SELECT)
       .in("transfer_id", ids);
     progressById = transferProgressById(svcRows, ids);
+
+    // What each draft's REQUEST decided. Rejected and returned requests leave
+    // the transfer in `draft`, so without this the firm's own list says
+    // "awaiting approval" about a transaction nobody is waiting on.
+    const { data: reviewRows } = await supabase
+      .from("transfer_requests")
+      .select(TRANSFER_REVIEW_SELECT)
+      .in("transfer_id", ids);
+    reviewById = transferReviewById(reviewRows);
   }
 
   return (
@@ -150,9 +165,11 @@ export default async function PartnerTransfersPage({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {/* §5.10 — where a request went, and why one was declined. Its own
-              page rather than a section here: this list is transfers that
-              EXIST, and a declined request is precisely one that does not. */}
+          {/* §5.10 — where a request went, and why one was rejected. Its own
+              page rather than a section here: this list groups by the
+              TRANSACTION, and the requests page by the ASK. Since 083 a
+              rejected request does leave its transfer behind, and that transfer
+              now wears a red "Rejected" chip in the list beside this button. */}
           <Link
             href="/partner/transfers/requests"
             className="inline-flex items-center gap-1.5 rounded border border-line px-3.5 py-2 text-sm font-semibold text-ink-2 transition-colors duration-150 ease-out hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
@@ -249,6 +266,7 @@ export default async function PartnerTransfersPage({
                   transfer={t}
                   href={`/partner/transfers/${t.id}`}
                   progress={progressById.get(t.id)}
+                  review={reviewById.get(t.id)}
                 />
               ))}
             </ul>

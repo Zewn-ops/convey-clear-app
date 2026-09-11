@@ -349,7 +349,7 @@ export default async function TransferRequestsPage() {
                     </Link>
                   )}
                   <Badge
-                    label={r.status === "approved" ? "Approved" : "Declined"}
+                    label={r.status === "approved" ? "Approved" : "Rejected"}
                     variant={r.status === "approved" ? "success" : "danger"}
                   />
                 </div>

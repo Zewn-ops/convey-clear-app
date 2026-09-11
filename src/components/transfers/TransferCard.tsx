@@ -1,11 +1,12 @@
 import Link from "next/link";
-import StatusPill, { type StatusTone } from "@/components/ui/StatusPill";
+import StatusPill from "@/components/ui/StatusPill";
 import MetaChip from "@/components/ui/MetaChip";
 import { formatDate, formatRands, municipalityLabel } from "@/lib/utils";
 import { workdaysSince } from "@/lib/elapsed";
-import { TRANSFER_STATUS_LABELS, type PropertyTransfer, type TransferStatus } from "@/types";
+import { type PropertyTransfer } from "@/types";
 import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import type { TransferProgress } from "@/lib/transfer-service-progress";
+import { transferChip, type TransferReview } from "@/lib/transfer-review-state";
 
 /**
  * The property transfer card. Same shape as MatterCard so a firm reads one
@@ -18,18 +19,8 @@ import type { TransferProgress } from "@/lib/transfer-service-progress";
  * question, honestly answerable at this level.
  */
 
-const STATUS_TONE: Record<string, StatusTone> = {
-  // Amber, not the default grey: "Draft — awaiting approval" is a transfer
-  // waiting on somebody, and a neutral pill read as a finished state on a card
-  // that is anything but. Zewn, 2026-09-02: "make the bubble yellow to indicate
-  // it more visually".
-  draft: "waiting",
-  open: "action",
-  registered: "ok",
-  cancelled: "danger",
-  on_hold: "waiting",
-  archived: "neutral",
-};
+// The status→tone map moved to lib/transfer-review-state.ts, where the chip is
+// decided once for cards and detail pages alike.
 
 const STALLED_WORKDAYS = 60;
 
@@ -38,6 +29,7 @@ export default function TransferCard({
   href,
   matterCount,
   progress,
+  review,
 }: {
   transfer: PropertyTransfer;
   href: string;
@@ -58,12 +50,20 @@ export default function TransferCard({
    * empty one that would read as "nothing has happened".
    */
   progress?: TransferProgress;
+  /**
+   * What this transfer's REQUEST decided, when that is not "approved".
+   *
+   * Only a draft has one. Omitted where the caller has not fetched it, and the
+   * chip then reads the transfer's own status as before.
+   */
+  review?: TransferReview | null;
 }) {
   const open = workdaysSince(t.created_at);
   // A registered transfer is finished, so its age is history rather than a
   // warning. Only live ones can be stalled.
   const live = t.status === "open" || t.status === "on_hold";
   const stalled = live && open !== null && open > STALLED_WORKDAYS;
+  const chip = transferChip(t.status, review);
 
   return (
     <li className="rounded-lg bg-surface p-6 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line sm:p-7">
@@ -79,10 +79,19 @@ export default function TransferCard({
             <p className="mt-1.5 text-[13px] font-medium text-ink-3">{t.property_description}</p>
           )}
         </div>
-        <StatusPill tone={STATUS_TONE[t.status] ?? "neutral"}>
-          {TRANSFER_STATUS_LABELS[t.status as TransferStatus] ?? t.status}
-        </StatusPill>
+        <StatusPill tone={chip.tone}>{chip.label}</StatusPill>
       </div>
+
+      {/* The reason, on the card itself. Zewn: "dont remove or hide the prop
+          trf" — so it stays in the list, and a red chip with no explanation
+          would send the reader hunting through a second page for the one
+          sentence that says what to do next. */}
+      {review?.reason && (
+        <p className="mt-3 text-[13px] text-required">
+          {review.state === "rejected" ? "Rejected: " : "We asked for: "}
+          {review.reason}
+        </p>
+      )}
 
       <div className="mt-5 flex flex-wrap gap-2">
         {typeof matterCount === "number" && (

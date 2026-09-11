@@ -119,7 +119,7 @@ export async function POST(request: Request) {
 
     await notifyUsers([req.requested_by], {
       type: "transfer_request",
-      title: "Transfer request declined",
+      title: "Transfer request rejected",
       body: reason,
       link: "/partner/transfers",
     });
