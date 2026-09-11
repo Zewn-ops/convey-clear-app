@@ -13,14 +13,12 @@ import { COUNCIL_ISSUES, COT_CLEARANCE_BLOCKERS } from "./build";
 // What is genuinely RCA-specific rather than copied:
 //   · the decision produces an ACCOUNT, not a memo — the outcome vocabulary is
 //     Account Opened / Application Delayed / Application Rejected;
-//   · the delivery phase ends when the rates account number is captured on the
-//     matter, because that number is what the RCF (the next stage) is applied
-//     for against;
 //   · there is no proof-of-payment step — opening an account is not billed to
 //     the client the way a memo is.
 //
-// ▶ CONFIRM WITH JUKKA. If COT runs RCA through different stages, this file is
-// the only thing that changes — a matter stores its position, not the tree.
+// ✅ CONFIRMED, 2026-09-11. Zewn: "RCA is like RCF but with extra steps so there
+// will be similarities." The extra steps are the application and the account;
+// the ending is the same, and the delivery phase below now says so.
 export const cotRca: Pipeline = {
   serviceCode: "PRC",
   municipality: "COT",
@@ -79,7 +77,7 @@ export const cotRca: Pipeline = {
           // the blocked matters can be counted by cause: "how many are sitting
           // on estimated readings" is the question this stage exists to answer.
           key: "clearance_blocked",
-          name: "Clearance Blocked",
+          name: "Clearance Blocked — waiting on council",
           clientVisible: true,
           ownerRole: "staff_ops",
           waitingOn: "council",
@@ -88,7 +86,7 @@ export const cotRca: Pipeline = {
         { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         {
           key: "cot_decision",
-          name: "COT Decision",
+          name: "COT Decision — council's answer",
           clientVisible: true,
           ownerRole: "staff_ops",
           outcomes: [
@@ -123,19 +121,29 @@ export const cotRca: Pipeline = {
       internalName: "Client Delivery",
       clientVisible: false,
       stages: [
-        // The deliverable of an RCA is the account number itself — capture it on
-        // the matter (Rates account number, below the pipeline card) and the
-        // figures request has something to quote.
-        // ▶ ZEWN / JUKKA — THE ONE PLACE THE MAP AND THIS FILE DISAGREE.
-        //   Map §2 phase 4 reads "Rates Clearance Figures Issued / Uploaded" for
-        //   RCA. That is what §3 says for RCF, and an RCA does not produce
-        //   figures: it OPENS THE ACCOUNT that the figures are then requested
-        //   against, which is why the delivery below captures an account number.
-        //   Read as a copy-paste in the source document, so the existing
-        //   stages stand. If the RCA really does end with figures, this is two
-        //   lines to change and no migration — a matter stores its position.
-        { key: "account_number_issued", name: "Account Number Issued", clientVisible: true, ownerRole: "staff_delivery" },
-        { key: "account_details_sent", name: "Account Details Sent to Client", clientVisible: true, ownerRole: "staff_delivery" },
+        // ✅ THE MAP WAS RIGHT AND THIS FILE WAS WRONG. Zewn, 2026-09-11:
+        //   "RCA does end with figures. once we have gotten through the
+        //    application we then get the figures. RCA is like RCF but with extra
+        //    steps so there will be similarities"
+        //
+        // The note that stood here read Map §2 phase 4 — "Rates Clearance
+        // Figures Issued / Uploaded" under RCA — as a copy-paste from §3's RCF,
+        // reasoning that an RCA opens the account rather than producing figures.
+        // It does both: lodge → account opened → figures. The similarity to the
+        // RCF is the point, not an error in the source document.
+        //
+        // 🔴 THE ACCOUNT NUMBER IS NOT LOST. Opening the account is the
+        // COUNCIL'S ANSWER rather than our deliverable, so it stays where an
+        // answer belongs: the COT Decision stage in Operations already records
+        // "Account Opened" as an outcome. Delivery is what we hand over.
+        //
+        // The stage keys change with the names. Checked against production first
+        // (2026-09-11): no matter anywhere stands on account_number_issued or
+        // account_details_sent, so nothing is stranded. `figures_uploaded` is
+        // deliberately the SAME key the RCF uses — a key shared across pipelines
+        // means the same thing in both, which is exactly the case here.
+        { key: "figures_issued", name: "Rates Clearance Figures Issued", clientVisible: true, ownerRole: "staff_delivery" },
+        { key: "figures_uploaded", name: "Rates Clearance Figures Uploaded", clientVisible: true, ownerRole: "staff_delivery" },
       ],
     },
     {

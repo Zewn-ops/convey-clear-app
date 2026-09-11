@@ -50,7 +50,7 @@ export const cotRcf: Pipeline = {
           // the blocked matters can be counted by cause: "how many are sitting
           // on estimated readings" is the question this stage exists to answer.
           key: "clearance_blocked",
-          name: "Clearance Blocked",
+          name: "Clearance Blocked — waiting on council",
           clientVisible: true,
           ownerRole: "staff_ops",
           waitingOn: "council",
@@ -59,7 +59,7 @@ export const cotRcf: Pipeline = {
         { key: "pending_cot_decision", name: "Pending COT Decision", clientVisible: true, ownerRole: "staff_ops", waitingOn: "council" },
         {
           key: "cot_decision",
-          name: "COT Decision",
+          name: "COT Decision — council's answer",
           clientVisible: true,
           ownerRole: "staff_ops",
           outcomes: [

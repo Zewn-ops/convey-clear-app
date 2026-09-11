@@ -156,9 +156,16 @@ const OFFBOARDING = {
  * stages, and a reason already recorded against a matter must not become an
  * unresolvable key.
  *
- * ▶ ZEWN: the two lists now coexist — this one on the blocked stage, the sheet's
- *   on the COT Decision outcomes. If Jukka means this to be the only list,
- *   COUNCIL_ISSUES is the thing to delete, and that is a second pass.
+ * ✅ ANSWERED, Zewn 2026-09-11: BOTH LISTS STAY, and they stay because they
+ *   answer two different questions. "one option is we are waiting for council to
+ *   respond or something and the other is what the council decided from it."
+ *
+ *     Clearance Blocked  → why we are WAITING on the council (this list)
+ *     COT Decision       → what the council DECIDED (COUNCIL_ISSUES, above)
+ *
+ *   Nothing is deleted, so no reason already recorded against a matter becomes
+ *   an unresolvable key. The stage names below carry the split so it reads off
+ *   the screen instead of needing this comment.
  */
 export const COT_CLEARANCE_BLOCKERS: StageOutcome[] = [
   { key: "pending_approval", label: "Pending approval", clientVisible: true },
@@ -276,10 +283,18 @@ export function buildRca(municipality: string, councilName: string, short: strin
         internalName: "Client Delivery",
         clientVisible: false,
         stages: [
-          // The deliverable of an RCA is the account number itself — captured on
-          // the matter, so the figures request has something to quote.
-          { key: "account_number_issued", name: "Account Number Issued", clientVisible: true, ownerRole: "staff_delivery" },
-          { key: "account_details_sent", name: "Account Details Sent to Client", clientVisible: true, ownerRole: "staff_delivery" },
+          // An RCA ends with figures, at every council. Zewn, 2026-09-11: "RCA
+          // does end with figures. once we have gotten through the application
+          // we then get the figures." Applied to the derived councils for the
+          // same reason Offboarding was — §5.15 treats the three as one process
+          // with per-council issue lists, and an RCA that ended differently at
+          // CoE than at COT would be a divergence nobody asked for.
+          //
+          // The account number is still recorded: `account_opened` is an outcome
+          // of the decision stage above, which is where the council's answer
+          // belongs. Delivery is what we hand over.
+          { key: "figures_issued", name: "Rates Clearance Figures Issued", clientVisible: true, ownerRole: "staff_delivery" },
+          { key: "figures_uploaded", name: "Rates Clearance Figures Uploaded", clientVisible: true, ownerRole: "staff_delivery" },
         ],
       },
       OFFBOARDING,
