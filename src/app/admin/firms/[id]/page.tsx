@@ -66,6 +66,7 @@ export default async function AdminFirmDetailPage({
     { data: matterRows },
     { data: transferRows },
     { data: credentialRows },
+    { data: revealRows },
   ] = await Promise.all([
     supabase
       .from("users")
@@ -89,6 +90,17 @@ export default async function AdminFirmDetailPage({
       .select("id, user_id, municipality, key_version, updated_at")
       .eq("firm_id", id)
       .order("municipality", { ascending: true }),
+    // 🔒 095 — who has read this firm's council logins, most recent first. A
+    // log nothing displays is very nearly no log: the point of recording a
+    // reveal is that somebody can be shown it, starting with whoever is looking
+    // at the firm. Fails soft (see below) so a portal deployed ahead of the
+    // migration still renders the page.
+    supabase
+      .from("credential_reveals")
+      .select("credential_id, revealed_by, revealed_at")
+      .eq("firm_id", id)
+      .order("revealed_at", { ascending: false })
+      .limit(200),
   ]);
 
   const users = (userRows as Pick<AppUser, "id" | "email" | "full_name" | "first_name" | "last_name" | "role" | "active">[] | null) ?? [];
@@ -101,6 +113,33 @@ export default async function AdminFirmDetailPage({
     return u.full_name || [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "Unknown user";
   };
 
+  // Most recent reveal per credential. The query is ordered newest first, so
+  // the first row seen for a credential is the one that matters.
+  //
+  // ⚠️ FAILS SOFT. Before migration 095 the table does not exist and the query
+  // returns an error with null data, which lands here as an empty map and a
+  // page that renders exactly as it did before. A missing audit table must not
+  // take a firm page down with it.
+  const lastReveal = new Map<string, { by: string; at: string }>();
+  for (const r of ((revealRows as { credential_id: string | null; revealed_by: string; revealed_at: string }[] | null) ?? [])) {
+    if (!r.credential_id || lastReveal.has(r.credential_id)) continue;
+    lastReveal.set(r.credential_id, { by: r.revealed_by, at: r.revealed_at });
+  }
+
+  // The people who looked are ConveyClear staff, so they are not in this firm's
+  // user list. One query for all of them rather than one per row.
+  const revealerIds = Array.from(new Set(Array.from(lastReveal.values()).map((v) => v.by)));
+  const { data: revealerRows } = revealerIds.length
+    ? await supabase.from("users").select("id, full_name, first_name, last_name, email").in("id", revealerIds)
+    : { data: null };
+  const staffName = (uid: string) => {
+    const u = ((revealerRows as
+      | { id: string; full_name: string | null; first_name: string | null; last_name: string | null; email: string | null }[]
+      | null) ?? []).find((x) => x.id === uid);
+    if (!u) return "a ConveyClear admin";
+    return u.full_name || [u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "a ConveyClear admin";
+  };
+
   const credentials: AdminCredentialRow[] = (
     (credentialRows as
       | { id: string; user_id: string; municipality: string; key_version: number; updated_at: string }[]
@@ -111,6 +150,10 @@ export default async function AdminFirmDetailPage({
     key_version: c.key_version,
     updated_at: c.updated_at,
     person: userName(c.user_id),
+    lastRevealedAt: lastReveal.get(c.id)?.at ?? null,
+    // staffName rather than userName: whoever revealed it is a ConveyClear
+    // person and will not be in this firm's user list.
+    lastRevealedBy: lastReveal.get(c.id) ? staffName(lastReveal.get(c.id)!.by) : null,
   }));
 
   return (

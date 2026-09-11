@@ -10,6 +10,9 @@ export interface AdminCredentialRow {
   key_version: number;
   updated_at: string;
   person: string;
+  /** 095 — when this login was last revealed, and by whom. Null if never. */
+  lastRevealedAt: string | null;
+  lastRevealedBy: string | null;
 }
 
 /**
@@ -27,7 +30,8 @@ export interface AdminCredentialRow {
  * from state.
  *
  * That also means each reveal is a request, which can be logged. A pure
- * client-side toggle never can.
+ * client-side toggle never can — and since 095 it is logged, before the value
+ * comes back, with the last reading shown on the row below.
  */
 export default function CouncilCredentialRow({ row }: { row: AdminCredentialRow }) {
   const [value, setValue] = useState<{ username: string; password: string } | null>(null);
@@ -57,6 +61,15 @@ export default function CouncilCredentialRow({ row }: { row: AdminCredentialRow 
         <p className="text-xs text-ink-3">
           {row.municipality} · updated{" "}
           {new Date(row.updated_at).toLocaleDateString("en-ZA")}
+        </p>
+        {/* 🔒 The reading, shown where the reading happens. An audit trail
+            nobody is confronted with is one nobody checks — and the firm is
+            being told these reveals are recorded, so the record has to be in
+            front of the person doing the revealing too. */}
+        <p className="text-xs text-ink-3">
+          {row.lastRevealedAt
+            ? `Last revealed ${new Date(row.lastRevealedAt).toLocaleString("en-ZA")} by ${row.lastRevealedBy}`
+            : "Never revealed"}
         </p>
 
         {value ? (
