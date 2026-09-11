@@ -126,14 +126,11 @@ export default async function ClientTransferDetail({ params }: { params: Promise
     progress: serviceProgress(r.status, r.matters ?? null, "client", Boolean(r.matter_id)),
     matterTitle: r.matters?.title ?? null,
   }));
-  // Counts the list the CLIENT sees, for the reason the partner page's does: a
-  // buyer or seller is shown only the services that have been asked for, so a
-  // denominator of seven sat above a list of two on their own screen. Same fix,
-  // same day, second page — staff keep seven, because unanswered lines are their
-  // job to notice.
-  const transferRollup = transferProgress(
-    serviceRows.filter((r) => r.status !== "not_specified")
-  );
+  // Unchosen lines are excluded inside transferProgress now, on every screen for
+  // every role (Zewn 2026-09-11). This page used to filter them out here, which
+  // was right for the client and left the list cards and the admin page counting
+  // a different denominator for the same transfer.
+  const transferRollup = transferProgress(serviceRows);
 
   return (
     <div className="space-y-6">

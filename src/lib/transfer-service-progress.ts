@@ -173,20 +173,37 @@ export const LINKED_MATTER_SELECT =
  *   · `already_done`    → resolved. Someone did it, not necessarily through us.
  *   · `needed` + a matter that is won or archived → resolved. The work is done.
  *   · `needed` otherwise → OUTSTANDING. Either no matter yet, or one still running.
- *   · `not_specified`   → OUTSTANDING, and this is the load-bearing choice.
+ *   · `not_specified`   → NOT COUNTED AT ALL. See below.
  *
- * ⚠️ WHY `not_specified` IS OUTSTANDING, AND WHAT IT COSTS
- *   His word is "marked", and `not_specified` is the absence of a mark — nobody
- *   has yet said whether this service is needed. A transfer with an open
- *   question on it is not finished.
+ * 🔴 ONLY CHOSEN SERVICES ARE COUNTED (Zewn, 2026-09-11)
+ *   *"get the list page to match the details page … staff see what the firm
+ *   sees."*
  *
- *   The cost is real and worth knowing before this ships: 063's
- *   `instantiate_transfer_services` creates all seven lines as `not_specified`,
- *   so a BRAND-NEW transfer reads 0 of 7 rather than an encouraging blank, and a
- *   transfer only reaches 100% once staff have explicitly marked the irrelevant
- *   services `not_applicable`. That may be exactly the forcing function wanted —
- *   it makes "we never decided about the refund" visible instead of invisible —
- *   but it is a deliberate choice and reversible in one line if it annoys.
+ *   `not_specified` used to be OUTSTANDING — the absence of a mark read as an
+ *   unanswered question, and a transfer was not finished while one stood open.
+ *   That was defensible when every screen showed all seven lines. It stopped
+ *   being defensible when the "+" shipped (2026-09-02): the firm is shown only
+ *   the services it has asked for, so a denominator of seven sat above a list of
+ *   two, and a brand-new transfer read "0 of 7 services settled" above nothing at
+ *   all. Both detail pages patched it locally, each with its own filter, and the
+ *   list cards and the admin page kept counting seven — three screens, two
+ *   answers, no error anywhere.
+ *
+ *   So the rule lives HERE, once, where no caller can get it wrong: a line with
+ *   no status set is not a service on this transaction. It draws no circle, it is
+ *   not in the denominator, and that is true for staff as well, which is the
+ *   whole of "staff see what the firm sees".
+ *
+ *   ⚠️ WHAT IS GIVEN UP. "We never decided about the refund" is no longer visible
+ *   in the count — it was the forcing function the old behaviour bought. The
+ *   checklist itself still shows every unchosen line to staff (`canManage` in
+ *   TransferServices), which is where that question belongs: on the surface that
+ *   can answer it, not on a number that cannot.
+ *
+ *   ⚠️ A transfer where NOTHING has been chosen now has an empty denominator, and
+ *   zero circles reads as broken rather than as new. `awaitingChoice` below is
+ *   what tells the bar to say "No services chosen yet" instead of drawing
+ *   nothing.
  *
  * SUB-SERVICES ARE NOT COUNTED. Only top-level lines (`parent_id === null`) go
  * into the denominator. A parent that happens to have four children would
@@ -226,14 +243,29 @@ export interface TransferServiceDot {
 export interface TransferProgress {
   /** Service lines that are marked done, already done, or not applicable. */
   resolved: number;
-  /** Top-level service lines in total. */
+  /**
+   * Top-level service lines that have been CHOSEN — the denominator.
+   *
+   * Not the number of lines the transfer holds: 063 instantiates every service
+   * as `not_specified`, and an unchosen line is not a service on this
+   * transaction. See the note above.
+   */
   total: number;
   /** 0–100, floored. 0 when there is nothing to measure. */
   percent: number;
-  /** Every line resolved — and at least one line exists. */
+  /** Every chosen line resolved — and at least one has been chosen. */
   complete: boolean;
-  /** Short human summary, e.g. "3 of 7 services settled". */
+  /** Short human summary, e.g. "3 of 4 services settled". */
   label: string;
+  /**
+   * The transfer HAS service lines, but none of them has been chosen yet.
+   *
+   * Distinct from having no lines at all (a transfer created before 063), and
+   * the two need different sentences: one is waiting on the firm to ask for
+   * something, the other is a gap in the data. Without this the bar cannot tell
+   * "new" from "broken", because both arrive as total 0.
+   */
+  awaitingChoice: boolean;
   /**
    * One entry per top-level service, in checklist order.
    *
@@ -295,10 +327,17 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
   // `dots` is positional — the third dot must be the third service on every
   // card — and this function is called from list pages whose queries have no
   // ORDER BY of their own. Rows without a position keep their arrival order.
-  const top = rows
+  const allTop = rows
     .filter((r) => r.parent_id === null)
     .slice()
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+  // 🔴 THE CHOSEN LINES ARE THE TRANSFER. Filtering here rather than in each
+  // caller is the point of the change: the partner detail page and the client
+  // detail page each carried their own copy of this line, and the two list pages
+  // and the admin detail page carried none, so the same transaction reported two
+  // different denominators depending on which screen you were standing on.
+  const top = allTop.filter((r) => r.status !== "not_specified");
   const total = top.length;
 
   const resolved = top.filter(isSettled).length;
@@ -316,15 +355,19 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
     };
   });
 
-  // No lines at all: a transfer created before 063 instantiated them. Report
-  // nothing rather than a triumphant 100%, which is what 0/0 would otherwise be.
+  // Nothing chosen. Report nothing rather than a triumphant 100%, which is what
+  // 0/0 would otherwise be — and say WHICH kind of nothing it is, because
+  // "nobody has asked for anything yet" and "this transfer predates the
+  // checklist" want different sentences from the same empty count.
   if (total === 0) {
+    const awaitingChoice = allTop.length > 0;
     return {
       resolved: 0,
       total: 0,
       percent: 0,
       complete: false,
-      label: "No services listed yet",
+      label: awaitingChoice ? "No services chosen yet" : "No services listed yet",
+      awaitingChoice,
       dots: [],
     };
   }
@@ -338,6 +381,7 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
       resolved === total
         ? "All services settled"
         : `${resolved} of ${total} services settled`,
+    awaitingChoice: false,
     dots,
   };
 }
