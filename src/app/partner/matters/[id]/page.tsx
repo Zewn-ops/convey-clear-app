@@ -19,6 +19,7 @@ import InPlaceFica from "@/components/matters/InPlaceFica";
 import { buildFicaSubjects } from "@/lib/fica";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
+import { resolveMatterPropertySubject } from "@/lib/doc-naming";
 import { getPipeline } from "@/lib/pipelines";
 import { resolveDocClass, type PartyRole } from "@/lib/doc-classes";
 import { DOC_CLASSES, DOC_CLASS_LABELS, DOC_CLASS_HINTS } from "@/lib/councils";
@@ -92,6 +93,9 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
   const docs = (docsData as MatterDocument[] | null) ?? [];
   const parties = (partiesData as MatterParty[] | null) ?? [];
   const signedUrls = docs.length > 0 ? await signedDocUrls(createAdminClient(), docs) : {};
+
+  // Same function the server names with — see the admin page's note.
+  const propertySubject = await resolveMatterPropertySubject(createAdminClient(), params.id);
 
   // FICA vault (migration 025): reusable docs for the matter's client + each
   // party's linked client, so the intake can offer "Reuse".
@@ -464,14 +468,9 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                   matterId={matter.id}
                   parties={uploadParties}
                   municipality={matter.municipality}
-                  // What the document is ABOUT. The matter's own title already
-                  // carries the property (COT_RCF_<ref>_ERF 3456 LONEHILL), so
-                  // it is the honest subject here; the transfer's property
-                  // description is not on this row.
-                  propertyDescription={
-                  (matter as unknown as { property_description?: string | null })
-                    .property_description ?? null
-                }
+                  // What the document is ABOUT: the property, reached the way
+                  // the server reaches it.
+                  propertySubject={propertySubject}
                 />
                 <p className="mt-2 text-xs text-ink-3">
                   ConveyClear reviews what you upload before it reaches the buyer or seller.

@@ -94,13 +94,80 @@ export async function resolveDocumentSubject(
     if (name) return name;
   }
 
-  const { data: matter } = await admin
-    .from("matters")
-    .select("property_description")
-    .eq("id", input.matterId)
-    .maybeSingle();
+  return resolveMatterPropertySubject(admin, input.matterId);
+}
 
-  return (matter?.property_description as string | null) || null;
+/**
+ * The property a MATTER is about, for naming a document filed against it.
+ *
+ * 🔴 THIS REPLACES A SELECT ON A COLUMN THAT DOES NOT EXIST.
+ *   resolveDocumentSubject used to read `matters.property_description`. There is
+ *   no such column — matters reach their property through property_id (001/056)
+ *   or through the transfer (026). supabase-js infers the row type from the
+ *   literal select string, so tsc could not catch it, and PostgREST fails the
+ *   ENTIRE row read on one bad column name: the query errored on every call,
+ *   returned null every time, and every matter document has been named
+ *   "Type — date" with no subject since canonical naming shipped on 2026-07-20.
+ *
+ *   It read as "this matter has no property description", which is why it
+ *   survived a rewrite: the upload panel was then built to mirror the same
+ *   missing value, so preview and saved name agreed — on being wrong.
+ *
+ * THE TWO ROUTES, in order:
+ *   property_id → properties.label     the property record, when one is linked
+ *   transfer_id → the transfer's own subject (its property_description, else the
+ *                 firm's reference — see resolveTransferSubject)
+ *
+ * Property first: a linked property is the more specific fact, and on production
+ * only three of fourteen transfers carry one, so the transfer branch does most
+ * of the work.
+ *
+ * Exported because the UPLOAD PANEL needs the same answer to preview the name it
+ * is about to save. The preview and the server must not compute this twice.
+ */
+export async function resolveMatterPropertySubject(
+  admin: SupabaseClient,
+  matterId: string
+): Promise<string | null> {
+  // ⚠️ The errors are LOGGED, not swallowed. The bug this function replaces was
+  // invisible for seven weeks precisely because a failed read and an absent
+  // value are the same `null` here, and tsc cannot tell them apart — supabase-js
+  // infers the row type from the literal select string, so a wrong column name
+  // only widens the type. If one of these selects ever names a column that is
+  // not there, the log is the only thing that will say so.
+  const { data: matter, error: matterError } = await admin
+    .from("matters")
+    .select("property_id, transfer_id")
+    .eq("id", matterId)
+    .maybeSingle();
+  if (matterError) {
+    console.error("[doc-naming] matter lookup failed", { matterId, error: matterError.message });
+    return null;
+  }
+  if (!matter) return null;
+
+  const propertyId = (matter as { property_id: string | null }).property_id;
+  if (propertyId) {
+    const { data: property, error: propertyError } = await admin
+      .from("properties")
+      .select("label")
+      .eq("id", propertyId)
+      .maybeSingle();
+    if (propertyError) {
+      console.error("[doc-naming] property lookup failed", {
+        matterId,
+        propertyId,
+        error: propertyError.message,
+      });
+    }
+    const label = (property?.label as string | null) || null;
+    if (label) return label;
+  }
+
+  const transferId = (matter as { transfer_id: string | null }).transfer_id;
+  if (transferId) return resolveTransferSubject(admin, transferId);
+
+  return null;
 }
 
 /**

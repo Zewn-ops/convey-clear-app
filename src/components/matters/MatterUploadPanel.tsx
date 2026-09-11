@@ -64,7 +64,7 @@ export default function MatterUploadPanel({
   matterId,
   parties = [],
   municipality = null,
-  propertyDescription = null,
+  propertySubject = null,
 }: {
   matterId: string;
   /** The matter's parties, for "whose is it". Empty on a single-client matter. */
@@ -72,11 +72,15 @@ export default function MatterUploadPanel({
   /** Decides which of input / supporting / output this document files under. */
   municipality?: string | null;
   /**
-   * The matter's `property_description` — what the server falls back to when no
-   * party is chosen. Named for the column on purpose: this value has to BE that
-   * column, not something close to it, or the preview stops being true.
+   * What the server will name this document after when no party is chosen.
+   *
+   * The caller MUST produce it with `resolveMatterPropertySubject` — the same
+   * function the naming code calls — rather than reading a field that looks
+   * right. The previous prop was named for a column (`property_description`)
+   * that does not exist on matters, so both sides agreed on undefined and every
+   * document came out as "Type — date".
    */
-  propertyDescription?: string | null;
+  propertySubject?: string | null;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -100,14 +104,17 @@ export default function MatterUploadPanel({
   // Found by uploading one file, 2026-09-04.
   //
   // The server's rule (resolveDocumentSubject) is: the chosen PARTY'S NAME, else
-  // the matter's `property_description`, else nothing — and no qualifier at all.
-  // A matter document is about a person or a property; the role is already in
-  // the party column beside it, and the matter title repeats what the page
-  // heading says.
+  // the matter's property — via its property record, else via its transfer —
+  // else nothing, and no qualifier at all. A matter document is about a person
+  // or a property; the role is already in the party column beside it, and the
+  // matter title repeats what the page heading says.
+  //
+  // `propertySubject` is that second branch, resolved by the page with the same
+  // function the server uses, so the two cannot disagree by construction.
   //
   // A preview that is merely plausible is worse than none: it is the thing the
   // uploader will believe, and the Rename control turns it into what they save.
-  const subject = party ? party.name : propertyDescription;
+  const subject = party ? party.name : propertySubject;
   const generated = file
     ? buildDocumentName({
         documentType: type,
