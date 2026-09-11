@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import type { TransferServiceDot } from "@/lib/transfer-service-progress";
 
 /**
- * One circle per service on a transfer, for LIST cards.
+ * One circle per CHOSEN service on a transfer, for LIST cards.
  *
  * Zewn, 2026-08-28: *"i want to see the progress circles on the overview pages
  * aswell, all 3 so the main overview page then the prop trfs list and matters
@@ -11,27 +11,46 @@ import type { TransferServiceDot } from "@/lib/transfer-service-progress";
  * WHY THESE ARE NOT THE SAME CIRCLES AS EVERYWHERE ELSE
  *   `ServiceSteps` draws one circle per PHASE of one pipeline. That works on the
  *   matters list, where a card is one matter with one pipeline. A transfer has
- *   no pipeline of its own — it has seven services, each with their own — so the
- *   equivalent would be seven steppers stacked on a list card, four cards deep.
- *   That is not a summary, it is the detail page with worse spacing.
+ *   no pipeline of its own — it has its services, each with their own — so the
+ *   equivalent would be several steppers stacked on a list card, four cards
+ *   deep. That is not a summary, it is the detail page with worse spacing.
  *
- *   So a transfer's circles are one per SERVICE: seven dots answering "how much
- *   of this transaction is settled", at the altitude a list actually works at.
- *   The stepper is still there on the detail page, where there is room for it.
+ *   So a transfer's circles are one per SERVICE, answering "how much of this
+ *   transaction is settled" at the altitude a list actually works at. The
+ *   stepper is still there on the detail page, where there is room for it.
  *
- * FOUR STATES, NOT TWO.
+ * ── FOUR STATES (Zewn, 2026-09-11) ──────────────────────────────────────────
  *
- *   green check   settled — done, already done, or not applicable
- *   yellow solid  needed, and a matter is open against it
- *   yellow ring   needed, no matter yet — somebody has said this must happen
- *   grey ring     nobody has decided about this service
+ *   amber outline   chosen — asked for, no matter open yet
+ *   amber filled    in progress — a matter is open and moving
+ *   ORANGE + "!"    the attorney has to attend to it (Documents Outstanding)
+ *   green + tick    done — settled, already done, or not applicable
  *
- * The two yellows are Zewn's, 2026-09-01: "can we get yellow circles for the
- * items that are marked as needs to be done so we know whats in an active state
- * of trying to complete the service." A marked-but-not-started line used to draw
- * the same hollow grey ring as a line nobody had looked at, which are the two
- * most different states on the checklist. Yellow now means "this transaction
- * needs this", and the fill says whether the work has actually begun.
+ * His words: *"amber circle for service chosen, amber dot (filled in) for
+ * service being dealt with / in progress, yellow with an exclimation mark if the
+ * attorneys need to attend to it and green with a tick if it is done."*
+ *
+ * The alert state is the same fact that leads to a rejection, which is the
+ * point: *"this is just to try and teach the attorneys to upload all the docs we
+ * need in one go."* The circle warns before anyone has to reject.
+ *
+ * 🔴 THE GREY RING IS GONE, and that is half the change. It meant "nobody has
+ * decided about this service", and since the same day an undecided line is not
+ * on the circle list at all — only chosen services get a circle. A state that
+ * can no longer occur is worse than no state: it is a shape a reader learns and
+ * then never sees.
+ *
+ * 🔴 WHY THE ALERT IS `required` ORANGE AND NOT A YELLOW
+ *   Amber (#ad6200) and a yellow are the same colour at 16px to anyone not
+ *   comparing them side by side, and this state has to read as a different KIND
+ *   of thing rather than a shade of the one beside it. `required` (#c74d24) is
+ *   the token this design system already uses for a missing required document,
+ *   which is exactly what the state means. The "!" carries it for anyone who
+ *   cannot separate the two hues at all — the shape is the signal and the colour
+ *   reinforces it, never the other way round.
+ *
+ * The alert ranks ABOVE in-progress: a stuck matter and a moving matter both
+ * have an open matter, and only one of them is asking the reader for something.
  */
 export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
   if (dots.length === 0) return null;
@@ -39,15 +58,25 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
   return (
     <ul className="flex flex-wrap items-center gap-1.5" aria-label="Services on this transfer">
       {dots.map((d, i) => {
-        const state = d.settled ? "settled" : d.running ? "running" : d.needed ? "needed" : "open";
-        const wording =
-          state === "settled"
-            ? "settled"
-            : state === "running"
-              ? "in progress"
-              : state === "needed"
-                ? "needed — not started"
-                : "not specified";
+        const state = d.settled
+          ? "settled"
+          : d.attention
+            ? "attention"
+            : d.running
+              ? "running"
+              : "chosen";
+        const wording = {
+          settled: "settled",
+          attention: "needs the firm's attention — documents outstanding",
+          running: "in progress",
+          chosen: "chosen — not started",
+        }[state];
+        const tone = {
+          settled: "bg-ok text-white",
+          attention: "bg-required text-white",
+          running: "bg-waiting text-white",
+          chosen: "border-2 border-waiting bg-transparent",
+        }[state];
         return (
           <li
             key={`${d.name}-${i}`}
@@ -56,20 +85,17 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
             // name below carries the same information without hover at all.
             title={`${d.name} — ${wording}`}
             className={
-              "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold " +
-              (d.settled
-                ? "bg-ok text-white"
-                : d.running
-                  ? "bg-waiting text-white"
-                  : d.needed
-                    ? "border-2 border-waiting bg-transparent"
-                    : "border border-line bg-transparent")
+              "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold leading-none " +
+              tone
             }
           >
             <span className="sr-only">
               {d.name} — {wording}
             </span>
-            {d.settled && <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden />}
+            {state === "settled" && <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden />}
+            {/* A glyph, not an icon: lucide's AlertCircle draws its own ring
+                inside the circle, which at this size reads as a doughnut. */}
+            {state === "attention" && <span aria-hidden>!</span>}
           </li>
         );
       })}

@@ -1,4 +1,4 @@
-import { getPipeline, phaseOrder, phaseSteps, phaseLabel } from "@/lib/pipelines";
+import { getPipeline, isWaitingOnFirm, phaseOrder, phaseSteps, phaseLabel } from "@/lib/pipelines";
 import { serviceLabel } from "@/lib/councils/types";
 
 /**
@@ -42,6 +42,15 @@ export interface ServiceProgress {
    * in that case.
    */
   steps: string[];
+  /**
+   * The matter is parked on something the FIRM has to do — in practice
+   * Documents Outstanding.
+   *
+   * Derived from the stage rather than from the document checklist: see
+   * isWaitingOnFirm. Always false when there is no matter, because a service
+   * nobody has opened yet is not waiting on the attorney, it is waiting on us.
+   */
+  attention: boolean;
 }
 
 /** The linked matter, as embedded by the transfer pages. */
@@ -49,6 +58,8 @@ export interface LinkedMatterShape {
   id: string;
   title: string | null;
   current_phase: string | null;
+  /** Where the matter stands inside its phase — drives the "attend to this" dot. */
+  current_stage: string | null;
   status: string | null;
   municipality: string | null;
   service_subtype: string | null;
@@ -85,7 +96,7 @@ export function serviceProgress(
    */
   hasMatter = false
 ): ServiceProgress {
-  const empty = { phase: 0, total: 0, label: "", steps: [] as string[] };
+  const empty = { phase: 0, total: 0, label: "", steps: [] as string[], attention: false };
 
   if (status === "not_applicable" || status === "not_specified") {
     return { state: "none", ...empty };
@@ -115,6 +126,9 @@ export function serviceProgress(
   if (!matter) return { state: "unstarted", ...empty, label: "Not started" };
 
   const done = matter.status === "won" || matter.status === "archived";
+  // A finished matter is never "attend to this": whatever was outstanding when
+  // it was parked there, it is not what the attorney should be looking at now.
+  const attention = !done && isWaitingOnFirm(matter.current_stage);
   const pipeline = getPipeline(
     matter.services?.code,
     matter.municipality,
@@ -131,6 +145,7 @@ export function serviceProgress(
       total: 0,
       label: done ? "Complete" : matter.current_phase ?? "In progress",
       steps: [],
+      attention,
     };
   }
 
@@ -146,12 +161,13 @@ export function serviceProgress(
     total: steps.length,
     label: done ? "Complete" : phaseLabel(pipeline, matter.current_phase, forClient),
     steps: steps.map((s) => (forClient ? phaseLabel(pipeline, s.key, true) : s.label)),
+    attention,
   };
 }
 
 /** The columns the transfer pages must select for the above to work. */
 export const LINKED_MATTER_SELECT =
-  "matters(id, title, current_phase, status, municipality, service_subtype, services(code))";
+  "matters(id, title, current_phase, current_stage, status, municipality, service_subtype, services(code))";
 
 // ---------------------------------------------------------------------------
 // THE TRANSFER'S OWN PROGRESS — rolled up from its service lines.
@@ -225,20 +241,30 @@ export interface TransferServiceDot {
   name: string;
   /** Marked done / already done / not applicable, or its matter is finished. */
   settled: boolean;
+  /**
+   * The matter behind this line is parked on something the FIRM has to do —
+   * Documents Outstanding.
+   *
+   * Zewn, 2026-09-11: *"yellow with an exclimation mark if the attorneys need to
+   * attend to it"*, and *"this is just to try and teach the attorneys to upload
+   * all the docs we need in one go"* — the circle warns before anyone has to
+   * reject, which is the same fact arriving earlier and more cheaply.
+   *
+   * Ranked ABOVE `running` when both are true: a matter that is moving and a
+   * matter that is stuck both have an open matter, and only one of them is
+   * asking the reader for something.
+   */
+  attention: boolean;
   /** Needed, with a matter open against it. */
   running: boolean;
-  /**
-   * Marked "needed" by anyone — with or without a matter yet.
-   *
-   * Zewn, 2026-09-01: "can we get yellow circles for the items that are marked
-   * as needs to be done so we know whats in an active state of trying to
-   * complete the service." Before this, a line somebody had deliberately marked
-   * as needed but not yet opened a matter for drew the SAME hollow ring as a
-   * line nobody had looked at — the two most different states on the checklist,
-   * rendered identically.
-   */
-  needed: boolean;
 }
+
+// `needed` was a fourth flag here until 2026-09-11, meaning "somebody marked
+// this, with or without a matter" — the distinction that earned the hollow
+// amber ring on 09-01. It is gone because it became a tautology: once unchosen
+// lines are filtered out, every unsettled line IS `needed`, so the flag said
+// what `!settled` already said. The state it named survives as the chosen
+// circle; only the redundant field is gone.
 
 export interface TransferProgress {
   /** Service lines that are marked done, already done, or not applicable. */
@@ -295,6 +321,12 @@ export interface TransferProgressRow {
   matter_id?: string | null;
   progress?: ServiceProgress;
   matterStatus?: string | null;
+  /**
+   * The linked matter's current stage, for list pages that carry no `progress`.
+   * Detail pages leave it unset and the dot reads `progress.attention` instead —
+   * both routes end at isWaitingOnFirm, so they cannot disagree.
+   */
+  matterStage?: string | null;
   /** Service code or label, for the dot's name. */
   serviceCode?: string | null;
   label?: string | null;
@@ -347,11 +379,15 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
     return {
       name: r.label?.trim() || serviceLabel(r.serviceCode),
       settled,
+      // Detail pages pass `progress`; list pages pass the raw stage. Both end at
+      // isWaitingOnFirm, so the same transfer cannot read differently on a card
+      // and on its own page.
+      attention:
+        !settled && (r.progress?.attention || isWaitingOnFirm(r.matterStage)),
       // Work is under way: a matter exists and has not finished. A viewer who
       // cannot see the matter still gets this from matter_id, which is on the
       // service row itself rather than behind the RLS-filtered embed.
       running: !settled && r.status === "needed" && Boolean(r.matter_id),
-      needed: !settled && r.status === "needed",
     };
   });
 
@@ -392,7 +428,7 @@ export function transferProgress(rows: TransferProgressRow[]): TransferProgress 
  * only whether the work finished.
  */
 export const TRANSFER_PROGRESS_SELECT =
-  "transfer_id, parent_id, status, matter_id, service_code, label, position, matters(status)";
+  "transfer_id, parent_id, status, matter_id, service_code, label, position, matters(status, current_stage)";
 
 interface ProgressSelectRow {
   transfer_id: string;
@@ -402,7 +438,7 @@ interface ProgressSelectRow {
   service_code: string | null;
   label: string | null;
   position: number | null;
-  matters?: { status: string | null } | null;
+  matters?: { status: string | null; current_stage: string | null } | null;
 }
 
 /**
@@ -425,6 +461,7 @@ export function transferProgressById(
       status: raw.status,
       matter_id: raw.matter_id,
       matterStatus: raw.matters?.status ?? null,
+      matterStage: raw.matters?.current_stage ?? null,
       serviceCode: raw.service_code,
       label: raw.label,
       position: raw.position ?? 0,
