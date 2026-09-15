@@ -5,6 +5,7 @@ import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { transferProgressBlockedReason, type TransferPartyRow } from "@/lib/transfer-gate";
 import { ensureTransferServices } from "@/lib/transfer-services-init";
 import { syncPartiesFromTransfer } from "@/lib/transfer-party-sync";
+import { syncTransferGrant } from "@/lib/transfer-grants";
 import { requireStaff } from "@/lib/staff";
 
 export const runtime = "nodejs";
@@ -158,6 +159,24 @@ export async function POST(request: Request) {
   // and the registration gate see what this form just saved.
   await syncPartiesFromTransfer(admin, transfer.id as string, transferPayload(body));
 
+  // 🔴 NOT best-effort. Naming a firm here and not granting it is what made a
+  // staff-created transfer invisible to its own attorney — listed on the firm's
+  // admin page, absent from the firm's portal, with nothing on either screen to
+  // say why. If the grant cannot be written the caller has to hear about it,
+  // the way transfer-from-request.ts already treats the same failure.
+  const granted = await syncTransferGrant(admin, {
+    transferId: transfer.id as string,
+    firmId: (transfer.business_partner_id as string | null) ?? null,
+    actorId: auth.callerId,
+    note: "Transfer created by staff",
+  });
+  if (!granted.ok) {
+    return NextResponse.json(
+      { message: `Transfer created but access could not be granted: ${granted.error}` },
+      { status: 500 }
+    );
+  }
+
   // Every transfer gets its checklist on creation (Zewn, 2026-08-28). Best
   // effort — the "Create the service list" button remains as the fallback.
   await ensureTransferServices(admin, transfer.id as string, auth.callerId);
@@ -228,6 +247,22 @@ export async function PATCH(request: Request) {
       ? `Reference "${reference}" is already used by another transfer.`
       : error.message;
     return NextResponse.json({ message }, { status: 400 });
+  }
+
+  // The firm pointer can be changed on this form, and access has to follow it —
+  // in both directions. Not best-effort, for the same reason as on POST: a
+  // transfer whose attorney cannot open it fails silently on every screen.
+  const granted = await syncTransferGrant(admin, {
+    transferId: id,
+    firmId: (transfer.business_partner_id as string | null) ?? null,
+    actorId: auth.callerId,
+    note: "Firm set on the transfer form",
+  });
+  if (!granted.ok) {
+    return NextResponse.json(
+      { message: `Transfer saved but access could not be updated: ${granted.error}` },
+      { status: 500 }
+    );
   }
 
   // 060 / §92 — registering the transfer is the moment the sale completes, so
