@@ -64,6 +64,7 @@ import {
 import { logMatterActivity } from "@/lib/activity";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { signedDocUrls } from "@/lib/storage";
+import { resolveMatterPropertySubject } from "@/lib/doc-naming";
 
 export const dynamic = "force-dynamic";
 
@@ -553,6 +554,11 @@ export default async function AdminMatterDetailPage({
 
   // Short-lived signed URLs for docs stored in Supabase Storage (private bucket).
   const signedUrls = documents.length > 0 ? await signedDocUrls(createAdminClient(), documents) : {};
+
+  // Resolved with the SAME function the naming code calls, so the upload
+  // panel's preview and the name the server saves cannot drift apart. They did
+  // once, on 2026-09-04, when each worked it out its own way.
+  const propertySubject = await resolveMatterPropertySubject(createAdminClient(), id);
 
   // FICA vault (migration 025): reusable docs for the matter's client + each
   // party's linked client, so the in-place intake can offer "Reuse".
@@ -1128,10 +1134,7 @@ export default async function AdminMatterDetailPage({
                 matterId={id}
                 parties={uploadParties}
                 municipality={matter.municipality}
-                propertyDescription={
-                  (matter as unknown as { property_description?: string | null })
-                    .property_description ?? null
-                }
+                propertySubject={propertySubject}
               />
             </div>
 
