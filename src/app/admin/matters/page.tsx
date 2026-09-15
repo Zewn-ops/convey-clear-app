@@ -115,6 +115,31 @@ export default async function AdminMattersPage({
     );
   }
 
+  // 🔴 "Last update" MUST NOT be matters.updated_at.
+  //
+  // updated_at is bumped by trg_matters_updated_at on any column write, so a
+  // data migration re-dates the entire table. 092 did it on 2026-09-15 and 096
+  // again on 09-16, after which all 21 rows on this list read "Last update
+  // today" — a column that says the same false thing about every row is worse
+  // than no column, because a reader trusts it once and then stops.
+  //
+  // What a person means by "last update" is the last time something HAPPENED on
+  // the matter, which is exactly what matter_activities records. One extra
+  // query, bounded by the page size, rather than a denormalised column that
+  // would need its own trigger and could drift the same way.
+  const lastActivity = new Map<string, string>();
+  if (matters.length) {
+    const { data: acts } = await supabase
+      .from("matter_activities")
+      .select("matter_id, created_at")
+      .in("matter_id", matters.map((m) => m.id))
+      .order("created_at", { ascending: false });
+    for (const a of (acts ?? []) as { matter_id: string; created_at: string }[]) {
+      // Ordered newest-first, so the first one seen per matter is the latest.
+      if (!lastActivity.has(a.matter_id)) lastActivity.set(a.matter_id, a.created_at);
+    }
+  }
+
   const hasActiveFilters =
     filters.status !== "active" ||
     filters.scope !== "all" ||
@@ -290,7 +315,8 @@ export default async function AdminMattersPage({
               {matters.map((m, i) => (
                 <MatterCard
                   key={m.id}
-                  matter={m}
+                  // updated_at is a write timestamp, not an event. See above.
+                  matter={{ ...m, last_activity_at: lastActivity.get(m.id) ?? null }}
                   href={`/admin/matters/${m.id}`}
                   unread={unread.has(m.id)}
                   showStage

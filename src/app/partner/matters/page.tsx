@@ -56,6 +56,23 @@ export default async function PartnerMatters({
     (notes ?? []).forEach((n) => (n as { matter_id: string | null }).matter_id && unread.add((n as { matter_id: string }).matter_id));
   }
 
+  // "Last update" is the last thing that HAPPENED, not the last column write.
+  // matters.updated_at is bumped by any write, so a data migration re-dates the
+  // whole table — after 092 and 096 every row read "today". See the longer note
+  // on the admin list. RLS scopes these rows, so a firm only ever sees activity
+  // on matters it can already read.
+  const lastActivity = new Map<string, string>();
+  if (matters.length) {
+    const { data: acts } = await supabase
+      .from("matter_activities")
+      .select("matter_id, created_at")
+      .in("matter_id", matters.map((m) => m.id))
+      .order("created_at", { ascending: false });
+    for (const a of (acts ?? []) as { matter_id: string; created_at: string }[]) {
+      if (!lastActivity.has(a.matter_id)) lastActivity.set(a.matter_id, a.created_at);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="page-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -90,7 +107,7 @@ export default async function PartnerMatters({
           {matters.map((m) => (
             <MatterCard
               key={m.id}
-              matter={m}
+              matter={{ ...m, last_activity_at: lastActivity.get(m.id) ?? null }}
               href={`/partner/matters/${m.id}`}
               unread={unread.has(m.id)}
               // No stage and no status for a firm (2026-09-02). Both report OUR
