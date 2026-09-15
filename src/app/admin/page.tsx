@@ -10,7 +10,7 @@ import {
   transferProgressById,
   type TransferProgress,
 } from "@/lib/transfer-service-progress";
-import { ArrowRight, Building2, Inbox, FileCheck2 } from "lucide-react";
+import { ArrowRight, Building2, Inbox, FileCheck2, Briefcase } from "lucide-react";
 
 export const metadata = { title: "Admin Overview — ConveyClear" };
 export const dynamic = "force-dynamic";
@@ -32,6 +32,7 @@ export default async function AdminPage() {
     { count: pendingRequests },
     { count: pendingMatterDocs },
     { count: pendingTransferDocs },
+    { count: pendingFirmMatters },
     { data: linkedRows },
   ] = await Promise.all([
     // Oldest first: the question is which transaction has gone quiet, not which
@@ -60,6 +61,14 @@ export default async function AdminPage() {
       .select("id", { count: "exact", head: true })
       .is("approved_at", null)
       .is("disapproved_at", null),
+    // 098 — matters a FIRM opened and nobody here has answered. Without this
+    // tile the whole review flow is invisible: the matter lands in the list
+    // with no badge and no count, and the only way to find it is to open that
+    // exact matter. A queue nobody can see is not a queue.
+    supabase
+      .from("matters")
+      .select("id", { count: "exact", head: true })
+      .eq("firm_review_state", "pending"),
     // Matter counts for the cards below, in one query rather than per row.
     supabase.from("matters").select("transfer_id").not("transfer_id", "is", null),
   ]);
@@ -138,6 +147,26 @@ export default async function AdminPage() {
             Open approvals <ArrowRight className="h-3 w-3" />
           </p>
         </Link>
+
+        {/* 098 — matters a firm opened, waiting on us. Hidden at zero rather
+            than shown as a proud nought: three tiles reading 0 teach a reader to
+            stop looking at the row, and this is the one that means somebody
+            outside the building is waiting. */}
+        {(pendingFirmMatters ?? 0) > 0 && (
+          <Link
+            href="/admin/matters?review=pending&assignee=all"
+            className="group rounded-xl bg-surface p-5 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line dark:hover:ring-action/40"
+          >
+            <Briefcase className="h-5 w-5 text-required" />
+            <p className="mt-3 text-[26px] font-semibold tabular-nums tracking-[-0.025em] text-ink">
+              {pendingFirmMatters}
+            </p>
+            <p className="mt-0.5 text-sm text-ink-2">Matters from firms</p>
+            <p className="mt-2 inline-flex items-center gap-1 text-xs text-ink-3 group-hover:text-action">
+              Take them on <ArrowRight className="h-3 w-3" />
+            </p>
+          </Link>
+        )}
       </div>
 
       <div>
