@@ -53,6 +53,8 @@ export type MatterCardRow = {
   services?: { code?: string | null; name?: string | null } | null;
   /** The transaction this matter belongs to, where it belongs to one (029). */
   property_transfers?: { id?: string | null; reference?: string | null } | null;
+  /** 098 — set only on matters a FIRM proposed. NULL on every staff-created one. */
+  firm_review_state?: string | null;
 };
 
 export default function MatterCard({
@@ -166,6 +168,22 @@ export default function MatterCard({
           </StatusPill>
         )}
       </div>
+
+      {/* A matter the firm proposed and ConveyClear has not answered. Said on
+          the card rather than only on the detail page: the whole risk of a
+          draft state is that someone reads a list and assumes work is under
+          way. A rejected one keeps its chip too, so it does not simply look
+          like an ordinary matter that never moves. */}
+      {m.firm_review_state === "pending" && (
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-waiting-tint px-2 py-1 text-[11px] font-semibold text-waiting">
+          Awaiting ConveyClear review
+        </p>
+      )}
+      {m.firm_review_state === "rejected" && (
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-danger-tint px-2 py-1 text-[11px] font-semibold text-danger">
+          Not taken on
+        </p>
+      )}
 
       {/* Circles above the bar, matching the transfer's service lines (Zewn,
           2026-08-28). A matter has exactly ONE pipeline, so one stepper per card
