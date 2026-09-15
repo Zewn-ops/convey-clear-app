@@ -21,6 +21,8 @@ type TransferFields = {
   reference?: string;
   property_description?: string;
   municipality?: string;
+  /** 097 — the sub-area of the council. ConveyClear fills this, not the firm. */
+  council_region?: string;
   status?: string;
   business_partner_id?: string;
   estate_agent_partner_id?: string;
@@ -102,6 +104,7 @@ function transferPayload(body: TransferFields) {
   return {
     property_description: clean(body.property_description),
     municipality: clean(body.municipality),
+    council_region: clean(body.council_region),
     business_partner_id: clean(body.business_partner_id),
     estate_agent_partner_id: clean(body.estate_agent_partner_id),
     seller_client_id: clean(body.seller_client_id),

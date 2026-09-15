@@ -457,6 +457,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
                 { label: "Reference", value: transfer.reference },
                 { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
                 { label: "Council", value: municipalityLabel(transfer.municipality) },
+                // 097 — read-only here. Jukka, asked whether attorneys should
+                // see it: "no no no, they can see it." ConveyClear enters it.
+                { label: "Council region", value: transfer.council_region },
                 // 077 — visible to the firm as well as staff. Zewn: "the sale price
                 // can be available to all, its just one number which is purchase
                 // price."
