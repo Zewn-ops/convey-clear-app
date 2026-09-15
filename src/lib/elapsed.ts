@@ -61,3 +61,33 @@ export function relativeDays(from: string | Date | null | undefined, to: Date = 
   const months = Math.round(days / 30);
   return months < 24 ? `${months} months ago` : `${Math.round(days / 365)} years ago`;
 }
+
+/**
+ * How a waiting period should read at a glance.
+ *
+ * Francois, 2026-09-15, on the connectors between the phase circles: green for
+ * the first few days, yellow after a week or two, red past three weeks. Jukka
+ * extended it — the line should move through orange on the way, and reset to
+ * green the moment the matter advances, so a firm can scroll a list without
+ * reading it and see only the rows that have stopped.
+ *
+ * Thresholds are in WORKDAYS, because the chip beside these circles already
+ * says "Open 14 workdays" and two different day-counts on one card is worse
+ * than either. The calendar intent maps cleanly: 5 workdays is about a week,
+ * 10 about a fortnight, 15 about three weeks.
+ *
+ * `late` is deliberately not the last band. Jukka wants to distinguish "this is
+ * taking longer than usual" from "this is past the 30 days we promised", and a
+ * three-colour scale collapses those into one.
+ */
+export type AgeTone = "fresh" | "warn" | "late" | "overdue";
+
+export const AGE_BANDS = { warn: 5, late: 10, overdue: 15 } as const;
+
+export function ageTone(workdays: number | null | undefined): AgeTone {
+  if (workdays === null || workdays === undefined) return "fresh";
+  if (workdays > AGE_BANDS.overdue) return "overdue";
+  if (workdays > AGE_BANDS.late) return "late";
+  if (workdays > AGE_BANDS.warn) return "warn";
+  return "fresh";
+}

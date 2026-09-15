@@ -83,7 +83,10 @@ export async function POST(request: Request) {
 
   const payload = {
     type: "enquiry",
-    title: `New enquiry: ${subject}`,
+    // resolvedSubject, not subject. The matter conversation deliberately sends
+    // NO subject — that is the whole point of the naming above — so this read
+    // "New enquiry: " with nothing after the colon on every matter message.
+    title: `New enquiry: ${resolvedSubject}`,
     body: message.slice(0, 140),
     enquiry_id: enquiry.id,
     matter_id: matterId,

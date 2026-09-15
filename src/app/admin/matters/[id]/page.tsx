@@ -201,7 +201,20 @@ export default async function AdminMatterDetailPage({
     // Note 2026-06-22: first staff progression flips New → Open automatically.
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
 
-    await supabase.from("matters").update({ current_phase: newPhase, ...statusPatch }).eq("id", matterId);
+    // A phase change resets the same clock a stage change does (096). The
+    // connector this colours runs between PHASE circles, so leaving a phase is
+    // the movement it is measuring — and the stages of the old phase are not
+    // the stages of the new one, so the matter is no longer on the stage the
+    // clock was counting either way.
+    const phaseMoved = (row as { current_phase?: string | null } | null)?.current_phase !== newPhase;
+    await supabase
+      .from("matters")
+      .update({
+        current_phase: newPhase,
+        ...(phaseMoved ? { stage_changed_at: new Date().toISOString() } : {}),
+        ...statusPatch,
+      })
+      .eq("id", matterId);
     // Reverting to an earlier phase clears any stale council decision (see helper).
     await clearOutcomeIfReverted(supabase, matterId, pl, { phaseKey: newPhase }, userId || null);
     const logged = await logMatterActivity(supabase, {
@@ -239,7 +252,20 @@ export default async function AdminMatterDetailPage({
     const prevStage = (row as { current_stage?: string | null } | null)?.current_stage ?? null;
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
 
-    await supabase.from("matters").update({ current_stage: newStage, ...statusPatch }).eq("id", matterId);
+    // stage_changed_at rides in the SAME update as current_stage (096), so the
+    // clock and the stage it measures cannot disagree. Only when the stage
+    // actually moves: re-saving the stage a matter is already on is not
+    // movement, and resetting the counter on a no-op would hide exactly the
+    // stall the counter exists to show.
+    const stageMoved = prevStage !== newStage;
+    await supabase
+      .from("matters")
+      .update({
+        current_stage: newStage,
+        ...(stageMoved ? { stage_changed_at: new Date().toISOString() } : {}),
+        ...statusPatch,
+      })
+      .eq("id", matterId);
     // Reverting to an earlier stage clears any stale council decision (see helper).
     await clearOutcomeIfReverted(supabase, matterId, pl, { stageKey: newStage }, userId || null);
     const logged = await logMatterActivity(supabase, {

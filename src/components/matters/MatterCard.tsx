@@ -5,7 +5,7 @@ import MetaChip from "@/components/ui/MetaChip";
 import PhaseProgress from "@/components/ui/PhaseProgress";
 import ServiceSteps from "@/components/ui/ServiceSteps";
 import { formatDate, municipalityLabel } from "@/lib/utils";
-import { workdaysSince, relativeDays } from "@/lib/elapsed";
+import { workdaysSince, relativeDays, ageTone } from "@/lib/elapsed";
 import {
   getPipeline,
   phaseLabel,
@@ -49,6 +49,10 @@ export type MatterCardRow = {
   service_subtype?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  /** When the matter last moved phase or stage (096). Optional: a caller that
+   *  does not select it gets a green rail and no in-stage chip, which is the
+   *  behaviour every screen had before the counter existed. */
+  stage_changed_at?: string | null;
   clients?: { full_name?: string | null; business_name?: string | null } | null;
   services?: { code?: string | null; name?: string | null } | null;
   /** The transaction this matter belongs to, where it belongs to one (029). */
@@ -108,6 +112,12 @@ export default function MatterCard({
 
   const open = workdaysSince(m.created_at);
   const seen = relativeDays(m.updated_at);
+  // How long on the current phase/stage, and the colour that follows from it.
+  // Falls back to the matter's own age: a matter that has never moved has been
+  // waiting since it was created, which is the honest reading and the one that
+  // makes an untouched matter go red rather than sit permanently green.
+  const inStage = workdaysSince(m.stage_changed_at ?? m.created_at);
+  const waitTone = ageTone(inStage);
   const transferRef = m.property_transfers?.reference?.trim() || null;
   const stalled = open !== null && open > STALLED_WORKDAYS;
   const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
@@ -180,11 +190,20 @@ export default function MatterCard({
             steps={steps.map((s) => phaseLabel(pl, s.key, true))}
             phase={idx + 1}
             done={idx === steps.length - 1}
+            ageTone={waitTone}
           />
           <PhaseProgress
             phase={idx + 1}
             total={steps.length}
-            label={phaseLabel(pl, m.current_phase, true)}
+            /* The phase the stepper is POINTING AT, not the stored column. A
+               matter written before its pipeline existed carries current_phase
+               NULL, and phaseLabel renders that as an em dash — so the card read
+               "Phase 1 of 6 · —" while the circle above it correctly showed the
+               pre-phase highlighted. Seven matters on production read that way
+               on 2026-09-15. idx already resolves NULL to the pre-phase (see
+               above); taking the label from the same place keeps the two halves
+               of one sentence in agreement. */
+            label={phaseLabel(pl, steps[idx]?.key ?? m.current_phase, true)}
             done={idx === steps.length - 1}
           />
         </div>
@@ -199,6 +218,19 @@ export default function MatterCard({
           />
         )}
         {stage && <MetaChip label="Stage" value={stage} />}
+        {/* The second counter Marlene and Francois asked for: not how old the
+            matter is, but how long it has sat where it is. Toned with the same
+            scale as the connector above, so the chip and the line agree.
+            Suppressed when it would only repeat the "Open" chip — on a matter
+            that has never moved the two numbers are the same number, and two
+            chips saying 14 workdays reads as a bug. */}
+        {inStage !== null && inStage !== open && (
+          <MetaChip
+            label="In stage"
+            value={`${inStage} workday${inStage === 1 ? "" : "s"}`}
+            tone={waitTone === "fresh" ? "neutral" : waitTone === "warn" ? "waiting" : "required"}
+          />
+        )}
         {seen && <MetaChip label="Last update" value={seen} />}
         {/* The transaction this matter sits under. Since 2026-09-01 the matter
             TITLE carries the transfer reference, so without a way through, the
