@@ -29,7 +29,7 @@ export default async function PartnerMatters({
       // matter belongs to (2026-09-02). RLS scopes the embed the same way it
       // scopes the transfer itself, so one the firm cannot see comes back null
       // and the chip simply does not render.
-      .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, updated_at, stage_changed_at, firm_review_state, clients(full_name, business_name), services(code, name), property_transfers(id, reference)", {
+      .select("id, title, current_phase, current_stage, status, municipality, service_subtype, created_at, updated_at, stage_changed_at, firm_review_state, clients(full_name, business_name), services(code, name), property_transfers(id, reference, council_region)", {
         count: "exact",
       }),
     filters

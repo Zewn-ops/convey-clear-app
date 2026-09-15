@@ -55,8 +55,15 @@ export type MatterCardRow = {
   stage_changed_at?: string | null;
   clients?: { full_name?: string | null; business_name?: string | null } | null;
   services?: { code?: string | null; name?: string | null } | null;
-  /** The transaction this matter belongs to, where it belongs to one (029). */
-  property_transfers?: { id?: string | null; reference?: string | null } | null;
+  /** The transaction this matter belongs to, where it belongs to one (029).
+   *  council_region rides along from 097 — the region is a fact about the
+   *  PROPERTY, so it is stored once on the transfer rather than copied onto
+   *  every matter under it, where the two would drift. */
+  property_transfers?: {
+    id?: string | null;
+    reference?: string | null;
+    council_region?: string | null;
+  } | null;
   /** 098 — set only on matters a FIRM proposed. NULL on every staff-created one. */
   firm_review_state?: string | null;
 };
@@ -130,9 +137,16 @@ export default function MatterCard({
   const service = [serviceDisplayName(m.services?.code, m.services?.name), m.service_subtype]
     .filter(Boolean)
     .join(": ");
-  const subtitle = [service, m.municipality ? municipalityLabel(m.municipality) : null]
-    .filter(Boolean)
-    .join(" · ");
+  // Jukka, 2026-09-15: "if you scroll down we'll need to be able to see the
+  // council — so in that case, councils are the council City of Tshwane, and
+  // then region." Region follows the council it qualifies, and is silently
+  // absent until someone sets one.
+  const council = m.municipality
+    ? [municipalityLabel(m.municipality), m.property_transfers?.council_region?.trim() || null]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+  const subtitle = [service, council].filter(Boolean).join(" · ");
 
   // A stage the client is not meant to see collapses to "In progress" rather
   // than leaking an internal step name.
