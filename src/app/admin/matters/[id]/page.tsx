@@ -884,9 +884,10 @@ export default async function AdminMatterDetailPage({
                 </p>
                 <p className="mt-1 text-[13px] text-ink-2">
                   {municipalityLabel(matter.municipality)} / {svc?.name ?? "this service"} has no mapped
-                  process yet, so this matter is running the general four-step one. The stages below are
-                  ours, not the council&apos;s. Progress still tracks and the client still sees where the
-                  matter is — they are not shown this note.
+                  process yet, so this matter is running the general one — four working phases between
+                  New Instruction and Successful. The stages below are ours, not the council&apos;s.
+                  Progress still tracks and the client still sees where the matter is — they are not
+                  shown this note.
                 </p>
               </div>
             )}

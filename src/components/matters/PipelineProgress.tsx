@@ -53,7 +53,11 @@ export default function PipelineProgress({
                   (done ? "bg-green-500 text-white" : active ? "bg-action-fill text-white" : "bg-line text-ink-3")
                 }
               >
-                {done ? <CheckCircle2 className="h-5 w-5" /> : i}
+                {/* 1-based, to agree with the "Phase 3 of 6" line above this
+                    stepper and with the cards on the matters list. The raw
+                    index numbered New Instruction 0 and left every circle one
+                    behind its own caption. */}
+                {done ? <CheckCircle2 className="h-5 w-5" /> : i + 1}
               </div>
               <p className={"mt-2 text-[11px] leading-tight " + (active ? "font-semibold text-action" : "text-ink-3")}>
                 {s.name}
