@@ -99,13 +99,7 @@ export default function ServiceSteps({
                   against the 8px phase bar directly beneath it. */}
               <span
                 className={`h-[3px] flex-1 rounded-full ${
-                  i === 0
-                    ? "bg-transparent"
-                    : i === currentIdx
-                      ? waitClass
-                      : i < currentIdx
-                        ? "bg-ok"
-                        : "bg-line"
+                  i === 0 ? "bg-transparent" : i <= currentIdx ? "bg-ok" : "bg-line"
                 }`}
               />
               <span
@@ -120,8 +114,29 @@ export default function ServiceSteps({
               >
                 {isDone ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
               </span>
+              {/* 🔴 THE WAIT IS THE SEGMENT LEAVING THE ACTIVE CIRCLE, NOT THE
+                  ONE ARRIVING AT IT.
+                  
+                  It was the arriving one for four hours on 2026-09-15, and that
+                  is invisible at phase 1 — the first cell's left connector is
+                  transparent by design, because nothing precedes it. On
+                  production that hid the colour on 26 of 32 matters, every one
+                  of them sitting at New Instruction. It compiled, deployed and
+                  did nothing.
+                  
+                  Leaving also reads better: green is the distance travelled,
+                  and the coloured stub is the road not yet taken — how long we
+                  have stood here before the next step. */}
               <span
-                className={`h-[3px] flex-1 rounded-full ${i === steps.length - 1 ? "bg-transparent" : i < currentIdx ? "bg-ok" : "bg-line"}`}
+                className={`h-[3px] flex-1 rounded-full ${
+                  i === steps.length - 1
+                    ? "bg-transparent"
+                    : i === currentIdx
+                      ? waitClass
+                      : i < currentIdx
+                        ? "bg-ok"
+                        : "bg-line"
+                }`}
               />
             </div>
             {/* Names wrap rather than truncate. A phase called "Council
