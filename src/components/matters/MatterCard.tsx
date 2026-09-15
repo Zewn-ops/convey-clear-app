@@ -246,7 +246,23 @@ export default function MatterCard({
           <MetaChip
             label="Open"
             value={`${open} workday${open === 1 ? "" : "s"}`}
-            tone={stalled ? "waiting" : "neutral"}
+            /* When the matter has never moved, this IS the wait — the "In stage"
+               chip below is suppressed as a duplicate number — so it has to
+               carry the colour or a stale matter reads as neutral forever. On a
+               matter that HAS moved, the two numbers mean different things and
+               only the stage one is a wait, so this falls back to how long it
+               has been open and the 60-workday stall rule. */
+            tone={
+              inStage === open
+                ? waitTone === "fresh"
+                  ? "neutral"
+                  : waitTone === "warn"
+                    ? "waiting"
+                    : "required"
+                : stalled
+                  ? "waiting"
+                  : "neutral"
+            }
           />
         )}
         {stage && <MetaChip label="Stage" value={stage} />}
