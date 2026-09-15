@@ -573,9 +573,9 @@ export default function TransferServices({
                   Open matter
                 </Link>
               ) : (
-                canManage &&
                 r.status === "needed" &&
-                code !== "OTHER" && (
+                code !== "OTHER" &&
+                (canManage ? (
                   // Explicit, not automatic — see the note above the component.
                   <Link
                     href={`/admin/matters/new?transfer=${transferId}&service=${code}`}
@@ -583,7 +583,25 @@ export default function TransferServices({
                   >
                     Open as matter
                   </Link>
-                )
+                ) : (
+                  canMark && (
+                    // The firm's own route to a matter (2026-09-15). Marlene:
+                    // "they click the plus button and it pops up with the matter
+                    // creation page". Jukka, on why clicking a service should do
+                    // something: "this must redirect to a new page … call to
+                    // action to that page."
+                    //
+                    // Gated on canMark, which is already "this firm owns this
+                    // transfer" — a client or an estate agent looking at the same
+                    // component must not be offered it.
+                    <Link
+                      href={`/partner/matters/new?transfer=${transferId}&service=${code}`}
+                      className="shrink-0 text-xs font-medium text-action hover:underline"
+                    >
+                      Open as matter
+                    </Link>
+                  )
+                ))
               )}
 
               {mayPickStatus ? (

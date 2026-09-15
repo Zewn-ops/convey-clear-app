@@ -27,6 +27,7 @@ import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
 import MatterPocsCard from "@/components/matters/MatterPocsCard";
 import PipelineProgress from "@/components/matters/PipelineProgress";
+import FirmReviewPanel from "@/components/matters/FirmReviewPanel";
 import PhaseProgress from "@/components/ui/PhaseProgress";
 import DocRenameButton from "@/components/matters/DocRenameButton";
 import CouncilPackButton from "@/components/matters/CouncilPackButton";
@@ -508,7 +509,7 @@ export default async function AdminMatterDetailPage({
     supabase
       .from("matters")
       .select(
-        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, transfer_id, created_at, updated_at, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), firms(name, abbreviation), services(id, code, name, config), property_transfers(id, reference, status)"
+        "id, title, current_phase, current_stage, status, priority, deadline, deal_value, municipality, partner_file_ref, service_subtype, service_data, service_notes, drive_folder_id, transfer_id, created_at, updated_at, firm_review_state, firm_review_note, submitted_by_user_id, clients(id, entity_type, full_name, first_name, last_name, business_name, primary_email, primary_cell), firms(name, abbreviation), services(id, code, name, config), property_transfers(id, reference, status)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -909,6 +910,16 @@ export default async function AdminMatterDetailPage({
                 service yet, which is our problem to solve and not theirs to
                 carry. Staff need it because the stage names below are generic
                 and would otherwise look like the council's own. */}
+            {/* A matter the firm proposed, before anything about the pipeline:
+                whether we are doing this at all comes before where it has got
+                to. Renders nothing on a staff-created matter (098). */}
+            <FirmReviewPanel
+              matterId={matter.id}
+              state={(matter as { firm_review_state?: string | null }).firm_review_state ?? null}
+              note={(matter as { firm_review_note?: string | null }).firm_review_note ?? null}
+              submittedBy={(matter as { firms?: { name?: string | null } | null }).firms?.name ?? null}
+            />
+
             {pipeline.isDefault && (
               <div className="rounded-lg bg-waiting-tint px-3.5 py-3 ring-1 ring-inset ring-waiting/20">
                 <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-waiting">
