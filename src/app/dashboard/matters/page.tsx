@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+export const metadata = { title: "My matters — ConveyClear" };
+
 /**
  * Clients do not see matters.
  *

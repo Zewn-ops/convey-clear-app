@@ -10,6 +10,8 @@ import { formatDateTime } from "@/lib/utils";
 import { isStaffRole, ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryMessage, type EnquiryStatus } from "@/types";
 import { ArrowLeft, Phone } from "lucide-react";
 
+export const metadata = { title: "Enquiry — ConveyClear Admin" };
+
 export const dynamic = "force-dynamic";
 
 function statusVariant(s: EnquiryStatus): "info" | "success" | "warning" | "gray" {

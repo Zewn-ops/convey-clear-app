@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +20,24 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
   const dots = useNotifyDots();
   const toolsActive = toolsItems.some((item) => pathname.startsWith(item.href));
   const [toolsOpen, setToolsOpen] = useState(toolsActive);
+
+  // The nav is taller than the pane it sits in — sixteen destinations against
+  // roughly 570px on a laptop — so it scrolls. Admin Tools sits at the BOTTOM of
+  // that list, and expanding it added five more items below the fold: the click
+  // revealed one child and a sliver of the next, which reads as a broken menu
+  // rather than a scrolled one.
+  //
+  // block: "nearest" scrolls the container by the minimum needed, so the group's
+  // own button stays put when the children already fit and the list moves only
+  // as far as it must when they do not.
+  const toolsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!toolsOpen) return;
+    toolsRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [toolsOpen]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -81,7 +99,7 @@ export default function AdminSidebar({ role }: { role?: UserRole | null }) {
           />
         </button>
         {toolsOpen && (
-          <div className="ml-3 space-y-1 border-l border-white/10 pl-3">
+          <div ref={toolsRef} className="ml-3 space-y-1 border-l border-white/10 pl-3">
             {toolsItems.map((item) => {
               const active = pathname.startsWith(item.href);
               return (

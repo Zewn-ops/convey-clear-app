@@ -9,6 +9,8 @@ import { ENQUIRY_STATUS_LABELS, type Enquiry, type EnquiryMessage, type EnquiryS
 import { ArrowLeft, Phone } from "lucide-react";
 import { CONVEYCLEAR_PHONE, telHref } from "@/lib/contact";
 
+export const metadata = { title: "Enquiry — ConveyClear Partner" };
+
 function statusVariant(s: EnquiryStatus): "info" | "success" | "warning" | "gray" {
   return ({ open: "warning", assigned: "info", resolved: "success", closed: "gray" } as const)[s] ?? "gray";
 }
