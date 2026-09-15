@@ -78,6 +78,15 @@ export default async function NotificationsPageBody({
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(PAGE_SIZE);
+  // Archived means "I am done with this" (see the bell's header comment). The
+  // bell hides archived rows from every view but its own Archived tab, and its
+  // badge counts !read_at AND !archived_at. This page did neither: it listed
+  // rows the bell had dropped and counted them as unread, so the badge read 25
+  // while the page read 40, for one person at one moment.
+  //
+  // The bell is the one that is right — a notification you have archived is not
+  // waiting on you. Archived rows stay reachable in the bell's Archived view.
+  query = query.is("archived_at", null);
   if (filter === "unread") query = query.is("read_at", null);
   if (type) query = query.eq("type", type);
   if (q) {
