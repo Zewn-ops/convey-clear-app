@@ -103,7 +103,17 @@ const dot = (row: Partial<Row>) => {
   const d = transferProgress([line(row)]).dots[0];
   return d.settled ? "settled" : d.attention ? "attention" : d.running ? "running" : "chosen";
 };
+// The "chosen" state is drawn as an amber "!" since 2026-09-15 — a service
+// asked for that nobody has opened as a matter. The state itself is unchanged;
+// only its rendering is, so this assertion still pins the resolver.
 eq("chosen, no matter", dot({ status: "needed" }), "chosen");
+// It must NOT be swallowed by the documents-outstanding alert: the two share a
+// glyph on screen and are different facts underneath.
+eq(
+  "chosen-with-no-matter is not the documents alert",
+  transferProgress([line({ status: "needed" })]).dots[0].attention,
+  false
+);
 eq("matter open", dot({ status: "needed", matter_id: "m1" }), "running");
 eq(
   "matter on documents_outstanding (list-page route)",

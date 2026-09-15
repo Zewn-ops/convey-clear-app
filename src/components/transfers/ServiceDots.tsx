@@ -21,10 +21,24 @@ import type { TransferServiceDot } from "@/lib/transfer-service-progress";
  *
  * ── FOUR STATES (Zewn, 2026-09-11) ──────────────────────────────────────────
  *
- *   amber outline   chosen — asked for, no matter open yet
+ *   AMBER + "!"     chosen, but nobody has opened it as a matter yet
  *   amber filled    in progress — a matter is open and moving
  *   ORANGE + "!"    the attorney has to attend to it (Documents Outstanding)
  *   green + tick    done — settled, already done, or not applicable
+ *
+ * ── THE TWO "!" STATES, AND WHY THEY SHARE A GLYPH (2026-09-15) ─────────────
+ *
+ * Both mean the same class of thing — the ball is in the firm's court — so they
+ * read as one alphabet with two entries rather than two unrelated symbols. What
+ * separates them is the reason, which the title and the accessible name carry:
+ * "add service details" versus "documents outstanding".
+ *
+ * ⚠️ They are distinguished by HUE ALONE at 16px (amber #ad6200 against
+ * required #c74d24), and this file already argues that those two are hard to
+ * tell apart at this size. That is accepted here rather than solved: the states
+ * are adjacent in meaning, so reading one as the other costs a reader nothing —
+ * both say "this one is yours". If they ever need to be told apart at a glance,
+ * change the GLYPH, not the colour.
  *
  * His words: *"amber circle for service chosen, amber dot (filled in) for
  * service being dealt with / in progress, yellow with an exclimation mark if the
@@ -69,13 +83,18 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
           settled: "settled",
           attention: "needs the firm's attention — documents outstanding",
           running: "in progress",
-          chosen: "chosen — not started",
+          chosen: "add service details — not opened as a matter yet",
         }[state];
         const tone = {
           settled: "bg-ok text-white",
           attention: "bg-required text-white",
           running: "bg-waiting text-white",
-          chosen: "border-2 border-waiting bg-transparent",
+          // 🔴 WAS A HOLLOW AMBER RING until 2026-09-15. Zewn: "we should have
+          // it that there is a yellow circle with a ! inside once they choose a
+          // service so they know they need to create the matter for that
+          // service." A ring said "chosen" and stopped there; the service then
+          // sat untouched because nothing asked anyone for the next thing.
+          chosen: "bg-waiting text-white",
         }[state];
         return (
           <li
@@ -95,7 +114,7 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
             {state === "settled" && <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden />}
             {/* A glyph, not an icon: lucide's AlertCircle draws its own ring
                 inside the circle, which at this size reads as a doughnut. */}
-            {state === "attention" && <span aria-hidden>!</span>}
+            {(state === "attention" || state === "chosen") && <span aria-hidden>!</span>}
           </li>
         );
       })}
