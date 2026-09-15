@@ -62,6 +62,16 @@ export interface MatterFilters {
    * matches only that person's matters.
    */
   assigneeIsDefault: boolean;
+  /**
+   * 098 — the firm-review state. "" = no filter.
+   *
+   * Its own filter rather than a queue tab: the three queues answer "who owes
+   * the next move on work we are DOING", and a matter awaiting review is not
+   * work we are doing yet. Folding it into `ours` would have put unaccepted
+   * matters into the same list as accepted ones, which is the distinction the
+   * whole review state exists to draw.
+   */
+  review: string;
   priority: string; // "" = any
   phase: string; // "" = any
   page: number; // 1-indexed
@@ -120,6 +130,7 @@ export function parseMatterFilters(
     q: (get("q") ?? "").trim().slice(0, 100),
     municipality: pick(get("municipality"), municipalityCodes),
     assignee: resolveAssignee(get("assignee"), assigneeIds, defaultAssignee),
+    review: pick(get("review"), ["pending", "approved", "rejected"]),
     assigneeIsDefault: get("assignee") === undefined && Boolean(defaultAssignee),
     firm: pick(get("firm"), firmIds),
     priority: pick(get("priority"), ["priority", "standard", "emerging", "complex", "urgent", "whale"]),
@@ -169,6 +180,7 @@ export function applyMatterFilters(query: any, f: MatterFilters): any {
       ? q.or(`current_owner_id.eq.${f.assignee},current_owner_id.is.null`)
       : q.eq("current_owner_id", f.assignee);
   if (f.priority) q = q.eq("priority", f.priority);
+  if (f.review) q = q.eq("firm_review_state", f.review);
   if (f.phase) q = q.eq("current_phase", f.phase);
   // The queue split. "ours" deliberately includes matters with NO stage set —
   // an uncategorised matter is unstarted work, not work someone else owes us,

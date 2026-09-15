@@ -35,7 +35,7 @@ type MatterRow = Matter &
   };
 
 const LIST_SELECT =
-  "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, updated_at, stage_changed_at, firm_review_state, business_partner_id, clients(full_name, business_name, first_name, last_name), firms(name), services(code, name)";
+  "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, updated_at, stage_changed_at, firm_review_state, business_partner_id, clients(full_name, business_name, first_name, last_name), firms(name), services(code, name), property_transfers(id, reference, council_region)";
 
 export default async function AdminMattersPage({
   searchParams,
@@ -121,7 +121,10 @@ export default async function AdminMattersPage({
     // assignee is deliberately absent here: landing on your own matters is the
     // default state, not an active filter, and badging it as one would put a
     // "clear filters" affordance on a list nobody has filtered.
-    Boolean(filters.q || filters.municipality || filters.firm || filters.priority || filters.phase);
+    Boolean(
+      filters.q || filters.municipality || filters.firm || filters.priority || filters.phase ||
+        filters.review
+    );
 
   // A facet with nothing to choose between is noise — drop it rather than render
   // a control with one option (which is what a fresh database would show).
@@ -150,6 +153,20 @@ export default async function AdminMattersPage({
     // Shown from the first firm onward, not the second: with one firm the
     // control still separates that firm's matters from those with no firm at
     // all, which is a real distinction on a staff list.
+    {
+      // 098. Offered always, not only when something is pending: a staff member
+      // looking for "what have firms sent us" should find the control in the
+      // same place whether the answer is three or none.
+      key: "review",
+      label: "From a firm",
+      defaultValue: "",
+      options: [
+        { value: "", label: "Any" },
+        { value: "pending", label: "Awaiting our decision" },
+        { value: "approved", label: "Taken on" },
+        { value: "rejected", label: "Sent back" },
+      ],
+    },
     ...(firms.length > 0
       ? [
           {
