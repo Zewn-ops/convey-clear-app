@@ -38,6 +38,11 @@ const { isWaitingOnFirm, FIRM_WAIT_STAGE_KEYS } =
   require("@/lib/pipelines") as typeof import("@/lib/pipelines");
 const { ageTone, workdaysSince } =
   require("@/lib/elapsed") as typeof import("@/lib/elapsed");
+const { isPostRegistration } =
+  require("@/lib/councils/registration-stage") as typeof import("@/lib/councils/registration-stage");
+const { councilServiceSpec, documentsOfClass } =
+  require("@/lib/councils") as typeof import("@/lib/councils");
+const { docLabel } = require("@/lib/prc-docs") as typeof import("@/lib/prc-docs");
 
 let fails = 0;
 function eq(what: string, got: unknown, want: unknown) {
@@ -155,6 +160,44 @@ eq("undefined is not a red reading", ageTone(undefined), "fresh");
 const monday = new Date("2026-09-14T09:00:00Z");
 eq("a weekend does not age a matter", workdaysSince("2026-09-11T09:00:00Z", monday), 1);
 eq("five workdays is a week later", workdaysSince("2026-09-07T09:00:00Z", monday), 5);
+
+// ── Before / after registration (2026-09-15) ───────────────────────────────
+// Jukka: "after registration is just two documents — transfer letter, transfer
+// confirmation letter, and updated deed search." Everything else can be
+// gathered before the property is registered in the new owner's name.
+eq("the confirmation letter is post-registration", isPostRegistration("Transfer Confirmation Letter"), true);
+eq("the updated deed search is post-registration", isPostRegistration("Deed Search (updated)"), true);
+eq("the SELLER's deed search is not", isPostRegistration("Deed Search"), false);
+eq("an ID is not", isPostRegistration("Certified ID"), false);
+eq("clearance figures are not", isPostRegistration("Clearance Figures"), false);
+eq("matching is case-insensitive", isPostRegistration("DEED SEARCH (UPDATED)"), true);
+
+// 🔴 THE ASSERTION THAT EARNS ITS KEEP. The patterns are substrings of the
+// registry's own prose labels, and the first draft of them was written from the
+// meeting transcript — "updated deed search" — which matches NOTHING, because
+// the registry says "Deed Search (updated)". The split would have rendered as
+// one unlabelled list and looked exactly like a working feature. So: assert
+// that at least one real document in a real council's real spec is classified
+// post-registration. If a label is renamed, this fails instead of the UI going
+// quietly inert.
+// Built through the SAME accessor the component uses, so the assertion cannot
+// pass while the screen shows something else — the spec is {documents: [...]},
+// reached by documentsOfClass, not by an .input / .supporting field.
+const cooSpec = councilServiceSpec("COT", "COO", null);
+const cooNames = (["input", "supporting"] as const).flatMap((cls) =>
+  documentsOfClass(cooSpec, cls).map((r) => {
+    const shared = docLabel(r.type);
+    return !r.label || r.label === shared ? shared : `${r.label} (${shared})`;
+  })
+);
+eq(
+  "a real COT/COO document the attorney brings is post-registration",
+  cooNames.filter((d) => isPostRegistration(d)),
+  ["Transfer Confirmation Letter"]
+);
+// And the one Jukka was most insistent about stays on the near side: "it's very
+// important for us to have the INITIAL deed search … the current owner's deed."
+eq("the seller's deed search stays pre-registration", cooNames.includes("Deed Search"), true);
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails === 0 ? 0 : 1);
