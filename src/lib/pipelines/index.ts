@@ -154,8 +154,12 @@ export function phaseLabel(p: Pipeline | null, key?: string | null, client = fal
 }
 
 export function stageLabel(p: Pipeline | null, key?: string | null): string {
-  if (!p || !key) return key ?? "—";
-  const found = findStage(p, key)?.stage.name;
+  if (!key) return "—";
+  // No pipeline is the SAME case as an unrecognised key, and it is common: a
+  // rates clearance with no subtype resolves to no pipeline on purpose (see
+  // getPipeline), so bailing out early here printed a raw "inquiry" on the
+  // client detail page while every matter with a pipeline read "Inquiry".
+  const found = p ? findStage(p, key)?.stage.name : null;
   if (found) return found;
   // The key is not a stage in this pipeline — seeded and legacy matters carry
   // values like "inquiry" that no pipeline defines. Humanise rather than print

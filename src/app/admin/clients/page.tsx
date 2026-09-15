@@ -5,7 +5,14 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
-import { isAdminRole, isStaffRole, clientDisplayName, type Client } from "@/types";
+import {
+  isAdminRole,
+  isStaffRole,
+  clientDisplayName,
+  entityTypeLabel,
+  ENTITY_TYPE_LABELS,
+  type Client,
+} from "@/types";
 import ClientRow from "@/components/clients/ClientRow";
 import NewClientButton from "@/components/clients/NewClientButton";
 import FilterBar from "@/components/ui/FilterBar";
@@ -15,12 +22,6 @@ import Pagination from "@/components/ui/Pagination";
 
 export const metadata = { title: "Clients — ConveyClear Admin" };
 export const dynamic = "force-dynamic";
-
-const entityLabels: Record<string, string> = {
-  natural_person: "Individual",
-  business: "Business",
-  trust: "Trust",
-};
 
 const entityVariants: Record<string, "info" | "default" | "gray"> = {
   natural_person: "info",
@@ -36,7 +37,7 @@ export default async function AdminClientsPage({
   const session = await getSessionProfile();
   if (!session || !isStaffRole(session.profile?.role)) redirect("/auth/login");
 
-  const filters = parseListFilters(searchParams, Object.keys(entityLabels));
+  const filters = parseListFilters(searchParams, Object.keys(ENTITY_TYPE_LABELS));
 
   const supabase = await createClient();
   let query = supabase
@@ -67,7 +68,7 @@ export default async function AdminClientsPage({
       defaultValue: "",
       options: [
         { value: "", label: "Any type" },
-        ...Object.entries(entityLabels).map(([value, label]) => ({ value, label })),
+        ...Object.entries(ENTITY_TYPE_LABELS).map(([value, label]) => ({ value, label })),
       ],
     },
     {
@@ -131,7 +132,7 @@ export default async function AdminClientsPage({
                   </td>
                   <td className="px-5 py-3 hidden md:table-cell">
                     <Badge
-                      label={entityLabels[client.entity_type] ?? client.entity_type}
+                      label={entityTypeLabel(client.entity_type)}
                       variant={entityVariants[client.entity_type] ?? "gray"}
                     />
                   </td>

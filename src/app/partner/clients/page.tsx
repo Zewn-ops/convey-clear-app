@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Table, THead, TH, TBody, TR, TD, TEmpty } from "@/components/ui/Table";
 import StatusPill from "@/components/ui/StatusPill";
 import { formatDate } from "@/lib/utils";
-import { clientDisplayName, type Client } from "@/types";
+import { clientDisplayName, entityTypeLabel, type Client } from "@/types";
 
 export const metadata = { title: "Clients — ConveyClear Partner" };
 
@@ -35,7 +35,7 @@ export default async function PartnerClients() {
                 </Link>
               </TD>
               <TD>
-                <StatusPill tone="neutral">{c.entity_type.replace("_", " ")}</StatusPill>
+                <StatusPill tone="neutral">{entityTypeLabel(c.entity_type)}</StatusPill>
               </TD>
               <TD hideBelow="md">{c.primary_email || "—"}</TD>
               <TD hideBelow="md">{formatDate(c.created_at)}</TD>
