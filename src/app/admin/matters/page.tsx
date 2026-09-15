@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import { Plus, Briefcase } from "lucide-react";
 import {
   isStaffRole,
+  STAFF_ROLES,
   MATTER_STATUS_LABELS,
   PRIORITY_LABELS,
   type Matter,
@@ -50,23 +51,34 @@ export default async function AdminMattersPage({
   // added later shows up as a filter without a code change. Phases are read from
   // the rows themselves because the phase vocabulary is per-pipeline (service ×
   // municipality) and there is no single global list to enumerate.
-  const [{ data: muniRows }, { data: firmRows }, { data: phaseRows }] = await Promise.all([
-    supabase.from("municipalities").select("code, name").eq("active", true).order("name"),
-    supabase.from("firms").select("id, name").order("name"),
-    supabase.from("matters").select("current_phase").not("current_phase", "is", null),
-  ]);
+  const [{ data: muniRows }, { data: firmRows }, { data: phaseRows }, { data: staffRows }] =
+    await Promise.all([
+      supabase.from("municipalities").select("code, name").eq("active", true).order("name"),
+      supabase.from("firms").select("id, name").order("name"),
+      supabase.from("matters").select("current_phase").not("current_phase", "is", null),
+      // Everyone who can own a matter. Ordered by name so the rail reads the
+      // same way every load; the viewer is lifted to the top in the facet below.
+      supabase.from("users").select("id, full_name, role").in("role", STAFF_ROLES).order("full_name"),
+    ]);
   const municipalities = (muniRows as { code: string; name: string }[] | null) ?? [];
   const firms = (firmRows as { id: string; name: string | null }[] | null) ?? [];
+  const staff = (staffRows as { id: string; full_name: string | null; role: string }[] | null) ?? [];
   const phases = Array.from(
     new Set(((phaseRows as { current_phase: string | null }[] | null) ?? []).map((r) => r.current_phase!).filter(Boolean))
   ).sort();
 
   // Staff land on their own work, not on everything. See QueueTabs.
+  // Staff land on their own work, not on everything — and on their own
+  // ASSIGNED work since 2026-09-15. The viewer's id is the default, which per
+  // FilterRail's contract means an absent param; "all" is the explicit opt-out.
+  const meId = session.profile?.id ?? null;
   const filters = parseMatterFilters(
     searchParams,
     municipalities.map((m) => m.code),
     firms.map((f) => f.id),
-    "ours"
+    "ours",
+    staff.map((u) => u.id),
+    meId ?? ""
   );
 
   // Counts for the three tabs, each carrying the *other* active filters so the
@@ -90,7 +102,6 @@ export default async function AdminMattersPage({
   const total = count ?? 0;
 
   // Per-row unread notification dots (cleared when the matter is opened).
-  const meId = session.profile?.id ?? null;
   const unread = new Set<string>();
   if (meId && matters.length) {
     const { data: notes } = await supabase
@@ -107,11 +118,35 @@ export default async function AdminMattersPage({
   const hasActiveFilters =
     filters.status !== "active" ||
     filters.scope !== "all" ||
+    // assignee is deliberately absent here: landing on your own matters is the
+    // default state, not an active filter, and badging it as one would put a
+    // "clear filters" affordance on a list nobody has filtered.
     Boolean(filters.q || filters.municipality || filters.firm || filters.priority || filters.phase);
 
   // A facet with nothing to choose between is noise — drop it rather than render
   // a control with one option (which is what a fresh database would show).
   const facets: Facet[] = [
+    // Assignee first: it is the lever that decides whether the list is "my
+    // desk" or "the whole office", which is the question staff answer before
+    // any other. defaultValue "" = the viewer's own matters and maps to NO
+    // param; "all" is the explicit opt-out. Both halves of that contract live
+    // in parseMatterFilters — see the warning in FilterRail.
+    ...(staff.length > 0
+      ? [
+          {
+            key: "assignee",
+            label: "Assigned to",
+            defaultValue: "",
+            options: [
+              { value: "", label: "Me" },
+              { value: "all", label: "Everyone" },
+              ...staff
+                .filter((u) => u.id !== meId)
+                .map((u) => ({ value: u.id, label: u.full_name ?? "Unnamed" })),
+            ],
+          } as Facet,
+        ]
+      : []),
     // Shown from the first firm onward, not the second: with one firm the
     // control still separates that firm's matters from those with no firm at
     // all, which is a real distinction on a staff list.

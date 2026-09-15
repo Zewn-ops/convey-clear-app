@@ -39,6 +39,29 @@ export interface MatterFilters {
   q: string;
   municipality: string; // "" = any
   firm: string; // "" = any — matters.business_partner_id
+  /**
+   * Who at ConveyClear the matter is assigned to (matters.current_owner_id).
+   * "" = everyone.
+   *
+   * Jukka, 2026-09-15, wanted staff RESTRICTED to their own matters. Zewn
+   * disagreed and the meeting settled on a default, not a restriction: "if
+   * Francois is missing one day and his client calls in, Franzu can't access
+   * it". So this is a view, the rail can switch it off, and RLS is untouched —
+   * every staff member can still reach every matter.
+   */
+  assignee: string; // "" = any — matters.current_owner_id
+  /**
+   * True when `assignee` is the viewer's own id because nobody chose it — the
+   * default view rather than a deliberate filter. It widens the match to
+   * include UNOWNED matters: on production today 6 of 32 have no owner, and a
+   * strict "mine" default would drop them out of every staff member's list at
+   * once, leaving work nobody is looking at. Same reasoning as the "ours" queue
+   * deliberately keeping matters with no stage.
+   *
+   * Choosing yourself, or anyone else, from the rail is a real filter and
+   * matches only that person's matters.
+   */
+  assigneeIsDefault: boolean;
   priority: string; // "" = any
   phase: string; // "" = any
   page: number; // 1-indexed
@@ -62,7 +85,18 @@ export function parseMatterFilters(
   sp: SP | undefined,
   municipalityCodes: readonly string[] = [],
   firmIds: readonly string[] = [],
-  defaultQueue: MatterQueue = "all"
+  defaultQueue: MatterQueue = "all",
+  /**
+   * Staff user ids the assignee facet may filter by, and the id to default to.
+   *
+   * ⚠️ The default MUST map to an absent param, per the contract in
+   * FilterRail — the facet declares defaultValue:"" and this resolves an absent
+   * param to defaultAssignee. "all" is the explicit opt-out and is the only
+   * spelling that clears the filter. Drift between these two is exactly what
+   * made the rail read "This month" while the query returned all time.
+   */
+  assigneeIds: readonly string[] = [],
+  defaultAssignee = ""
 ): MatterFilters {
   const get = (k: string) => {
     const v = sp?.[k];
@@ -85,12 +119,26 @@ export function parseMatterFilters(
     scope: get("scope") === "month" ? "month" : "all",
     q: (get("q") ?? "").trim().slice(0, 100),
     municipality: pick(get("municipality"), municipalityCodes),
+    assignee: resolveAssignee(get("assignee"), assigneeIds, defaultAssignee),
+    assigneeIsDefault: get("assignee") === undefined && Boolean(defaultAssignee),
     firm: pick(get("firm"), firmIds),
     priority: pick(get("priority"), ["priority", "standard", "emerging", "complex", "urgent", "whale"]),
     phase: (get("phase") ?? "").trim().slice(0, 60),
     page: Math.max(1, parseInt(get("page") ?? "1", 10) || 1),
     perPage: parsePageSize(get("per")),
   };
+}
+
+/** Absent → the viewer's own id. "all" → no filter. Anything else must be a
+ *  known staff id or it is ignored, the same way every other facet value is. */
+function resolveAssignee(
+  raw: string | undefined,
+  allowed: readonly string[],
+  fallback: string
+): string {
+  if (raw === undefined) return fallback;
+  if (raw === "all") return "";
+  return pick(raw, allowed) || fallback;
 }
 
 export function startOfMonthISO(d = new Date()): string {
@@ -116,6 +164,10 @@ export function applyMatterFilters(query: any, f: MatterFilters): any {
   // ever compared, never interpolated into an .or() expression.
   if (f.municipality) q = q.eq("municipality", f.municipality);
   if (f.firm) q = q.eq("business_partner_id", f.firm);
+  if (f.assignee)
+    q = f.assigneeIsDefault
+      ? q.or(`current_owner_id.eq.${f.assignee},current_owner_id.is.null`)
+      : q.eq("current_owner_id", f.assignee);
   if (f.priority) q = q.eq("priority", f.priority);
   if (f.phase) q = q.eq("current_phase", f.phase);
   // The queue split. "ours" deliberately includes matters with NO stage set —
