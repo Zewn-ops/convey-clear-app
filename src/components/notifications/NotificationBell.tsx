@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { formatDateTimeNumeric } from "@/lib/utils";
 import { Bell, X, Star, Archive, ArchiveRestore, Check, Inbox } from "lucide-react";
 import { playDing, unlockAudio, getStoredVolume } from "@/lib/notify-sound";
 
@@ -353,7 +354,7 @@ export default function NotificationBell({ base }: { base: string }) {
                         </p>
                         {n.body && <p className="mt-0.5 line-clamp-2 text-xs text-ink-3">{n.body}</p>}
                         <p className="mt-1 text-[11px] text-ink-3">
-                          {new Date(n.created_at).toLocaleString("en-ZA")}
+                          {formatDateTimeNumeric(n.created_at)}
                         </p>
                       </div>
                     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { formatDateNumeric } from "@/lib/utils";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
@@ -156,7 +157,7 @@ export default function CouncilLoginsCard({
                 </p>
                 <p className="truncate text-xs text-ink-3">
                   {councilLabel(s.municipality)} · captured{" "}
-                  {new Date(s.updated_at).toLocaleDateString("en-ZA")}
+                  {formatDateNumeric(s.updated_at)}
                 </p>
               </div>
               <button

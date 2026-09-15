@@ -5,7 +5,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, clientDisplayName, TRANSFER_STATUS_LABELS, type TransferStatus } from "@/types";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
-import { municipalityLabel, formatDate } from "@/lib/utils";
+import { municipalityLabel, formatDate, formatDateMedium } from "@/lib/utils";
 import PropertyActiveToggle from "@/components/properties/PropertyActiveToggle";
 import { ArrowLeft, Pencil, Building2 } from "lucide-react";
 
@@ -99,7 +99,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                 {clientDisplayName(property.clients)}
               </Link>
               {!property.active && property.deactivated_at && (
-                <> · sold {new Date(property.deactivated_at).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" })}</>
+                <> · sold {formatDateMedium(property.deactivated_at)}</>
               )}
             </p>
           )}

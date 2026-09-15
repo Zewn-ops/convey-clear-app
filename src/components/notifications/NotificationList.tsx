@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { formatDateTimeNumeric } from "@/lib/utils";
 import { Check, Inbox } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -107,7 +108,7 @@ export default function NotificationList({
                   </p>
                   {n.body && <p className="mt-0.5 text-xs text-ink-2">{n.body}</p>}
                   <p className="mt-1 text-[11px] text-ink-3">
-                    {new Date(n.created_at).toLocaleString("en-ZA")}
+                    {formatDateTimeNumeric(n.created_at)}
                   </p>
                 </Link>
                 {!n.read_at && (

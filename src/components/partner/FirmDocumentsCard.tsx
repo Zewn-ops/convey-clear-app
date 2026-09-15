@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { formatDateNumeric } from "@/lib/utils";
 import Card from "@/components/ui/Card";
 import Select from "@/components/ui/Select";
 import { FileText, Upload, Check } from "lucide-react";
@@ -121,9 +122,7 @@ export default function FirmDocumentsCard({
                 </p>
                 <p className="truncate text-xs text-ink-3">
                   {doc
-                    ? `${doc.file_name ?? "Uploaded"} · ${new Date(
-                        doc.created_at
-                      ).toLocaleDateString("en-ZA")}`
+                    ? `${doc.file_name ?? "Uploaded"} · ${formatDateNumeric(doc.created_at)}`
                     : t.hint ?? "Not uploaded"}
                 </p>
               </div>
