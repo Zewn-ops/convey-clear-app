@@ -68,12 +68,18 @@ export default function SubmitMatterForm({
       }),
     });
     const json = await res.json().catch(() => ({}));
-    setSaving(false);
     if (!res.ok) {
+      setSaving(false);
       toast.error(json.message ?? "Could not send this to ConveyClear");
       return;
     }
     toast.success("Sent to ConveyClear for review");
+    // 🔴 saving STAYS true through the navigation. The transfer page is
+    // force-dynamic and took more than six seconds to render on production,
+    // during which this button read "Send to ConveyClear" again on a form that
+    // still had every word in it — so the obvious thing to do was press it
+    // again. The server refuses the duplicate, but the attorney has no way to
+    // know that from here, and a second matter is exactly what it looks like.
     // Back to the transaction, where the service line now shows the matter and
     // its awaiting-review chip. Landing on the matter itself would show a page
     // that is deliberately half-inert until someone here accepts it.

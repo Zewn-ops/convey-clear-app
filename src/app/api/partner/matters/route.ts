@@ -113,6 +113,37 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
+  // 🔴 AN UNCLAIMED LINE IS NOT THE SAME AS "NO MATTER FOR THIS SERVICE".
+  //
+  // The check above asks whether the CHECKLIST LINE has been claimed. A matter
+  // can exist on this transfer for this service and not be attached to the line
+  // — the attach is best-effort in both creation routes, and a matter opened
+  // before the checklist existed was never attached at all. The transfer page
+  // already says so out loud: "also on this transfer, not tracked by this line".
+  //
+  // Found by clicking, 2026-09-16: ZH260901ZH carried COT_EBP_JUKKA HOLL and the
+  // firm was allowed to open a second Existing Building Plans matter on top of
+  // it. So the question has to be asked of the MATTERS, not of the line.
+  //
+  // Settled matters do not block: a transfer can legitimately need a second
+  // clearance after the first is finished. Only live work does.
+  const { data: existing } = await admin
+    .from("matters")
+    .select("id, title, status, services!inner(code)")
+    .eq("transfer_id", transferId)
+    .ilike("services.code", serviceCode)
+    .not("status", "in", "(won,lost,archived)")
+    .limit(1)
+    .maybeSingle();
+  if (existing) {
+    return NextResponse.json(
+      {
+        message: `${serviceCode} is already open on this transaction as "${(existing as { title?: string }).title ?? "an existing matter"}".`,
+      },
+      { status: 409 }
+    );
+  }
+
   // The service row the matter points at. Matched on code because that is what
   // the checklist carries; the firm never sees a services.id.
   const { data: service } = await admin
