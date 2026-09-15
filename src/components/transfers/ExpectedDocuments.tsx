@@ -9,6 +9,7 @@ import {
 } from "@/lib/councils";
 import { PRC_SUBTYPES, docLabel } from "@/lib/prc-docs";
 import { municipalityLabel } from "@/lib/utils";
+import { isPostRegistration } from "@/lib/councils/registration-stage";
 
 /**
  * "If you want X, these are the documents we normally need."
@@ -103,13 +104,43 @@ export default function ExpectedDocuments({
               {g.label}
               <span className="ml-1.5 text-xs font-normal text-ink-3">({g.docs.length})</span>
             </summary>
-            <ul className="mt-2 space-y-1">
-              {g.docs.map((d) => (
-                <li key={d} className="text-xs text-ink-2">
-                  · {d}
-                </li>
-              ))}
-            </ul>
+            {(() => {
+              // Split at render rather than when the groups are built: the
+              // grouping above is per SERVICE, and a service's list can span
+              // both sides of registration.
+              const before = g.docs.filter((d) => !isPostRegistration(d));
+              const after = g.docs.filter((d) => isPostRegistration(d));
+              const List = ({ items }: { items: string[] }) => (
+                <ul className="mt-1 space-y-1">
+                  {items.map((d) => (
+                    <li key={d} className="text-xs text-ink-2">
+                      · {d}
+                    </li>
+                  ))}
+                </ul>
+              );
+              // A service with nothing on the far side is not shown two
+              // headings, one of them empty — that reads as a missing list.
+              if (after.length === 0) return <List items={before} />;
+              return (
+                <div className="mt-2 space-y-2">
+                  {before.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                        Before registration
+                      </p>
+                      <List items={before} />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                      After registration
+                    </p>
+                    <List items={after} />
+                  </div>
+                </div>
+              );
+            })()}
           </details>
         ))}
       </div>
