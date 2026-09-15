@@ -1,4 +1,17 @@
 import { Check } from "lucide-react";
+import type { AgeTone } from "@/lib/elapsed";
+
+/**
+ * Green → yellow → orange → red, as Jukka described it. These are the semantic
+ * tokens, not raw colours, so the scale resolves correctly in dark mode without
+ * a `dark:` variant at this call site.
+ */
+const AGE_TONE_CLASS: Record<AgeTone, string> = {
+  fresh: "bg-ok",
+  warn: "bg-waiting-fill",
+  late: "bg-required-fill",
+  overdue: "bg-danger-fill",
+};
 
 /**
  * The numbered phase circles for ONE service line on a property transfer.
@@ -32,17 +45,33 @@ export default function ServiceSteps({
   steps,
   phase,
   done = false,
+  ageTone = "fresh",
 }: {
   /** Phase names in order. */
   steps: string[];
   /** 1-indexed current phase. */
   phase: number;
   done?: boolean;
+  /**
+   * How long this matter has sat where it is. Colours the connector RUNNING
+   * INTO the current circle — the one segment that represents the wait nobody
+   * has ended yet. Everything behind it stays green (distance travelled) and
+   * everything ahead stays grey.
+   *
+   * Francois asked for this on 2026-09-15 so a firm can scroll a list and see
+   * the stuck rows without reading any of them. Omit it and the connector is
+   * green, which is what every screen did before.
+   */
+  ageTone?: AgeTone;
 }) {
   if (steps.length === 0) return null;
 
   // A completed service is past its last phase, not sitting on it.
   const currentIdx = done ? steps.length : Math.max(1, phase) - 1;
+
+  // The active connector is the only one that can be anything but green. A
+  // finished service has no active wait, so it keeps the full green rail.
+  const waitClass = done ? "bg-ok" : AGE_TONE_CLASS[ageTone];
 
   return (
     <ol className="flex items-start" aria-label={`Phase ${phase} of ${steps.length}`}>
@@ -57,12 +86,27 @@ export default function ServiceSteps({
                   first and last are invisible rather than absent — a missing
                   element would shift its circle out of alignment with the rest.
 
-                  A filled connector is always green, never blue: it can only
-                  ever run out of, or into, a phase that is already COMPLETE, so
+                  A filled connector behind the current phase is always green,
+                  never blue: it ran out of a phase that is already COMPLETE, so
                   green reads as the distance travelled. Green behind you, blue
-                  where you are, grey ahead. */}
+                  where you are, grey ahead.
+
+                  The exception is the segment arriving AT the current circle
+                  (i === currentIdx). That one is not distance travelled — it is
+                  the wait in progress — so it carries the age colour, and turns
+                  green again the moment the matter advances and it becomes
+                  history like the rest. 3px rather than 1px: Jukka, 2026-09-15,
+                  against the 8px phase bar directly beneath it. */}
               <span
-                className={`h-px flex-1 ${i === 0 ? "bg-transparent" : i <= currentIdx ? "bg-ok" : "bg-line"}`}
+                className={`h-[3px] flex-1 rounded-full ${
+                  i === 0
+                    ? "bg-transparent"
+                    : i === currentIdx
+                      ? waitClass
+                      : i < currentIdx
+                        ? "bg-ok"
+                        : "bg-line"
+                }`}
               />
               <span
                 className={
@@ -77,7 +121,7 @@ export default function ServiceSteps({
                 {isDone ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
               </span>
               <span
-                className={`h-px flex-1 ${i === steps.length - 1 ? "bg-transparent" : i < currentIdx ? "bg-ok" : "bg-line"}`}
+                className={`h-[3px] flex-1 rounded-full ${i === steps.length - 1 ? "bg-transparent" : i < currentIdx ? "bg-ok" : "bg-line"}`}
               />
             </div>
             {/* Names wrap rather than truncate. A phase called "Council
