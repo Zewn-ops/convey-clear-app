@@ -66,6 +66,16 @@ export type MatterCardRow = {
   } | null;
   /** 098 — set only on matters a FIRM proposed. NULL on every staff-created one. */
   firm_review_state?: string | null;
+  /**
+   * When something last HAPPENED on this matter — the newest matter_activities
+   * row, resolved by the list page.
+   *
+   * ⚠️ NOT updated_at. That column is bumped by any write, so a data migration
+   * re-dates every row: after 092 and 096 the whole list read "Last update
+   * today". A caller that does not supply this falls back to updated_at, which
+   * is the old behaviour and still wrong in the same way — supply it.
+   */
+  last_activity_at?: string | null;
 };
 
 export default function MatterCard({
@@ -120,7 +130,7 @@ export default function MatterCard({
   const idx = pl ? Math.max(phaseOrder(pl, m.current_phase), m.current_phase ? -1 : 0) : -1;
 
   const open = workdaysSince(m.created_at);
-  const seen = relativeDays(m.updated_at);
+  const seen = relativeDays(m.last_activity_at ?? m.updated_at);
   // How long on the current phase/stage, and the colour that follows from it.
   // Falls back to the matter's own age: a matter that has never moved has been
   // waiting since it was created, which is the honest reading and the one that
