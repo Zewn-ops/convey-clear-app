@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { Landmark, Plus, X, ExternalLink } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { MUNICIPALITIES } from "@/lib/conveyclear-lists";
+import { municipalityLabel } from "@/lib/utils";
 import { councilPocName, type CouncilPoc } from "@/types";
 
 // B5 / Theme G — Council POC section on the staff matter detail (admin portal
@@ -17,10 +18,13 @@ export default function MatterPocsCard({
   matterId,
   linked,
   all,
+  municipality = null,
 }: {
   matterId: string;
   linked: CouncilPoc[];
   all: CouncilPoc[];
+  /** The matter's own council, so its contacts lead the picker. */
+  municipality?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -32,6 +36,30 @@ export default function MatterPocsCard({
 
   const linkedIds = useMemo(() => new Set(linked.map((p) => p.id)), [linked]);
   const assignable = useMemo(() => all.filter((p) => !linkedIds.has(p.id)), [all, linkedIds]);
+
+  // The directory is one flat list across all three councils, and the picker
+  // offered it in council order with nothing to say which council this MATTER
+  // belongs to. That is how a City of Johannesburg matter came to carry a City
+  // of Tshwane rates manager on production (2026-09-10), with no warning on
+  // either screen.
+  //
+  // Grouped rather than filtered: the directory is small, a council can be
+  // recorded loosely, and hiding a contact outright is how someone ends up
+  // unable to link the person they are actually emailing. Picking one from
+  // another council stays possible — it just stops being the accident.
+  const councilName = municipality ? municipalityLabel(municipality) : null;
+  const isOwnCouncil = (p: CouncilPoc) =>
+    Boolean(councilName && (p.council ?? "").trim().toLowerCase() === councilName.toLowerCase());
+  const ownCouncilPocs = useMemo(
+    () => (councilName ? assignable.filter(isOwnCouncil) : assignable),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assignable, councilName]
+  );
+  const otherCouncilPocs = useMemo(
+    () => (councilName ? assignable.filter((p) => !isOwnCouncil(p)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assignable, councilName]
+  );
 
   const input = "rounded-lg border border-line bg-surface text-ink px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action";
 
@@ -107,6 +135,9 @@ export default function MatterPocsCard({
                 </button>
               </div>
               <p className="text-xs text-ink-3 mt-0.5">{[p.council, p.department].filter(Boolean).join(" · ") || "—"}</p>
+              {councilName && p.council && !isOwnCouncil(p) && (
+                <p className="mt-1 text-[11px] text-waiting">Not a {councilName} contact</p>
+              )}
               <dl className="mt-2 space-y-1 text-xs">
                 {p.email && <dd><span className="text-ink-3">Email:</span> <a href={`mailto:${p.email}`} className="text-action hover:underline">{p.email}</a></dd>}
                 {p.cell && <dd><span className="text-ink-3">Cell:</span> <a href={`tel:${p.cell}`} className="text-action hover:underline">{p.cell}</a></dd>}
@@ -126,11 +157,38 @@ export default function MatterPocsCard({
         <div className="flex gap-2 mb-3">
           <select value={assignId} onChange={(e) => setAssignId(e.target.value)} className={`${input} flex-1`}>
             <option value="">— Assign an existing POC —</option>
-            {assignable.map((p) => (
-              <option key={p.id} value={p.id}>
-                {councilPocName(p)}{p.council ? ` (${p.council})` : ""}{p.department ? ` · ${p.department}` : ""}
-              </option>
-            ))}
+            {councilName ? (
+              <>
+                <optgroup label={councilName}>
+                  {ownCouncilPocs.length > 0 ? (
+                    ownCouncilPocs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {councilPocName(p)}{p.department ? ` · ${p.department}` : ""}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>
+                      No contacts recorded for this council yet
+                    </option>
+                  )}
+                </optgroup>
+                {otherCouncilPocs.length > 0 && (
+                  <optgroup label="Other councils">
+                    {otherCouncilPocs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {councilPocName(p)}{p.council ? ` (${p.council})` : ""}{p.department ? ` · ${p.department}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </>
+            ) : (
+              assignable.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {councilPocName(p)}{p.council ? ` (${p.council})` : ""}{p.department ? ` · ${p.department}` : ""}
+                </option>
+              ))
+            )}
           </select>
           <button onClick={assign} disabled={busy || !assignId} className="px-4 py-2 text-sm font-medium bg-action-fill text-white rounded-lg hover:bg-action-fill/90 disabled:opacity-50">
             Assign

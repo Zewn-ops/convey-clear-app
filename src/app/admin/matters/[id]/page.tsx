@@ -1145,7 +1145,7 @@ export default async function AdminMatterDetailPage({
             LEFT column from 2026-09-01: a council contact is something staff act
             on while working the matter, not reference detail. Zewn: "move
             council POC to the left". */}
-        <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} />
+        <MatterPocsCard matterId={id} linked={linkedPocs} all={allPocs} municipality={matter.municipality} />
         </div>
 
         <div className="min-w-0 space-y-6">
