@@ -535,6 +535,10 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
               primary={[
                 { label: "Status", value: TRANSFER_STATUS_LABELS[transfer.status] },
                 { label: "Council", value: municipalityLabel(transfer.municipality) },
+                // 097. Its own row rather than appended to the council: a blank
+                // region must read as "nobody has set this" and not quietly
+                // vanish into the council's label.
+                { label: "Council region", value: transfer.council_region },
                 { label: "Attorney firm", value: transfer.attorney?.name ?? null, required: true },
                 { label: "Reference", value: transfer.reference },
                 // 077 — the Bert Smith cover sheet puts the price up front, so it

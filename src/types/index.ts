@@ -483,6 +483,10 @@ export interface PropertyTransfer {
   reference: string;
   property_description: string | null;
   municipality: string | null;
+  // The sub-area of that council (097), e.g. "Sandton" under COJ. Entered by
+  // ConveyClear staff and read-only to the firm: which office a clearance goes
+  // to varies by region, and attorneys reliably leave the field alone.
+  council_region: string | null;
   status: TransferStatus;
   business_partner_id: string | null;
   estate_agent_partner_id: string | null;

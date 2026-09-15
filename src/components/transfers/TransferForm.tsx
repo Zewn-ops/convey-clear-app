@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import SearchSelect from "@/components/ui/SearchSelect";
+import { councilRegionSuggestions } from "@/lib/councils/regions";
 import {
   TRANSFER_STATUS_LABELS,
   type PropertyTransfer,
@@ -58,6 +59,11 @@ export default function TransferForm({
   const [reference, setReference] = useState(existing?.reference ?? "");
   const [property, setProperty] = useState(existing?.property_description ?? "");
   const [municipality, setMunicipality] = useState(existing?.municipality ?? "");
+  // 097 — the sub-area of the council. Jukka: ConveyClear enters it, the firm
+  // only reads it, so it appears on this (staff) form and nowhere on the
+  // partner's. Free text with suggestions: the only regions named so far are
+  // three COJ suburbs, and a hard list would freeze a taxonomy nobody agreed.
+  const [councilRegion, setCouncilRegion] = useState(existing?.council_region ?? "");
   const [status, setStatus] = useState<TransferStatus>(existing?.status ?? "open");
   const [attorneyId, setAttorneyId] = useState(existing?.business_partner_id ?? "");
   // Estate agent — NO LONGER A FIELD. Zewn, 2026-09-01: "please remove estate
@@ -101,6 +107,7 @@ export default function TransferForm({
         reference,
         property_description: property,
         municipality,
+        council_region: councilRegion,
         status,
         business_partner_id: attorneyId,
         estate_agent_partner_id: agentId,
@@ -138,6 +145,26 @@ export default function TransferForm({
           placeholder="ERF 123 VALHALLA"
         />
         <Select label="Municipality" value={municipality} onChange={(e) => setMunicipality(e.target.value)} options={MUNI} />
+        <div>
+          <Input
+            label="Council region"
+            value={councilRegion}
+            onChange={(e) => setCouncilRegion(e.target.value)}
+            list="council-region-suggestions"
+            placeholder={
+              councilRegionSuggestions(municipality)[0]
+                ? `e.g. ${councilRegionSuggestions(municipality)[0]}`
+                : "Optional"
+            }
+          />
+          {/* Suggestions, not options — the input still accepts anything. An
+              empty list for a council nobody has mapped yet is deliberate. */}
+          <datalist id="council-region-suggestions">
+            {councilRegionSuggestions(municipality).map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
+        </div>
         <Select
           label="Status"
           value={status}
