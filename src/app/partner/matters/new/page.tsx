@@ -108,6 +108,19 @@ export default async function PartnerNewMatterPage({
     .limit(1)
     .maybeSingle();
 
+  // The same question the route asks: is this service already being worked on
+  // this transaction, whether or not the checklist line knows about it? Asked
+  // here too so the attorney is told BEFORE filling the form in, rather than by
+  // a toast after pressing send. Never dead-end (PRODUCT.md §5).
+  const { data: existingMatter } = await supabase
+    .from("matters")
+    .select("id, title, services!inner(code)")
+    .eq("transfer_id", transferId)
+    .ilike("services.code", serviceCode)
+    .not("status", "in", "(won,lost,archived)")
+    .limit(1)
+    .maybeSingle();
+
   const { data: tdocData } = await supabase
     .from("transfer_documents")
     .select("*")
@@ -148,7 +161,23 @@ export default async function PartnerNewMatterPage({
 
       {/* The service is already taken. Said plainly rather than shown as a
           failing form — never dead-end (PRODUCT.md §5). */}
-      {!line ? (
+      {existingMatter ? (
+        <Card>
+          <p className="text-sm text-ink-2">
+            {serviceLabel(serviceCode)} is already open on this transaction as{" "}
+            <Link
+              href={`/partner/matters/${(existingMatter as { id: string }).id}`}
+              className="font-medium text-action hover:underline"
+            >
+              {(existingMatter as { title?: string | null }).title ?? "an existing matter"}
+            </Link>
+            . Open that one rather than starting a second.
+          </p>
+          <Link href={backHref} className="mt-3 inline-block text-sm font-medium text-action hover:underline">
+            Back to the transaction
+          </Link>
+        </Card>
+      ) : !line ? (
         <Card>
           <p className="text-sm text-ink-2">
             {serviceLabel(serviceCode)} is already open as a matter on this transaction, or is not on
