@@ -62,11 +62,28 @@ function prettySize(bytes: number): string {
 
 export default function MatterUploadPanel({
   matterId,
+  transferId = null,
   parties = [],
   municipality = null,
   propertySubject = null,
 }: {
   matterId: string;
+  /**
+   * The transaction this matter sits under, when it has one.
+   *
+   * 🔴 WHEN PRESENT, THE UPLOAD GOES THERE INSTEAD. Zewn, 2026-09-17: "all the
+   * documents get saved to the prop trf and then you reference them in matters.
+   * Same goes for documents that get 'uploaded' to a matter — the container is
+   * still within the prop trf and just displays in the matter."
+   *
+   * One container is what makes "do we already have this?" answerable at all.
+   * Two is how the same deed search ended up on FRPS_0001 three times.
+   *
+   * Null for a standalone matter, which has no transaction to hold anything —
+   * those still write to the matter's own bucket, because the alternative is
+   * refusing the upload.
+   */
+  transferId?: string | null;
   /** The matter's parties, for "whose is it". Empty on a single-client matter. */
   parties?: UploadParty[];
   /** Decides which of input / supporting / output this document files under. */
@@ -156,11 +173,21 @@ export default function MatterUploadPanel({
     if (!file) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/documents/signed-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matter_id: matterId, file_name: file.name }),
-      });
+      // The transaction owns the file when there is one; the matter only ever
+      // references it. See the note on `transferId`.
+      const viaTransfer = Boolean(transferId);
+      const r = await fetch(
+        viaTransfer ? "/api/transfer-documents/signed-upload" : "/api/documents/signed-upload",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            viaTransfer
+              ? { transfer_id: transferId, file_name: file.name }
+              : { matter_id: matterId, file_name: file.name }
+          ),
+        }
+      );
       const j = await r.json();
       if (!r.ok) throw new Error(j.message ?? "Could not start the upload");
 
@@ -169,6 +196,43 @@ export default function MatterUploadPanel({
         .from(j.bucket)
         .uploadToSignedUrl(j.path, j.token, file);
       if (upErr) throw new Error(upErr.message);
+
+      if (viaTransfer) {
+        const tc = await fetch("/api/transfer-documents/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transfer_id: transferId,
+            storage_path: j.path,
+            document_type: type,
+            file_name: file.name,
+            display_name: nameOverride ?? undefined,
+            mime_type: file.type,
+            size_bytes: file.size,
+          }),
+        });
+        const tj = await tc.json();
+        if (!tc.ok) throw new Error(tj.message ?? "Could not record the document");
+
+        // ⚠️ transfer_document_id, not id — that is what this route answers.
+        const at = await fetch("/api/transfer-documents/attach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transfer_document_id: tj.transfer_document_id,
+            matter_id: matterId,
+            matter_party_id: partyId || null,
+          }),
+        });
+        if (!at.ok) {
+          const aj = await at.json().catch(() => ({}));
+          throw new Error(aj.message ?? "Saved to the transaction, but could not link it here");
+        }
+        toast.success("Document added.");
+        reset();
+        router.refresh();
+        return;
+      }
 
       const c = await fetch("/api/documents/confirm", {
         method: "POST",

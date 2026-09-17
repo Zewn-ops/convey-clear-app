@@ -6,6 +6,8 @@ import { findOrCreateClientForParty } from "@/lib/party-client";
 import { logMatterActivity } from "@/lib/activity";
 import { buildMatterTitle } from "@/lib/matter-naming";
 import { getPipeline } from "@/lib/pipelines";
+import { serviceDocSlots } from "@/lib/service-doc-slots";
+import { attachTransferDocToMatter } from "@/lib/documents";
 import { normalisePrcStage } from "@/lib/prc-docs";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { notifyStaff } from "@/lib/notify";
@@ -270,6 +272,47 @@ export async function POST(request: Request) {
       `[partner/matters] could not attach matter ${matter.id} to service line ${line.id}:`,
       adoptErr.message
     );
+  }
+
+  // ── Pick up what the attorney uploaded while filling this in ─────────────
+  //
+  // The checklist on the creation page uploads to the TRANSACTION, because the
+  // matter does not exist until this request. So the documents are already
+  // there, unattached, and the matter would open with an empty list beside a
+  // transaction that holds exactly what it asked for.
+  //
+  // Only the types THIS service asks for, and only one per type: attaching
+  // everything on the transaction would put the other side's certificates on a
+  // building-plans matter. /attach points at the same storage object rather
+  // than copying, so this costs no storage and creates no second file.
+  try {
+    const wanted = new Set(
+      serviceDocSlots(transfer.municipality, serviceCode, subtype)
+        .filter((sl) => sl.type !== "other")
+        .map((sl) => sl.type)
+    );
+    if (wanted.size) {
+      const { data: tdocs } = await admin
+        .from("transfer_documents")
+        .select("id, document_type, created_at")
+        .eq("transfer_id", transferId)
+        .eq("status", "current")
+        .order("created_at", { ascending: false });
+      const seen = new Set<string>();
+      for (const td of (tdocs ?? []) as { id: string; document_type: string | null }[]) {
+        const t = td.document_type ?? "";
+        if (!wanted.has(t) || seen.has(t)) continue;
+        seen.add(t);
+        await attachTransferDocToMatter(admin, td.id, matter.id, {
+          uploadedBy: "attorney",
+          userId,
+        });
+      }
+    }
+  } catch (e) {
+    // Best-effort: a matter that exists without its documents linked is
+    // recoverable from the page; a matter that failed to be created is not.
+    console.error(`[partner/matters] auto-attach failed for ${matter.id}:`, e);
   }
 
   await logMatterActivity(admin, {

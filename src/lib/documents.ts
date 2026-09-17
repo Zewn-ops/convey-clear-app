@@ -204,3 +204,81 @@ export async function syncMatterDocToTransfer(
 
   return { synced: true, transferId, transferDocumentId: tdoc.id as string, deduped: false };
 }
+
+/**
+ * Put a TRANSFER document onto a matter as a reference.
+ *
+ * Extracted from /api/transfer-documents/attach on 2026-09-17 so the partner
+ * matter-creation route can reuse it rather than carry a second copy. 066 is the
+ * standing warning: a second implementation of the same write silently stops
+ * matching the first — and the first one's history is a list of exactly that
+ * (the missing uploader stamp, the party-keyed dedupe that duplicated a file).
+ *
+ * ⚠️ THIS HELPER DOES NOT AUTHORISE ANYTHING. The route's guards stay in the
+ * route: that the caller can see both records, that the matter belongs to the
+ * SAME transfer as the document, and that the document is current. Callers who
+ * did not just create the matter themselves must perform those checks first.
+ *
+ * Idempotent by way of the 036 unique index: a second attach of the same pair
+ * returns the row that already exists rather than inserting beside it.
+ */
+export async function attachTransferDocToMatter(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  transferDocumentId: string,
+  matterId: string,
+  opts: { uploadedBy?: "attorney" | "staff"; userId?: string | null } = {}
+): Promise<{ documentId: string | null; deduped: boolean }> {
+  const { data: tdoc } = await admin
+    .from("transfer_documents")
+    .select("id, document_type, file_name, mime_type, size_bytes, storage_bucket, storage_path, status")
+    .eq("id", transferDocumentId)
+    .maybeSingle();
+  if (!tdoc || (tdoc.status ?? "current") !== "current") return { documentId: null, deduped: false };
+
+  const { data: existing } = await admin
+    .from("documents")
+    .select("id")
+    .eq("matter_id", matterId)
+    .eq("transfer_document_id", transferDocumentId)
+    .neq("document_status", "superseded")
+    .maybeSingle();
+  if (existing) return { documentId: existing.id as string, deduped: true };
+
+  const { data: doc, error } = await admin
+    .from("documents")
+    .insert({
+      matter_id: matterId,
+      matter_party_id: null,
+      document_type: tdoc.document_type || "other",
+      document_status: "provided",
+      storage_bucket: tdoc.storage_bucket,
+      storage_path: tdoc.storage_path,
+      file_name: tdoc.file_name,
+      mime_type: tdoc.mime_type,
+      size_bytes: tdoc.size_bytes,
+      transfer_document_id: transferDocumentId,
+      uploaded_by: opts.uploadedBy ?? "attorney",
+      // Stamped, always. Omitting it is what made every reused transfer document
+      // show as an "Unknown" uploader and get held for an approval that was
+      // never meant to apply to it (found 2026-09-11, fixed by B7).
+      uploaded_by_user_id: opts.userId ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      const { data: winner } = await admin
+        .from("documents")
+        .select("id")
+        .eq("matter_id", matterId)
+        .eq("transfer_document_id", transferDocumentId)
+        .neq("document_status", "superseded")
+        .maybeSingle();
+      return { documentId: (winner?.id as string) ?? null, deduped: true };
+    }
+    throw new Error(error.message);
+  }
+  return { documentId: doc.id as string, deduped: false };
+}
