@@ -137,6 +137,30 @@ export default function MatterCard({
   // makes an untouched matter go red rather than sit permanently green.
   const inStage = workdaysSince(m.stage_changed_at ?? m.created_at);
   const waitTone = ageTone(inStage);
+
+  /**
+   * A coloured edge down the side of the card for a matter the firm submitted.
+   *
+   * ConveyClear Services, bi-weekly meeting 2026-09-17: they wanted more
+   * visibility on "not taken on" — the chip inside the card was not enough on a
+   * long list, because a chip only reads once you are already looking at that
+   * card. An edge is visible in peripheral vision while scrolling, which is the
+   * whole job.
+   *
+   * Red for declined, yellow for awaiting our decision, as asked. Nothing for an
+   * ordinary matter: an edge on every card is wallpaper, and then the two that
+   * mean something stop meaning anything.
+   *
+   * A LEFT border rather than a ring: a ring closes the shape and reads as
+   * selection, and these cards already use `dark:ring-1` for their own edge in
+   * dark mode — a second ring would fight it.
+   */
+  const reviewEdge =
+    m.firm_review_state === "rejected"
+      ? "border-l-4 border-danger-fill"
+      : m.firm_review_state === "pending"
+        ? "border-l-4 border-waiting-fill"
+        : "";
   const transferRef = m.property_transfers?.reference?.trim() || null;
   const stalled = open !== null && open > STALLED_WORKDAYS;
   const tone = STATUS_TONE[m.status ?? ""] ?? "neutral";
@@ -168,7 +192,12 @@ export default function MatterCard({
       : null;
 
   return (
-    <li className="rounded-lg bg-surface p-6 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line sm:p-7">
+    <li
+      className={
+        "rounded-lg bg-surface p-6 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line sm:p-7 " +
+        reviewEdge
+      }
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link

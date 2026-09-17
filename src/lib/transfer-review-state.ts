@@ -150,3 +150,26 @@ export const TRANSFER_STATUS_TONE: Record<string, StatusTone> = {
   on_hold: "waiting",
   archived: "neutral",
 };
+
+/**
+ * The coloured edge down the side of a card, from the same chip decision.
+ *
+ * ConveyClear Services, 2026-09-17: more visibility on "not taken on". A chip
+ * only reads once you are already looking at the card; an edge reads while you
+ * are scrolling past it, which is the actual complaint.
+ *
+ * Derived from transferChip rather than from `status` again, so the edge and
+ * the chip can never disagree about what a transfer is — the pattern this file
+ * exists to enforce (a rejected transfer came out red on one page and amber on
+ * another when each caller decided for itself).
+ *
+ * Empty string for everything else. An edge on every card is wallpaper, and
+ * then the two that mean something stop meaning anything.
+ */
+export function reviewEdgeClass(status: string, review?: TransferReview | null): string {
+  const { tone } = transferChip(status, review);
+  if (status !== "draft") return "";
+  if (tone === "danger") return "border-l-4 border-danger-fill";
+  if (tone === "required" || tone === "waiting") return "border-l-4 border-waiting-fill";
+  return "";
+}

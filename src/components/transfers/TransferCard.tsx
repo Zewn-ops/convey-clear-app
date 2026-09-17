@@ -6,7 +6,7 @@ import { workdaysSince } from "@/lib/elapsed";
 import { type PropertyTransfer } from "@/types";
 import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import type { TransferProgress } from "@/lib/transfer-service-progress";
-import { transferChip, type TransferReview } from "@/lib/transfer-review-state";
+import { transferChip, reviewEdgeClass, type TransferReview } from "@/lib/transfer-review-state";
 
 /**
  * The property transfer card. Same shape as MatterCard so a firm reads one
@@ -66,7 +66,12 @@ export default function TransferCard({
   const chip = transferChip(t.status, review);
 
   return (
-    <li className="rounded-lg bg-surface p-6 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line sm:p-7">
+    <li
+      className={
+        "rounded-lg bg-surface p-6 shadow transition-shadow duration-200 ease-out hover:shadow-lg dark:ring-1 dark:ring-line sm:p-7 " +
+        reviewEdgeClass(t.status, review)
+      }
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link
