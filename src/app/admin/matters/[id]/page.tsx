@@ -1169,6 +1169,7 @@ export default async function AdminMatterDetailPage({
               </p>
               <MatterUploadPanel
                 matterId={id}
+                transferId={matter.transfer_id ?? null}
                 parties={uploadParties}
                 municipality={matter.municipality}
                 propertySubject={propertySubject}

@@ -38,6 +38,8 @@ const { isWaitingOnFirm, FIRM_WAIT_STAGE_KEYS } =
   require("@/lib/pipelines") as typeof import("@/lib/pipelines");
 const { ageTone, workdaysSince } =
   require("@/lib/elapsed") as typeof import("@/lib/elapsed");
+const { serviceDocSlots, matchTransferDocs, OTHER_SLOT } =
+  require("@/lib/service-doc-slots") as typeof import("@/lib/service-doc-slots");
 const { isPostRegistration } =
   require("@/lib/councils/registration-stage") as typeof import("@/lib/councils/registration-stage");
 const { councilServiceSpec, documentsOfClass } =
@@ -208,6 +210,40 @@ eq(
 // And the one Jukka was most insistent about stays on the near side: "it's very
 // important for us to have the INITIAL deed search … the current owner's deed."
 eq("the seller's deed search stays pre-registration", cooNames.includes("Deed Search"), true);
+
+// ── Service document slots (2026-09-17) ────────────────────────────────────
+// Zewn: "if we do a change of ownership in COT then it should have upload slots
+// for each document that the COO COT requires."
+const cooSlots = serviceDocSlots("COT", "COO", null);
+eq("COO slots are not the transfer's five", cooSlots.some((s) => s.type === "deed_search"), true);
+eq(
+  "output documents are excluded — we produce those",
+  cooSlots.some((s) => s.type === "deed_search_updated"),
+  false
+);
+eq("the catch-all is always last", cooSlots[cooSlots.length - 1].type, OTHER_SLOT.type);
+
+// 🔴 The slot list must differ BY SERVICE. If it did not, this whole change is
+// cosmetic — the old page showed the same five documents on every service, and
+// an assertion that only checked "there are slots" would have passed then too.
+const ebpSlots = serviceDocSlots("COT", "EBP", null);
+const sameShape =
+  ebpSlots.length === cooSlots.length &&
+  ebpSlots.every((s, i) => s.type === cooSlots[i].type);
+eq("EBP and COO ask for different things", sameShape, false);
+
+// Every combination gets somewhere to put something, including the 12 of 33
+// that have no list at all — for those, the catch-all is the only way in.
+const barren = serviceDocSlots("COT", "BC", null);
+eq("a service with no registry list still gets the catch-all", barren.map((s) => s.type), ["other"]);
+
+// Matching against the transaction: by type, and never via the catch-all.
+const hits = matchTransferDocs(cooSlots, [
+  { id: "t1", document_type: "deed_search", file_name: "deed.pdf" },
+  { id: "t2", document_type: "other", file_name: "random.pdf" },
+]);
+eq("a matching type is offered for linking", hits.get("deed_search")?.length, 1);
+eq("the catch-all never matches a pile of unrelated files", hits.has("other"), false);
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails === 0 ? 0 : 1);

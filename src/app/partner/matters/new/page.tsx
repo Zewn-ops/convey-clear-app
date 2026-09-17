@@ -5,8 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import Card from "@/components/ui/Card";
-import TransferDocuments from "@/components/transfers/TransferDocuments";
-import ExpectedDocuments from "@/components/transfers/ExpectedDocuments";
+import ServiceDocChecklist from "@/components/matters/ServiceDocChecklist";
 import SubmitMatterForm from "@/components/matters/SubmitMatterForm";
 import { signedDocUrls } from "@/lib/storage";
 import { municipalityLabel } from "@/lib/utils";
@@ -190,28 +189,31 @@ export default async function PartnerNewMatterPage({
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0 space-y-6">
-            {/* What this service needs, generated from the council registry —
-                the same source the matter's own checklist uses, so the two
-                cannot drift. */}
-            <ExpectedDocuments
+            {/* 🔴 THIS SERVICE'S documents, not the transaction's five.
+            
+                Until 2026-09-17 this page showed ExpectedDocuments (a read-only
+                list of what the service needs) above TransferDocuments (upload
+                tiles for the transfer's five NAMED documents — deed search,
+                transfer letter, clearance figures, proof of payment, electrical
+                COC). Those five are a fixed set on every transfer at every
+                council. On a City of Tshwane building-plans matter the page
+                therefore named five documents we needed and offered five
+                completely different ones to upload, with a "0 of 5 uploaded"
+                counter measuring neither.
+            
+                One component now does both halves: the service's own list, each
+                row with somewhere to put it, and a tick when the transaction
+                already holds one. */}
+            <ServiceDocChecklist
               municipality={transfer.municipality}
               serviceCode={serviceCode}
               prcStage={prcStage}
-              defaultOpen
-            />
-
-            {/* Everything already on the transaction, and somewhere to add to
-                it. Francois's point: sort the documents out while you are
-                creating the matter, not afterwards. */}
-            <TransferDocuments
               transferId={transferId}
-              docs={docsWithUrls}
-              canManage={false}
-              canUpload
-              sellerName={transfer.seller ? clientDisplayName(transfer.seller) : null}
-              buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
-              nameSubject={transfer.property_description || transfer.reference}
-              municipality={transfer.municipality}
+              transferDocs={docsWithUrls.map((d) => ({
+                id: d.id,
+                document_type: d.document_type ?? null,
+                file_name: d.file_name ?? null,
+              }))}
             />
           </div>
 

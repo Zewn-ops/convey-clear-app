@@ -508,6 +508,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
                 </p>
                 <MatterUploadPanel
                   matterId={matter.id}
+                  transferId={partnerTransferId ?? null}
                   parties={uploadParties}
                   municipality={matter.municipality}
                   // What the document is ABOUT: the property, reached the way
