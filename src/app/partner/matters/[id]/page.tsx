@@ -23,7 +23,7 @@ import { resolveMatterPropertySubject } from "@/lib/doc-naming";
 import { getPipeline } from "@/lib/pipelines";
 import { resolveDocClass, type PartyRole } from "@/lib/doc-classes";
 import { DOC_CLASSES, DOC_CLASS_LABELS, DOC_CLASS_HINTS } from "@/lib/councils";
-import { formatDate, municipalityLabel } from "@/lib/utils";
+import { formatDate, formatDateTime, municipalityLabel } from "@/lib/utils";
 import {
   clientDisplayName,
   MATTER_STATUS_LABELS,
@@ -52,7 +52,7 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
 
   const { data: matterData } = await supabase
     .from("matters")
-    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, created_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
+    .select("id, title, current_phase, current_stage, status, municipality, service_subtype, service_data, partner_file_ref, service_notes, deadline, transfer_id, created_at, firm_review_state, firm_review_note, firm_review_at, clients(id, entity_type, full_name, business_name, primary_email, primary_cell), services(code), property_transfers(id, reference, status)")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -243,6 +243,42 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
             their own instruction learns nothing about their transaction. The
             phase stepper below says where the work actually is. */}
       </div>
+
+      {/* 🔴 CONVEYCLEAR'S ANSWER, WHERE THE FIRM CANNOT MISS IT (098).
+      
+          Found by Zewn on 2026-09-17, walking the flow: he declined a matter
+          with a reason, opened it as Sarah Hayes, and the page showed a normal
+          matter — phase 1 of 6, an empty document list, a chat box. Nothing
+          said it had been declined and nothing said why. The reason was stored
+          correctly and rendered nowhere: the chip was built on the LIST card and
+          the review panel on the ADMIN page, and the one screen the attorney
+          actually opens to find out had neither.
+      
+          Full width and above the columns on purpose. A rejection is not a
+          detail of the matter, it is the state of the matter — the whole reason
+          the page is being looked at — and a rail item or a chip beside the
+          title would both be things you can read past. */}
+      {matter.firm_review_state === "rejected" && (
+        <Callout tone="required" label="ConveyClear has not taken this matter on">
+          <p className="text-[15px] font-medium text-ink">
+            {matter.firm_review_note || "No reason was recorded."}
+          </p>
+          <p className="mt-2 text-[13px] text-ink-2">
+            Nothing further happens on this matter until you send what is missing. Add it below, or
+            use the conversation on the right to ask us what is needed
+            {matter.firm_review_at ? ` — declined ${formatDateTime(matter.firm_review_at)}` : ""}.
+          </p>
+        </Callout>
+      )}
+
+      {matter.firm_review_state === "pending" && (
+        <Callout tone="waiting" label="With ConveyClear for review">
+          <p className="text-[13px] text-ink-2">
+            You opened this matter and we have not answered yet. We will either take it on or come
+            back to you with what is missing — you will see it here either way.
+          </p>
+        </Callout>
+      )}
 
       {/* Two columns, in the transfer page's shape and for its reasons (§5.13 —
           the surfaces change together). Zewn, 2026-09-02: "structure it like the

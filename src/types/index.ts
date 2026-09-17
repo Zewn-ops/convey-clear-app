@@ -219,6 +219,24 @@ export interface Client {
 
 export interface Matter {
   id: string;
+  /**
+   * 098 — ConveyClear's answer to a matter a FIRM opened.
+   *
+   * NULL on every staff-created matter, which is what "not a firm submission"
+   * looks like. 'pending' = they asked and we have not answered. 'rejected'
+   * carries firm_review_note, which the firm is SHOWN — being told no without
+   * being told why is the thing the state exists to prevent.
+   *
+   * Deliberately not a matters.status value: adding one to that CHECK broke
+   * submission on 089 and send-back on 090.
+   */
+  firm_review_state?: "pending" | "approved" | "rejected" | null;
+  firm_review_note?: string | null;
+  firm_review_at?: string | null;
+  submitted_by_user_id?: string | null;
+  /** When current_stage last moved (096). Powers the in-stage counter and the
+   *  colour of the rail between the phase circles. */
+  stage_changed_at?: string | null;
   client_id: string | null;
   business_partner_id: string | null;
   service_id: string | null;
