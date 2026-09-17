@@ -40,6 +40,8 @@ const { ageTone, workdaysSince } =
   require("@/lib/elapsed") as typeof import("@/lib/elapsed");
 const { serviceDocSlots, matchTransferDocs, OTHER_SLOT } =
   require("@/lib/service-doc-slots") as typeof import("@/lib/service-doc-slots");
+const { transferChip, reviewEdgeClass } =
+  require("@/lib/transfer-review-state") as typeof import("@/lib/transfer-review-state");
 const { isPostRegistration } =
   require("@/lib/councils/registration-stage") as typeof import("@/lib/councils/registration-stage");
 const { councilServiceSpec, documentsOfClass } =
@@ -244,6 +246,24 @@ const hits = matchTransferDocs(cooSlots, [
 ]);
 eq("a matching type is offered for linking", hits.get("deed_search")?.length, 1);
 eq("the catch-all never matches a pile of unrelated files", hits.has("other"), false);
+
+// ── The status edge (2026-09-17) ───────────────────────────────────────────
+// ConveyClear Services wanted "not taken on" visible while scrolling, not only
+// once you are looking at the card.
+const REJECTED = { state: "rejected" as const, reason: "FICA missing" };
+const RETURNED = { state: "changes_requested" as const, reason: "Fix the parties" };
+eq("a rejected draft gets a red edge", reviewEdgeClass("draft", REJECTED), "border-l-4 border-danger-fill");
+eq("a returned draft gets a yellow edge", reviewEdgeClass("draft", RETURNED), "border-l-4 border-waiting-fill");
+eq("an open transfer gets no edge", reviewEdgeClass("open", null), "");
+eq("a registered transfer gets no edge", reviewEdgeClass("registered", null), "");
+// 🔴 The edge must agree with the CHIP, always. They disagreed once before —
+// a rejected transfer came out red on one page and amber on another because
+// each caller decided for itself, which is why both now come from transferChip.
+eq(
+  "edge and chip agree on a rejection",
+  [transferChip("draft", REJECTED).tone, reviewEdgeClass("draft", REJECTED).includes("danger")],
+  ["danger", true]
+);
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails === 0 ? 0 : 1);
