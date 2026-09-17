@@ -183,7 +183,19 @@ export async function POST(request: Request) {
     // matter. Staff paths pass nothing because staff can see everything anyway.
     const { data: party } = await admin
       .from("transfer_parties")
-      .select("role, entity_type, full_name, first_name, last_name, business_name, id_number, email, cell")
+      // 🔴 EVERY NAME HERE MUST EXIST. transfer_parties has NO first_name or
+      // last_name — it stores full_name and business_name only — and PostgREST
+      // fails the ENTIRE read on one bad column, returning an error object
+      // rather than rows. The caller then sees no parties and says so.
+      //
+      // That is exactly how resolveDocumentSubject selected
+      // matters.property_description, a column that does not exist, and named
+      // every matter document "Type — date" for seven weeks. It reads as "this
+      // record has nothing", which is a different claim from "I asked wrongly".
+      //
+      // Found on production 2026-09-17: "This transfer has no parties captured
+      // yet" on a transfer carrying a seller and a buyer.
+      .select("role, entity_type, full_name, business_name, id_number, email, cell")
       .eq("transfer_id", transferId)
       .in("role", ["seller", "buyer"])
       .order("role", { ascending: true }) // buyer before seller alphabetically; seller preferred below
@@ -201,8 +213,6 @@ export async function POST(request: Request) {
       {
         entityType: (preferred.entity_type as "natural_person" | "business" | "trust") ?? "natural_person",
         fullName: preferred.full_name,
-        firstName: preferred.first_name,
-        lastName: preferred.last_name,
         businessName: preferred.business_name,
         idNumber: preferred.id_number,
         email: preferred.email,
