@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { isStaffRole, entityTypeLabel } from "@/types";
 import Card from "@/components/ui/Card";
+import RequestDocVetting from "@/components/transfers/RequestDocVetting";
 import Badge from "@/components/ui/Badge";
 import TransferRequestReview from "@/components/transfers/TransferRequestReview";
 import { formatDateTime, municipalityLabel } from "@/lib/utils";
@@ -173,6 +174,51 @@ export default async function TransferRequestsPage() {
   // we asked a question and are waiting for the answer. Filed with the decided
   // list would bury it; filed with pending would put it in a queue staff work
   // through, when the ball is with the firm.
+  // 🔴 VET THE DOCUMENTS BEFORE THE DECISION (Jukka, 2026-09-15): "before we
+  // actually accept the transfer, we can automatically vet the documents that
+  // has been uploaded up to that point."
+  //
+  // Reachable because 083 makes a firm's request create the whole transfer in
+  // DRAFT — parties, checklist and all — so by the time it reaches this queue
+  // the documents are already on a real transfer. Before 083 there was nowhere
+  // for them to be, which is what made this feature look expensive.
+  //
+  // Two queries for the whole page rather than two per row.
+  const pendingTransferIds = rows
+    .filter((r) => r.status === "pending" && r.transfer_id)
+    .map((r) => r.transfer_id as string);
+
+  const chosenByTransfer = new Map<string, { serviceCode: string; prcStage: string | null }[]>();
+  const docsByTransfer = new Map<string, string[]>();
+  if (pendingTransferIds.length > 0) {
+    const [{ data: svcRows }, { data: docRows }] = await Promise.all([
+      supabase
+        .from("transfer_services")
+        .select("transfer_id, service_code, prc_subtype, status, parent_id")
+        .in("transfer_id", pendingTransferIds)
+        .eq("status", "needed")
+        .is("parent_id", null),
+      supabase
+        .from("transfer_documents")
+        .select("transfer_id, document_type")
+        .in("transfer_id", pendingTransferIds)
+        .eq("status", "current"),
+    ]);
+    for (const r of (svcRows ?? []) as {
+      transfer_id: string; service_code: string | null; prc_subtype: string | null;
+    }[]) {
+      if (!r.service_code) continue;
+      const list = chosenByTransfer.get(r.transfer_id) ?? [];
+      list.push({ serviceCode: r.service_code, prcStage: r.prc_subtype });
+      chosenByTransfer.set(r.transfer_id, list);
+    }
+    for (const d of (docRows ?? []) as { transfer_id: string; document_type: string | null }[]) {
+      const list = docsByTransfer.get(d.transfer_id) ?? [];
+      if (d.document_type) list.push(d.document_type);
+      docsByTransfer.set(d.transfer_id, list);
+    }
+  }
+
   const awaitingFirm = rows.filter((r) => r.status === "changes_requested");
   const decided = rows.filter((r) => r.status === "approved" || r.status === "declined");
 
@@ -268,6 +314,20 @@ export default async function TransferRequestsPage() {
                 <div className="pt-3 border-t border-line">
                   <p className="text-xs font-semibold text-ink-3 uppercase tracking-wide">Notes</p>
                   <p className="text-sm text-ink-2 mt-1 whitespace-pre-wrap">{r.notes}</p>
+                </div>
+              )}
+
+              {/* Directly above the decision, for the same reason 088's party
+                  detail is on this screen rather than on the transfer page: a
+                  staff member cannot weigh what they cannot see, and the
+                  decision is taken here. */}
+              {r.transfer_id && (
+                <div className="pt-3 border-t border-line">
+                  <RequestDocVetting
+                    municipality={r.municipality}
+                    services={chosenByTransfer.get(r.transfer_id) ?? []}
+                    heldTypes={docsByTransfer.get(r.transfer_id) ?? []}
+                  />
                 </div>
               )}
 
