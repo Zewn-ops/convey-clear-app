@@ -70,7 +70,16 @@ export default function ServiceDocChecklist({
   const attached = useMemo(() => new Set(attachedTypes), [attachedTypes]);
 
   const real = slots.filter((s) => s.type !== OTHER_SLOT.type);
-  const filled = real.filter((s) => attached.has(s.type) || onTransfer.has(s.type) || justDone[s.type]).length;
+  // Count the REQUIRED ones, and say so. Counting every slot made this read
+  // "0 of 5" while the approval screen read "0 of 3" for the same service — two
+  // denominators for one question, on two screens a firm sees in the same hour.
+  // Optional documents are collected when available and never block, so they are
+  // still listed and still uploadable; they are simply not part of "are we
+  // there yet".
+  const required = real.filter((s) => !s.optional);
+  const filled = required.filter(
+    (s) => attached.has(s.type) || onTransfer.has(s.type) || justDone[s.type]
+  ).length;
 
   async function upload(file: File, type: string) {
     setBusy(type);
@@ -159,14 +168,14 @@ export default function ServiceDocChecklist({
     <Card accent="service">
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <h2 className="font-semibold text-ink">What this service needs</h2>
-        {real.length > 0 && (
+        {required.length > 0 && (
           <span
             className={
               "rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums " +
-              (filled === real.length ? "bg-ok-tint text-ok" : "bg-raised text-ink-2")
+              (filled === required.length ? "bg-ok-tint text-ok" : "bg-raised text-ink-2")
             }
           >
-            {filled} of {real.length}
+            {filled} of {required.length} required
           </span>
         )}
       </div>
