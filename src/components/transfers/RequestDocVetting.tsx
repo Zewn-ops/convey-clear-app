@@ -56,11 +56,17 @@ export default function RequestDocVetting({
     const slots: ServiceDocSlot[] = serviceDocSlots(municipality, s.serviceCode, s.prcStage).filter(
       (sl) => sl.type !== "other"
     );
-    const missing = slots.filter((sl) => !sl.optional && !held.has(sl.type));
+    // Count against the REQUIRED ones only. Counting every slot and then listing
+    // only the required ones read as "0 of 8 — still needs [six things]", which
+    // invites the question about the other two. Optional documents are collected
+    // when available and never block, so they do not belong in a completeness
+    // figure at all.
+    const required = slots.filter((sl) => !sl.optional);
+    const missing = required.filter((sl) => !held.has(sl.type));
     return {
       label: [serviceLabel(s.serviceCode), s.prcStage].filter(Boolean).join(": "),
-      total: slots.length,
-      have: slots.filter((sl) => held.has(sl.type)).length,
+      total: required.length,
+      have: required.length - missing.length,
       missing,
       unmapped: slots.length === 0,
     };
