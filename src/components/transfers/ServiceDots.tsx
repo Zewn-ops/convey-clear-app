@@ -94,13 +94,13 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
           // text token went DARKER so it could clear 4.5:1 on white, and the
           // circles came along with it and turned brown. A circle is a fill;
           // it takes the fill token and dark ink on top.
-          running: "bg-waiting-fill text-ink",
+          running: "bg-waiting-fill text-white",
           // 🔴 WAS A HOLLOW AMBER RING until 2026-09-15. Zewn: "we should have
           // it that there is a yellow circle with a ! inside once they choose a
           // service so they know they need to create the matter for that
           // service." A ring said "chosen" and stopped there; the service then
           // sat untouched because nothing asked anyone for the next thing.
-          chosen: "bg-waiting-fill text-ink",
+          chosen: "bg-waiting-fill text-white",
         }[state];
         return (
           <li
