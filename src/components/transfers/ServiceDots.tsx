@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import type { TransferServiceDot } from "@/lib/transfer-service-progress";
 
 /**
@@ -129,7 +129,12 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
                 this flow were "they click the plus button".
             
                 The "!" now means exactly one thing: something is wrong. */}
-            {state === "chosen" && <span aria-hidden>+</span>}
+            {/* A drawn icon, not a "+" character. At 9px a text plus has
+                hairline strokes and reads as a smudge inside a 16px circle —
+                the tick beside it works precisely because it is an icon with a
+                heavy stroke, so the plus gets the same treatment and a touch
+                more size. */}
+            {state === "chosen" && <Plus className="h-3 w-3" strokeWidth={4} aria-hidden />}
           </li>
         );
       })}

@@ -66,6 +66,8 @@ export type MatterCardRow = {
   } | null;
   /** 098 — set only on matters a FIRM proposed. NULL on every staff-created one. */
   firm_review_state?: string | null;
+  /** Why we did not take it on. Shown on the card, not only on the matter. */
+  firm_review_note?: string | null;
   /**
    * When something last HAPPENED on this matter — the newest matter_activities
    * row, resolved by the list page.
@@ -243,9 +245,18 @@ export default function MatterCard({
         </p>
       )}
       {m.firm_review_state === "rejected" && (
-        <p className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-danger-tint px-2 py-1 text-[11px] font-semibold text-danger">
-          Not taken on
-        </p>
+        <>
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-danger-tint px-2 py-1 text-[11px] font-semibold text-danger">
+            Not taken on
+          </p>
+          {/* The reason on the card, exactly as the transfer list already does
+              it. A red chip with no explanation sends the reader hunting
+              through a second page for the one sentence that says what to do
+              next — and this is the list they scan first. */}
+          {m.firm_review_note && (
+            <p className="mt-2 text-[13px] text-danger">We asked for: {m.firm_review_note}</p>
+          )}
+        </>
       )}
 
       {/* Circles above the bar, matching the transfer's service lines (Zewn,

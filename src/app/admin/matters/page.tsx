@@ -35,7 +35,7 @@ type MatterRow = Matter &
   };
 
 const LIST_SELECT =
-  "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, updated_at, stage_changed_at, firm_review_state, business_partner_id, clients(full_name, business_name, first_name, last_name), firms(name), services(code, name), property_transfers(id, reference, council_region)";
+  "id, title, current_phase, current_stage, status, priority, deadline, municipality, service_subtype, created_at, updated_at, stage_changed_at, firm_review_state, firm_review_note, business_partner_id, clients(full_name, business_name, first_name, last_name), firms(name), services(code, name), property_transfers(id, reference, council_region)";
 
 export default async function AdminMattersPage({
   searchParams,
