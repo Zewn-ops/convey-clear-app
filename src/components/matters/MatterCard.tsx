@@ -308,7 +308,9 @@ export default function MatterCard({
                   ? "neutral"
                   : waitTone === "warn"
                     ? "waiting"
-                    : "required"
+                    : waitTone === "late"
+                      ? "required-solid"
+                      : "danger-solid"
                 : stalled
                   ? "waiting"
                   : "neutral"
@@ -326,7 +328,18 @@ export default function MatterCard({
           <MetaChip
             label="In stage"
             value={`${inStage} workday${inStage === 1 ? "" : "s"}`}
-            tone={waitTone === "fresh" ? "neutral" : waitTone === "warn" ? "waiting" : "required"}
+            /* Plain → tinted amber → SOLID orange → SOLID red. The two solid
+               bands are the overdue ones, and only those: a flag stops being a
+               flag when everything is one. */
+            tone={
+              waitTone === "fresh"
+                ? "neutral"
+                : waitTone === "warn"
+                  ? "waiting"
+                  : waitTone === "late"
+                    ? "required-solid"
+                    : "danger-solid"
+            }
           />
         )}
         {seen && <MetaChip label="Last update" value={seen} />}
