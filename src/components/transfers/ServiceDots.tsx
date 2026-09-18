@@ -21,24 +21,24 @@ import type { TransferServiceDot } from "@/lib/transfer-service-progress";
  *
  * ── FOUR STATES (Zewn, 2026-09-11) ──────────────────────────────────────────
  *
- *   AMBER + "!"     chosen, but nobody has opened it as a matter yet
+ *   AMBER + "+"     chosen, but nobody has opened it as a matter yet
  *   amber filled    in progress — a matter is open and moving
  *   ORANGE + "!"    the attorney has to attend to it (Documents Outstanding)
  *   green + tick    done — settled, already done, or not applicable
  *
- * ── THE TWO "!" STATES, AND WHY THEY SHARE A GLYPH (2026-09-15) ─────────────
+ * ── "+" MEANS ADD, "!" MEANS WRONG (2026-09-18) ────────────────────────────
  *
- * Both mean the same class of thing — the ball is in the firm's court — so they
- * read as one alphabet with two entries rather than two unrelated symbols. What
- * separates them is the reason, which the title and the accessible name carry:
- * "add service details" versus "documents outstanding".
+ * These two shared an exclamation mark until 2026-09-18, on the reasoning that
+ * both mean "the ball is in the firm's court" and so belong to one alphabet.
+ * That was half right and the wrong half mattered: they were then separated by
+ * HUE ALONE at 16px — amber against required orange, which measure 1.81 against
+ * each other — and adjacent in meaning is not the same as interchangeable.
+ * "Add the details for a service you asked for" and "we are waiting on
+ * documents before we can start" want different actions from the reader.
  *
- * ⚠️ They are distinguished by HUE ALONE at 16px (amber #ad6200 against
- * required #c74d24), and this file already argues that those two are hard to
- * tell apart at this size. That is accepted here rather than solved: the states
- * are adjacent in meaning, so reading one as the other costs a reader nothing —
- * both say "this one is yours". If they ever need to be told apart at a glance,
- * change the GLYPH, not the colour.
+ * The glyph now carries the difference, which is the one axis no colour choice
+ * can buy: it survives greyscale, colour deficiency and a 16px circle. Marlene's
+ * own words for this flow were "they click the plus button".
  *
  * His words: *"amber circle for service chosen, amber dot (filled in) for
  * service being dealt with / in progress, yellow with an exclimation mark if the
@@ -114,7 +114,22 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
             {state === "settled" && <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden />}
             {/* A glyph, not an icon: lucide's AlertCircle draws its own ring
                 inside the circle, which at this size reads as a doughnut. */}
-            {(state === "attention" || state === "chosen") && <span aria-hidden>!</span>}
+            {state === "attention" && <span aria-hidden>!</span>}
+            {/* A PLUS, NOT A SECOND EXCLAMATION MARK (2026-09-18).
+            
+                Both states mean the ball is in the firm's court, so they shared
+                a glyph and were separated by hue alone — amber against required
+                orange, which measures 1.81 against each other. Adjacent in
+                meaning is not the same as interchangeable: "add the details for
+                a service you asked for" and "we are waiting on documents before
+                we can work" want different actions.
+            
+                A plus says ADD at a glance and needs no colour to do it, which
+                is the one axis a hue choice cannot buy. Marlene's own words for
+                this flow were "they click the plus button".
+            
+                The "!" now means exactly one thing: something is wrong. */}
+            {state === "chosen" && <span aria-hidden>+</span>}
           </li>
         );
       })}
