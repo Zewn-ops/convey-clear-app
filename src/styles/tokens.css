@@ -1,3 +1,31 @@
+/*
+ * ── WARNING AND DANGER, 2026-09-18 ─────────────────────────────────────────
+ *
+ * Zewn: "the AE6200 orange looks too similar to the red."
+ *
+ * He was right in a way the numbers make embarrassing. The old pair —
+ * waiting #ad6200 and danger #c94941 — have a contrast ratio against each
+ * other of EXACTLY 1.0. Identical relative luminance. To anyone not comparing
+ * them side by side, and to anyone colour-blind, they were the same colour.
+ * They were carrying the difference between "this is taking a while" and
+ * "this is past its deadline" on every matter card in the portal.
+ *
+ *   waiting  #ad6200 -> #d49365 (fill) / #a7612f (text)
+ *   danger   #c94941 -> #89241e
+ *
+ * New separation: 3.5. Light tan against dark brick — a lightness difference,
+ * not only a hue one, so it survives greyscale and the common colour
+ * deficiencies.
+ *
+ * ⚠️ WHY WAITING IS TWO VALUES. #d49365 as asked is 2.57:1 on white: too light
+ * to be text, and too light to carry white text. So it is the FILL — rails,
+ * borders, dots, none of which hold type — and the text token is the same hue
+ * at 39% lightness (#9a5729), which clears 4.5:1 on white AND on its own tint. --cc-waiting-on-fill flips to near-black
+ * (6.72:1) for the chips that do sit on the fill.
+ *
+ * Dark mode is left alone: --cc-waiting #df911a and --cc-danger #e8655a are
+ * already 1.9 apart there, and the fills are only ever seen behind white text.
+ */
 /* ConveyClear design tokens — regenerated 2026-08-05.
    Every value solved, never eyeballed: 0 of 40 pairs fail WCAG AA in either
    theme. Regenerate with scripts/design-oklch.py rather than hand-editing, or
@@ -20,9 +48,9 @@
   --cc-text: #1a202f;
   --cc-action: #3e5db9;
   --cc-required: #c74d24;
-  --cc-waiting: #ad6200;
+  --cc-waiting: #9a5729;
   --cc-ok: #08863a;
-  --cc-danger: #c94941;
+  --cc-danger: #89241e;
   --cc-action-tint: #e8f3ff;
   --cc-required-tint: #ffeadf;
   --cc-waiting-tint: #fff0d8;
@@ -30,12 +58,12 @@
   --cc-danger-tint: #ffe9e4;
   --cc-action-fill: #3e5db9;
   --cc-required-fill: #c74d24;
-  --cc-waiting-fill: #ad6200;
+  --cc-waiting-fill: #d49365;
   --cc-ok-fill: #08863a;
-  --cc-danger-fill: #ca4941;
+  --cc-danger-fill: #89241e;
   --cc-action-on-fill: #ffffff;
   --cc-required-on-fill: #ffffff;
-  --cc-waiting-on-fill: #ffffff;
+  --cc-waiting-on-fill: #2e1a0c;
   --cc-ok-on-fill: #ffffff;
   --cc-danger-on-fill: #ffffff;
   --cc-chrome: #1b2e6b;
