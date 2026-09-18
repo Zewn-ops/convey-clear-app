@@ -428,8 +428,6 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
               the upload, where an attorney is deciding what to attach. Generated
               from the council registry, so it cannot drift from what the matter
               then asks for. */}
-          <ExpectedDocuments municipality={transfer.municipality} />
-
           <TransferDocuments
             transferId={id}
             docs={transferDocsWithUrls}
@@ -439,6 +437,9 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
             buyerName={transfer.buyer ? clientDisplayName(transfer.buyer) : null}
             nameSubject={transfer.property_description || transfer.reference}
             municipality={transfer.municipality}
+            /* Underneath the upload tiles rather than above them — see the
+               note on TransferDocuments' `footer`. */
+            footer={<ExpectedDocuments municipality={transfer.municipality} bare />}
           />
         </div>
 

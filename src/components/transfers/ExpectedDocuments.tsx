@@ -41,6 +41,7 @@ export default function ExpectedDocuments({
   serviceCode = null,
   prcStage = null,
   defaultOpen = false,
+  bare = false,
 }: {
   municipality: string | null;
   /**
@@ -57,6 +58,9 @@ export default function ExpectedDocuments({
   prcStage?: string | null;
   /** Open the sections rather than collapsing them. True where there is one. */
   defaultOpen?: boolean;
+  /** Render without the Card wrapper, for use INSIDE another card (2026-09-18).
+   *  A card nested in a card reads as two objects and doubles the padding. */
+  bare?: boolean;
 }) {
   const groups: { label: string; docs: string[] }[] = [];
   const only = (serviceCode ?? "").toUpperCase();
@@ -87,8 +91,8 @@ export default function ExpectedDocuments({
   // One group is not a list to browse — it is the answer, so it opens.
   const open = defaultOpen || groups.length === 1;
 
-  return (
-    <Card>
+  const body = (
+    <>
       <div className="mb-1 flex items-center gap-2">
         <FileQuestion className="h-4 w-4 text-action" />
         <h2 className="font-semibold text-ink">What we normally need</h2>
@@ -144,8 +148,10 @@ export default function ExpectedDocuments({
           </details>
         ))}
       </div>
-    </Card>
+    </>
   );
+
+  return bare ? body : <Card>{body}</Card>;
 }
 
 /**

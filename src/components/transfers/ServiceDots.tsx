@@ -88,13 +88,19 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
         const tone = {
           settled: "bg-ok text-white",
           attention: "bg-required text-white",
-          running: "bg-waiting text-white",
+          // 🔴 THE FILL TOKEN, NOT THE TEXT ONE. These read `bg-waiting` until
+          // 2026-09-18, which was fine while --cc-waiting and --cc-waiting-fill
+          // were the same value. The colour work that morning split them: the
+          // text token went DARKER so it could clear 4.5:1 on white, and the
+          // circles came along with it and turned brown. A circle is a fill;
+          // it takes the fill token and dark ink on top.
+          running: "bg-waiting-fill text-ink",
           // 🔴 WAS A HOLLOW AMBER RING until 2026-09-15. Zewn: "we should have
           // it that there is a yellow circle with a ! inside once they choose a
           // service so they know they need to create the matter for that
           // service." A ring said "chosen" and stopped there; the service then
           // sat untouched because nothing asked anyone for the next thing.
-          chosen: "bg-waiting text-white",
+          chosen: "bg-waiting-fill text-ink",
         }[state];
         return (
           <li

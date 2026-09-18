@@ -92,6 +92,7 @@ export default function TransferDocuments({
   buyerName = null,
   nameSubject = null,
   municipality = null,
+  footer,
 }: {
   transferId: string;
   docs: Doc[];
@@ -124,6 +125,22 @@ export default function TransferDocuments({
    * property of the document type.
    */
   municipality?: string | null;
+  /**
+   * Rendered at the BOTTOM of this card, inside it.
+   *
+   * Zewn, 2026-09-18: "move what we need into the same container as the
+   * transfer docs and make it below, so it's sort of out of the way but if
+   * you're going to upload a doc then you can see it."
+   *
+   * "What we normally need" was its own card ABOVE this one — a long reference
+   * list standing between the reader and the upload tiles, read once and then
+   * scrolled past forever. Underneath the thing it describes, it is where you
+   * look when you are already deciding what to send.
+   *
+   * A slot rather than an import: this is a client component and the list is
+   * rendered on the server, so the page passes it in.
+   */
+  footer?: React.ReactNode;
   /**
    * Staff. Approving, sharing, disapproving and archiving — everything that
    * decides what a document MEANS or who sees it.
@@ -601,6 +618,8 @@ export default function TransferDocuments({
           </ul>
         </details>
       )}
+
+      {footer && <div className="mt-6 border-t border-line pt-5">{footer}</div>}
     </Card>
   );
 }
