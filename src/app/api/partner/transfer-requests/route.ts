@@ -76,6 +76,15 @@ export async function POST(request: Request) {
     );
   }
 
+  /** Rands as the firm typed them. Anything that is not a non-negative number
+   *  becomes NULL rather than 0 — a zero price is a claim, a blank is not. */
+  function price(key: string): number | null {
+    const raw = (body as Record<string, unknown>)[key];
+    if (raw === null || raw === undefined || raw === "") return null;
+    const n = Number(String(raw).replace(/[\s,]/g, ""));
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
   const supabase = await createClient();
 
   // Catch a clash NOW rather than at approve time.
@@ -253,6 +262,9 @@ export async function POST(request: Request) {
     property_description: propertyDescription,
     municipality: str("municipality"),
     suggested_reference: suggestedReference,
+    // 099 — the firm has the sale agreement; we do not. Optional on purpose:
+    // the figure is often not final when the instruction is lodged.
+    purchase_price: price("purchase_price"),
     seller_name: str("seller_name"),
     seller_email: str("seller_email"),
     seller_cell: str("seller_cell"),

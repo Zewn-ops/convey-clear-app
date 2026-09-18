@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     // approval builds the transfer. One string literal, not a concatenation:
     // supabase-js infers the row type from the literal, and splitting it drops
     // every field to `GenericStringError`.
-    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id, seller_name, seller_email, seller_cell, seller_entity_type, seller_id_number, seller_registration_no, buyer_name, buyer_email, buyer_cell, buyer_entity_type, buyer_id_number, buyer_registration_no")
+    .select("id, firm_id, requested_by, status, property_description, municipality, suggested_reference, notes, transfer_id, purchase_price, seller_name, seller_email, seller_cell, seller_entity_type, seller_id_number, seller_registration_no, buyer_name, buyer_email, buyer_cell, buyer_entity_type, buyer_id_number, buyer_registration_no")
     .eq("id", id)
     .maybeSingle();
   if (!req) return NextResponse.json({ message: "Request not found" }, { status: 404 });

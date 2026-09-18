@@ -36,6 +36,8 @@ export interface RequestRow {
   property_description: string | null;
   municipality: string | null;
   notes: string | null;
+  /** 099 — the sale price as the firm lodged it. */
+  purchase_price?: number | string | null;
   /**
    * The parties as the attorney typed them (055, extended by 088). Optional on
    * the type because a request may legitimately carry none — firms supply what
@@ -142,6 +144,12 @@ export async function createTransferFromRequest(
       municipality: req.municipality,
       business_partner_id: req.firm_id,
       notes: req.notes,
+      // 099 — carried across rather than retyped. Both columns are
+      // NUMERIC(12,2), so nothing rounds in transit.
+      purchase_price:
+        req.purchase_price === null || req.purchase_price === undefined || req.purchase_price === ""
+          ? null
+          : Number(req.purchase_price),
       created_by: callerId,
     })
     .select("id")
