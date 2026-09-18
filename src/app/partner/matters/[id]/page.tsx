@@ -10,7 +10,7 @@ import { workdaysSince } from "@/lib/elapsed";
 import PartiesCard from "@/components/matters/PartiesCard";
 import MatterTransferCard, { type LinkedTransfer } from "@/components/matters/MatterTransferCard";
 import MatterFeed, { type MatterActivity } from "@/components/matters/MatterFeed";
-import ExpectedDocuments from "@/components/transfers/ExpectedDocuments";
+import ServiceDocChecklist from "@/components/matters/ServiceDocChecklist";
 import { getMatterEnquiries } from "@/lib/enquiries";
 import PipelineProgress from "@/components/matters/PipelineProgress";
 import MatterUploadPanel from "@/components/matters/MatterUploadPanel";
@@ -532,13 +532,38 @@ export default async function PartnerMatterDetail({ params }: { params: { id: st
             basePath="/partner/transfers"
           />
 
-          {/* What this council asks for, for THIS service — the same generated
-              list the transfer page carries, narrowed to the one matter. */}
-          <ExpectedDocuments
-            municipality={matter.municipality}
-            serviceCode={serviceCode}
-            prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
-          />
+          {/* 🔴 THE SAME CHECKLIST AS THE CREATION PAGE, not a read-only copy of
+              the list. Zewn, 2026-09-18: "it would be great if we had the same
+              doclist type thing here as we do on the matter creation page — it
+              keeps visual consistency and helps with simplicity and
+              understanding how the portal works."
+              
+              It was ExpectedDocuments, which names the documents and stops
+              there. A firm reading "we need a Certified ID" on the matter it is
+              looking at, with no way to send one from that spot, has to work out
+              on its own that the upload lives further down the page under a
+              different heading.
+              
+              Here the matter EXISTS, so it does more than on the creation page:
+              matterId makes the "Link from transfer" button live, and
+              attachedTypes ticks the rows this matter already holds. */}
+          {/* Both are required: without a transfer there is nowhere for a
+              document to live, and without a service code there is no list. */}
+          {partnerTransferId && serviceCode && (
+            <ServiceDocChecklist
+              municipality={matter.municipality}
+              serviceCode={serviceCode}
+              prcStage={(matter as unknown as { service_subtype?: string | null }).service_subtype ?? null}
+              transferId={partnerTransferId}
+              transferDocs={transferDocs.map((d) => ({
+                id: d.id,
+                document_type: d.document_type ?? null,
+                file_name: d.file_name ?? null,
+              }))}
+              matterId={params.id}
+              attachedTypes={docs.map((d) => d.document_type).filter(Boolean) as string[]}
+            />
+          )}
 
           {/* One card, two tabs: the conversation and the lifecycle history.
               The activities are already filtered to lifecycle events by the

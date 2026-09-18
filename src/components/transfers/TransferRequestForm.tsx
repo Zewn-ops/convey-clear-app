@@ -42,6 +42,7 @@ export interface TransferRequestDraft {
   property_description: string | null;
   municipality: string | null;
   suggested_reference: string | null;
+  purchase_price?: number | string | null;
   seller_name: string | null;
   seller_email: string | null;
   seller_cell: string | null;
@@ -99,6 +100,7 @@ export default function TransferRequestForm({
     property_description: draft?.property_description ?? "",
     municipality: draft?.municipality ?? "",
     suggested_reference: draft?.suggested_reference ?? "",
+    purchase_price: draft?.purchase_price != null ? String(draft.purchase_price) : "",
     notes: draft?.notes ?? "",
   });
   // The two parties, each a small record rather than six loose fields — see
@@ -249,6 +251,27 @@ export default function TransferRequestForm({
               placeholder="e.g. SH-2026-0417"
               required
             />
+          </label>
+          {/* 099. The attorney has the sale agreement in front of them; we do
+              not. Until now this could only be typed by ConveyClear, after the
+              transfer existed, which meant asking the firm for a number they
+              already had. NOT required — a price is often not final at
+              instruction, and a required field would collect a guess. */}
+          <label className={label}>
+            Purchase price
+            <input
+              className={input}
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              value={form.purchase_price}
+              onChange={set("purchase_price")}
+              placeholder="e.g. 1850000"
+            />
+            <span className="mt-1 block text-xs font-normal text-ink-3">
+              Rands, no spaces. Leave blank if it is not settled yet — you can add it later.
+            </span>
             {/* Mandatory since 2026-08-11 (§78). Said plainly because it is the
                 firm's own code being adopted as ours — they should know it is
                 the name this transfer will carry, not a note for our reference. */}
