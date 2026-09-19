@@ -13,6 +13,7 @@ import {
   type Firm,
   type PartnerType,
 } from "@/types";
+import { isValidFirmCode, suggestFirmCode } from "@/lib/firm-reference";
 
 // Create OR edit a partner firm. `existing` switches it to edit mode (PATCH
 // instead of POST) and pre-fills every field.
@@ -20,6 +21,12 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
   const router = useRouter();
   const [name, setName] = useState(existing?.name ?? "");
   const [abbreviation, setAbbreviation] = useState(existing?.abbreviation ?? "");
+  // 100 — the code is now the prefix on every transfer reference this firm
+  // issues, so a NEW firm should not be able to leave it blank by inattention.
+  // Suggested from the name while the field is untouched; an EXISTING firm is
+  // never overwritten, because its code is already embedded in references that
+  // have been issued and changing it does not re-qualify them.
+  const [codeTouched, setCodeTouched] = useState(Boolean(existing?.abbreviation));
   const [type, setType] = useState<PartnerType>(existing?.partner_type ?? "law_firm");
   const [email, setEmail] = useState(existing?.primary_email ?? "");
   const [cell, setCell] = useState(existing?.primary_cell ?? "");
@@ -28,8 +35,17 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
   const [active, setActive] = useState(existing?.active ?? true);
   const [loading, setLoading] = useState(false);
 
+  // Shown in the field until someone types their own. Not written anywhere
+  // until save, so a firm created without touching it still gets a real code.
+  const code = codeTouched ? abbreviation : suggestFirmCode(name);
+
   const submit = async () => {
     if (!name.trim()) return toast.error("A firm name is required");
+    // The API and the CHECK both refuse this too; catching it here is what
+    // turns a rejected save into a correctable field.
+    if (code.trim() && !isValidFirmCode(code)) {
+      return toast.error("The firm code must be 2 to 6 letters or digits — for example BSI.");
+    }
 
     setLoading(true);
     const res = await fetch("/api/admin/partners", {
@@ -38,7 +54,7 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
       body: JSON.stringify({
         id: existing?.id,
         name,
-        abbreviation,
+        abbreviation: code,
         partner_type: type,
         primary_email: email,
         primary_cell: cell,
@@ -67,12 +83,15 @@ export default function FirmForm({ existing }: { existing?: Firm }) {
           placeholder="Bert Smith Inc"
         />
         <Input
-          label="Abbreviation"
-          value={abbreviation}
-          onChange={(e) => setAbbreviation(e.target.value)}
+          label="Firm code"
+          value={code}
+          onChange={(e) => {
+            setCodeTouched(true);
+            setAbbreviation(e.target.value.toUpperCase());
+          }}
           placeholder="BSI"
-          maxLength={10}
-          hint="Short code shown beside matter titles. Upper-cased on save."
+          maxLength={6}
+          hint="2–6 letters or digits, unique to this firm. It prefixes every transfer reference they send (BSI_5600), which is what lets two firms both run a file numbered 5600."
         />
         <Select
           label="Firm type"

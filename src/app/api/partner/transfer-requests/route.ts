@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { notifyStaff } from "@/lib/notify";
 import { createTransferFromRequest } from "@/lib/transfer-from-request";
+import { qualifyReference } from "@/lib/firm-reference";
 
 export const runtime = "nodejs";
 
@@ -68,8 +69,13 @@ export async function POST(request: Request) {
   // 061 — the firm's reference is mandatory (2026-08-11 §78) and becomes the
   // reference of the transfer created on approval. Checked here as well as by
   // the constraint so the firm gets a sentence, not a 23514.
-  const suggestedReference = str("suggested_reference");
-  if (!isDraft && !suggestedReference) {
+  //
+  // 100 — what the firm TYPED. It is qualified with the firm's code below,
+  // before anything compares it to another reference; the raw value is only
+  // used for the "did you give us one at all" check, which the prefix cannot
+  // affect either way.
+  const rawReference = str("suggested_reference");
+  if (!isDraft && !rawReference) {
     return NextResponse.json(
       { message: "Your transfer reference is required — it becomes the reference for this transfer." },
       { status: 400 }
@@ -100,17 +106,40 @@ export async function POST(request: Request) {
   // exact failure this is meant to prevent. It discloses nothing: the answer is
   // "that reference is taken", never whose it is.
   //
-  // 🔴 OPEN QUESTION, deliberately not settled in the schema: whether a firm's
-  // code must be unique GLOBALLY or only within that firm. Two firms can both
-  // run a file "2026/001". The existing convention embeds a firm prefix
-  // (SH-2026-0417) which makes global uniqueness work in practice, but nothing
-  // enforces the prefix. Raise with Jukka before this bites.
+  // ✅ SETTLED 2026-09-18, was: whether a firm's code must be unique GLOBALLY or
+  // only within that firm. Two firms can both run a file "2026/001". The old
+  // convention EMBEDDED a firm prefix (SH-2026-0417), which made global
+  // uniqueness work in practice while nothing enforced it — so it held only for
+  // as long as one firm was live.
+  //
+  // Jukka: "we should determine an abbreviation for each attorney … it'll just
+  // show up as BSI_code". 100 makes the firm code required and unique, and the
+  // reference is qualified with it below, so global uniqueness is now correct
+  // rather than accidental.
   //
   // Skipped for a draft: the reference may not even be typed yet, and refusing
   // to SAVE a working copy because a field it does not yet have might one day
   // clash would defeat the point. Submission still checks, which is the moment
   // it matters.
   const adminRead = createAdminClient();
+
+  // 🔴 QUALIFY BEFORE ANYTHING COMPARES. Every check below — the clash query,
+  // the orphan-draft adoption, the self-exemption — matches this string against
+  // property_transfers.reference, which now stores the qualified form. Comparing
+  // a raw "5600" against a stored "BSI_5600" would find no clash where one
+  // exists and no orphan where one exists, which is worse than the bug this
+  // replaces: it would let two firms through and fail at approval instead.
+  //
+  // Read through the ADMIN client: the firm's own row is readable to it, but
+  // doing this with the caller's client would make a missing RLS grant look like
+  // a firm with no code, and silently drop the prefix.
+  const { data: firmRow } = await adminRead
+    .from("firms")
+    .select("abbreviation")
+    .eq("id", auth.partnerId)
+    .maybeSingle();
+  const firmCode = (firmRow as { abbreviation: string | null } | null)?.abbreviation ?? null;
+  const suggestedReference = qualifyReference(firmCode, rawReference);
 
   // 🔴 THE ROW BEING EDITED, read before anything judges it. A request that has
   // been SENT BACK (089) already owns the transfer it created on its first

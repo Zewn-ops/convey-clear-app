@@ -254,7 +254,30 @@ export default async function TransferRequestsPage() {
             <Card key={r.id} className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-base font-semibold text-ink">{r.property_description}</p>
+                  {/* 🔴 THE TITLE OPENS THE TRANSFER (2026-09-18).
+                      Jukka, trying to approve one: "If I want to approve this
+                      thing, can I access the matter? … you need to be able to
+                      click it … the ERF title. Yeah, it's not working."
+
+                      He had to navigate out to Property Transfers and find it
+                      again to see what he was being asked to decide on. Since
+                      083 the firm's submission already creates the transfer in
+                      `draft`, so a pending request almost always HAS one to
+                      open — it was simply never linked.
+
+                      Plain text when transfer_id is null, which is a request
+                      lodged before 083. A link that goes nowhere is worse than
+                      no link on a screen where the next click is a decision. */}
+                  {r.transfer_id ? (
+                    <Link
+                      href={`/admin/property-transfers/${r.transfer_id}`}
+                      className="text-base font-semibold text-ink hover:text-action hover:underline"
+                    >
+                      {r.property_description}
+                    </Link>
+                  ) : (
+                    <p className="text-base font-semibold text-ink">{r.property_description}</p>
+                  )}
                   {/* The firm's reference IS the transfer's (2026-08-11 §78), so
                       it belongs on the card — staff should be able to spot a
                       duplicate or a malformed code without opening the approve

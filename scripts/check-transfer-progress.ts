@@ -47,6 +47,8 @@ const { isPostRegistration } =
 const { councilServiceSpec, documentsOfClass } =
   require("@/lib/councils") as typeof import("@/lib/councils");
 const { docLabel } = require("@/lib/prc-docs") as typeof import("@/lib/prc-docs");
+const { qualifyReference, alreadyQualified, isValidFirmCode, suggestFirmCode } =
+  require("@/lib/firm-reference") as typeof import("@/lib/firm-reference");
 
 let fails = 0;
 function eq(what: string, got: unknown, want: unknown) {
@@ -264,6 +266,52 @@ eq(
   [transferChip("draft", REJECTED).tone, reviewEdgeClass("draft", REJECTED).includes("danger")],
   ["danger", true]
 );
+
+// ── 100 — the firm code on a transfer reference ────────────────────────────
+//
+// The collision this prevents is invisible with one firm live and fires on the
+// second firm's first transfer, which is exactly the kind of thing that cannot
+// be caught by clicking around a single-firm demo.
+console.log("\n-- firm-qualified references --");
+
+eq("an ordinary reference gets the firm code", qualifyReference("BSI", "5600"), "BSI_5600");
+eq("the code is upper-cased", qualifyReference("bsi", "5600"), "BSI_5600");
+eq("two firms no longer collide",
+  qualifyReference("BSI", "5600") === qualifyReference("AA", "5600"), false);
+
+// 🔴 The live convention. Sterling Hayes' transfers already open with SH and a
+// HYPHEN; re-prefixing them would rename references attorneys hold on paper.
+eq("an already-prefixed reference is untouched",
+  qualifyReference("SH", "SH-2026-1001"), "SH-2026-1001");
+eq("a lower-case existing prefix is still recognised",
+  qualifyReference("SH", "sh-2026-1001"), "sh-2026-1001");
+eq("underscore separators count as prefixed",
+  qualifyReference("BSI", "BSI_5600"), "BSI_5600");
+eq("a slash separator counts too", qualifyReference("AA", "AA/2026/1"), "AA/2026/1");
+
+// 🔴 A reference that merely STARTS with the same letters is not prefixed.
+// "SHELL-4" is not Sterling Hayes' code followed by a separator, and treating
+// it as one would leave it unqualified and able to collide.
+eq("a word that merely starts with the code is still prefixed",
+  qualifyReference("SH", "SHELL-4"), "SH_SHELL-4");
+
+// ⚠️ NULL SURVIVES. A draft request legitimately has no reference yet and
+// suggested_reference must stay NULL — 078's CHECKs read "" as supplied.
+eq("null stays null", qualifyReference("BSI", null), null);
+eq("a firm with no code yet is left alone", qualifyReference(null, "5600"), "5600");
+eq("an empty reference is not turned into a bare code", qualifyReference("BSI", ""), "");
+
+eq("a code alone is already qualified", alreadyQualified("BSI", "BSI"), true);
+
+eq("codes must be 2-6 alphanumerics", [
+  isValidFirmCode("BSI"), isValidFirmCode("AA"), isValidFirmCode("A"),
+  isValidFirmCode("TOOLONGG"), isValidFirmCode("B S"), isValidFirmCode("B-S"),
+], [true, true, false, false, false, false]);
+
+eq("a code is suggested from the firm's name", suggestFirmCode("Bert Smith Inc"), "BSI");
+eq("connectives are skipped", suggestFirmCode("Adams & Adams"), "AA");
+eq("a one-word firm still yields a valid code",
+  isValidFirmCode(suggestFirmCode("Batsmith")), true);
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails === 0 ? 0 : 1);

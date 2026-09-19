@@ -488,7 +488,20 @@ export type TransferStatus =
   | "archived";
 
 export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
-  draft: "Draft — awaiting approval",
+  /**
+   * NOT "Draft — awaiting approval". Two different things were both being called
+   * a draft, and the word was doing the damage.
+   *
+   * An attorney's unsent request is a draft: theirs, editable, nobody waiting on
+   * it. A transfer in THIS state has been submitted and is waiting on
+   * ConveyClear — the firm is finished with it and can no longer edit it.
+   *
+   * Jukka, mid-demo 2026-09-18, looking at a list carrying both: "So what does
+   * draft mean? … But why isn't my one that I just did now not in draft? What's
+   * the difference? … It shouldn't be draft awaiting approval. It should just be
+   * awaiting approval."
+   */
+  draft: "Awaiting approval",
   open: "Open",
   archived: "Archived",
   registered: "Registered",

@@ -23,6 +23,7 @@ export default function TransferProgressBar({
   progress,
   showLabel = true,
   showDots = false,
+  nameDots = false,
 }: {
   progress: TransferProgress;
   /** Off on dense list rows where the count is already implied by context. */
@@ -33,6 +34,13 @@ export default function TransferProgressBar({
    * dots there would say the same thing twice. List cards turn it on.
    */
   showDots?: boolean;
+  /**
+   * Name each service beside its circle rather than leaving it in the tooltip.
+   *
+   * Jukka, 2026-09-18: "0 of 3 services" does not say WHICH three, and the names
+   * were only ever reachable on hover. See ServiceDots for the full note.
+   */
+  nameDots?: boolean;
 }) {
   // Nothing chosen yet, but the checklist is there and waiting. Since only
   // chosen services are counted (2026-09-11), this is what a brand-new transfer
@@ -63,7 +71,7 @@ export default function TransferProgressBar({
           </span>
           {/* One dot per service, beside the count rather than under the bar:
               the count says how many, the dots say which. */}
-          {showDots && <ServiceDots dots={progress.dots} />}
+          {showDots && <ServiceDots dots={progress.dots} withNames={nameDots} />}
         </div>
       )}
       <div

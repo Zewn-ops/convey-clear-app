@@ -66,11 +66,50 @@ import type { TransferServiceDot } from "@/lib/transfer-service-progress";
  * The alert ranks ABOVE in-progress: a stuck matter and a moving matter both
  * have an open matter, and only one of them is asking the reader for something.
  */
-export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
+export default function ServiceDots({
+  dots,
+  withNames = false,
+}: {
+  dots: TransferServiceDot[];
+  /**
+   * Print each service's NAME beside its circle.
+   *
+   * 🔴 THE NAMES WERE ONLY EVER IN A `title` AND AN `sr-only` SPAN — which is to
+   * say, behind hover. PRODUCT.md's seventh principle is "nothing critical
+   * behind hover: hover does not exist on a phone", and this was breaking it on
+   * the one surface attorneys actually scan.
+   *
+   * Jukka, 2026-09-18: "at the moment it's like, okay, two services selected —
+   * what ARE those services? … at the very least we open the drop down and it
+   * says what those services are. It doesn't have to have the bar."
+   *
+   * He asked for a dropdown first, then talked himself out of it on the grounds
+   * that the detail page already carries the bars — "then it's not necessary,
+   * you just need to open it" — and landed on labels in place: "you put the name
+   * there … not even an arrow, just a name." So this is a label, not a
+   * disclosure widget: nothing to open, no state to remember, and it reads on a
+   * phone.
+   *
+   * ⚠️ NO CONNECTORS BETWEEN THE CIRCLES, deliberately. Jukka, same breath:
+   * "maybe make the line something else or just a dot, so that they don't get
+   * confused between matter progresses and different services." A row of circles
+   * joined by a rail is the matter STEPPER, which means phases of one pipeline
+   * in sequence. These are unordered, independent services. They stay a wrapped
+   * list with gaps and no rail.
+   */
+  withNames?: boolean;
+}) {
   if (dots.length === 0) return null;
 
   return (
-    <ul className="flex flex-wrap items-center gap-1.5" aria-label="Services on this transfer">
+    <ul
+      className={
+        withNames
+          ? "flex flex-wrap items-center gap-x-3 gap-y-1.5"
+          : "flex flex-wrap items-center gap-1.5"
+      }
+      aria-label="Services on this transfer"
+    >
       {dots.map((d, i) => {
         const state = d.settled
           ? "settled"
@@ -102,21 +141,16 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
           // sat untouched because nothing asked anyone for the next thing.
           chosen: "bg-waiting-fill text-white",
         }[state];
-        return (
-          <li
-            key={`${d.name}-${i}`}
-            // Title on the element rather than a tooltip component: a list card
-            // is not the place to introduce a hover surface, and the accessible
-            // name below carries the same information without hover at all.
-            title={`${d.name} — ${wording}`}
+        // The circle itself. Extracted from the <li> so a visible name can sit
+        // beside it without the label inheriting the circle's fixed 16px box.
+        const circle = (
+          <span
+            aria-hidden={withNames || undefined}
             className={
-              "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold leading-none " +
+              "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none " +
               tone
             }
           >
-            <span className="sr-only">
-              {d.name} — {wording}
-            </span>
             {state === "settled" && <Check className="h-2.5 w-2.5" strokeWidth={3.5} aria-hidden />}
             {/* A glyph, not an icon: lucide's AlertCircle draws its own ring
                 inside the circle, which at this size reads as a doughnut. */}
@@ -141,6 +175,30 @@ export default function ServiceDots({ dots }: { dots: TransferServiceDot[] }) {
                 heavy stroke, so the plus gets the same treatment and a touch
                 more size. */}
             {state === "chosen" && <Plus className="h-3 w-3" strokeWidth={4} aria-hidden />}
+          </span>
+        );
+
+        return (
+          <li
+            key={`${d.name}-${i}`}
+            // Title kept on the row: it still adds the STATE wording for a mouse
+            // user, which the visible label deliberately does not repeat.
+            title={`${d.name} — ${wording}`}
+            className={withNames ? "flex items-center gap-1.5 min-w-0" : "flex"}
+          >
+            {circle}
+            {withNames ? (
+              // The name carries the accessible text when it is visible, so the
+              // circle goes aria-hidden above and nothing is announced twice.
+              <span className="truncate text-xs text-ink-2">
+                {d.name}
+                <span className="sr-only"> — {wording}</span>
+              </span>
+            ) : (
+              <span className="sr-only">
+                {d.name} — {wording}
+              </span>
+            )}
           </li>
         );
       })}

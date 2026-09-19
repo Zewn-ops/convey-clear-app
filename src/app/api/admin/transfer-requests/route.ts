@@ -6,6 +6,7 @@ import { notifyUsers } from "@/lib/notify";
 import { requireStaff } from "@/lib/staff";
 import { logTransferActivity } from "@/lib/activity";
 import { createTransferFromRequest } from "@/lib/transfer-from-request";
+import { qualifyReference } from "@/lib/firm-reference";
 
 export const runtime = "nodejs";
 
@@ -136,10 +137,29 @@ export async function POST(request: Request) {
   // That convention belongs to MATTER titles; a transfer carries the firm's file
   // reference. Details §74/§98 described staff assigning one, but those narrate
   // the demo as it worked on the day — §78 is the decision.
-  const reference = (body.reference ?? req.suggested_reference ?? "").trim();
-  if (!reference) {
+  const rawReference = (body.reference ?? req.suggested_reference ?? "").trim();
+  if (!rawReference) {
     return NextResponse.json({ message: "A transfer reference is required." }, { status: 400 });
   }
+
+  // 100 — qualify with the firm's code, on BOTH paths into this line.
+  //
+  // A request submitted since 100 already carries a qualified
+  // suggested_reference, and qualifying it again is a no-op. The two cases that
+  // need this are the ones that would otherwise slip through unqualified: a
+  // request submitted BEFORE 100, whose stored reference is still raw, and a
+  // staff override typed into the reference field on this screen — which is
+  // exactly the field used to resolve a clash, and so the last place that should
+  // be able to reintroduce one.
+  const { data: firmRow } = await admin
+    .from("firms")
+    .select("abbreviation")
+    .eq("id", req.firm_id)
+    .maybeSingle();
+  const reference = qualifyReference(
+    (firmRow as { abbreviation: string | null } | null)?.abbreviation ?? null,
+    rawReference
+  );
 
   // 🔴 THE TRANSFER USUALLY ALREADY EXISTS. Since 2026-09-01 a firm's submission
   // creates it in `draft` (083), so approval is a state change rather than a

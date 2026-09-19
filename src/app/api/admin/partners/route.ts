@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PARTNER_TYPES, type PartnerType } from "@/types";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { requireAdmin } from "@/lib/staff";
+import { isValidFirmCode } from "@/lib/firm-reference";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,12 @@ function partnerType(v?: string): PartnerType {
 
 // The abbreviation is a short firm code ("BSI") shown next to matter titles, so
 // it is upper-cased on write rather than trusted from the form.
+//
+// 100 — it is now also the PREFIX ON EVERY TRANSFER REFERENCE THIS FIRM ISSUES,
+// which is what makes two firms able to run the same file number. That promotes
+// it from a display nicety to a key, so the format is checked here rather than
+// left to the database: a 23514 on a CHECK constraint is not a sentence anyone
+// can act on, and this field is edited by staff, not developers.
 function firmPayload(body: FirmFields) {
   const abbr = clean(body.abbreviation);
   return {
@@ -45,6 +52,33 @@ function firmPayload(body: FirmFields) {
     physical_address: clean(body.physical_address),
     notes: clean(body.notes),
   };
+}
+
+/**
+ * Reject a malformed or already-taken firm code with a sentence.
+ *
+ * Returns null when the code is fine. Uniqueness is checked here AND enforced by
+ * `uq_firms_abbreviation` — this one produces the readable message,
+ * the index is what actually holds under a race.
+ */
+async function firmCodeProblem(
+  admin: ReturnType<typeof createAdminClient>,
+  code: string | null,
+  selfId?: string
+): Promise<string | null> {
+  if (!code) return null;
+  if (!isValidFirmCode(code)) {
+    return "The firm code must be 2 to 6 letters or digits, with no spaces or punctuation — for example BSI.";
+  }
+
+  let q = admin.from("firms").select("id, name").ilike("abbreviation", code);
+  if (selfId) q = q.neq("id", selfId);
+  const { data: taken } = await q.limit(1).maybeSingle();
+  if (taken) {
+    const other = (taken as { name: string | null }).name ?? "another firm";
+    return `The code ${code} is already used by ${other}. Every firm needs its own — it is what keeps two firms' file numbers apart.`;
+  }
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -65,9 +99,13 @@ export async function POST(request: Request) {
   if (!name) return NextResponse.json({ message: "Firm name is required" }, { status: 400 });
 
   const admin = createAdminClient();
+  const payload = firmPayload(body);
+  const codeProblem = await firmCodeProblem(admin, payload.abbreviation);
+  if (codeProblem) return NextResponse.json({ message: codeProblem }, { status: 400 });
+
   const { data, error } = await admin
     .from("firms")
-    .insert({ name, ...firmPayload(body), created_by: auth.callerId })
+    .insert({ name, ...payload, created_by: auth.callerId })
     .select("*")
     .single();
 
@@ -93,11 +131,17 @@ export async function PATCH(request: Request) {
   if (!name) return NextResponse.json({ message: "Firm name is required" }, { status: 400 });
 
   const admin = createAdminClient();
+  const payload = firmPayload(body);
+  // Scoped to OTHER firms — a firm keeping its own code on an unrelated edit is
+  // not a clash with itself.
+  const codeProblem = await firmCodeProblem(admin, payload.abbreviation, id);
+  if (codeProblem) return NextResponse.json({ message: codeProblem }, { status: 400 });
+
   const { data, error } = await admin
     .from("firms")
     .update({
       name,
-      ...firmPayload(body),
+      ...payload,
       ...(typeof body.active === "boolean" ? { active: body.active } : {}),
     })
     .eq("id", id)

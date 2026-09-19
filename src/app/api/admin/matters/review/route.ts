@@ -5,6 +5,7 @@ import { logMatterActivity } from "@/lib/activity";
 import { notifyMatterParties } from "@/lib/notify";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { isStaffRole, type UserRole } from "@/types";
+import { getPipeline } from "@/lib/pipelines";
 
 export const runtime = "nodejs";
 
@@ -12,10 +13,35 @@ export const runtime = "nodejs";
  * ConveyClear's answer to a matter a firm proposed (098).
  *
  * Marlene: the firm's matter lands "in a draft stage", and "ConveyClear can then
- * go in and approve/reject the matter based on what was provided". This is that
- * decision and nothing else — it does not move the matter's phase, stage or
- * status, because accepting a piece of work and starting it are two different
- * acts and collapsing them would mark work as begun that nobody has begun.
+ * go in and approve/reject the matter based on what was provided".
+ *
+ * ── REVERSAL, 2026-09-18: TAKING IT ON NOW MOVES THE PHASE ─────────────────
+ *
+ * This route used to record the decision and nothing else, on the reasoning
+ * that "accepting a piece of work and starting it are two different acts, and
+ * collapsing them would mark work as begun that nobody has begun."
+ *
+ * Jukka, walking a building-plans matter through: "So first let's take it on,
+ * saying that we approve that we will do this service… when I say take it on,
+ * can we have the instruction automatically move to onboarding? Make a note of
+ * that."
+ *
+ * The earlier reasoning was sound and its premise was wrong. Onboarding is not
+ * "the work has begun" — it is "the file is ours now, and receiving documents is
+ * the next thing that happens to it". Leaving an accepted matter parked in New
+ * Instruction meant every take-on needed a second, manual phase change that said
+ * nothing the acceptance had not already said, and left a queue full of matters
+ * at New Instruction that nobody had actually failed to start.
+ *
+ * ⚠️ THE STAGE IS DELIBERATELY LEFT UNSET, and that is the half that matters.
+ * Jukka, unprompted, in the same breath: "Documents received won't be selected,
+ * because we physically check. So moving from new instruction to onboarding will
+ * be pre-selected, but not documents received — because it could be documents
+ * outstanding or documents verified."
+ *
+ * Every stage in the onboarding phase records a human having looked at
+ * something. Ticking one on the machine's behalf would put a claim in the file
+ * that nobody made.
  */
 export async function POST(request: Request) {
   if (!rateLimit(`matter-review:${clientIp(request)}`, 60, 60_000)) {
@@ -62,7 +88,12 @@ export async function POST(request: Request) {
 
   const { data: matter } = await admin
     .from("matters")
-    .select("id, title, firm_review_state, current_owner_id")
+    // service + municipality + subtype are what resolve the pipeline, and
+    // current_phase is read so an accepted matter that has ALREADY been moved on
+    // by hand is not dragged backwards to onboarding.
+    .select(
+      "id, title, firm_review_state, current_owner_id, current_phase, municipality, service_subtype, services(code)"
+    )
     .eq("id", matterId)
     .maybeSingle();
   if (!matter) return NextResponse.json({ message: "Matter not found" }, { status: 404 });
@@ -75,6 +106,26 @@ export async function POST(request: Request) {
     );
   }
 
+  // The first real phase of THIS matter's pipeline — resolved rather than
+  // hardcoded to "onboarding". Every pipeline today opens on onboarding after
+  // the new_instruction prePhase, but a pipeline that did not would otherwise be
+  // silently sent to a phase it does not contain, and nothing would error.
+  //
+  // Only applied when the matter is still sitting at the prePhase. A matter
+  // someone has already advanced by hand keeps where it is: accepting it must
+  // never move work backwards.
+  const pipeline =
+    decision === "approved"
+      ? getPipeline(
+          (matter.services as { code?: string } | null)?.code ?? null,
+          matter.municipality as string | null,
+          matter.service_subtype as string | null
+        )
+      : null;
+  const atPrePhase =
+    !matter.current_phase || matter.current_phase === pipeline?.prePhase.key;
+  const advanceTo = pipeline && atPrePhase ? pipeline.phases[0]?.key ?? null : null;
+
   const { error } = await admin
     .from("matters")
     .update({
@@ -85,6 +136,9 @@ export async function POST(request: Request) {
       // Taking the work on makes the reviewer its owner. Rejecting leaves it
       // unowned — nobody at ConveyClear is doing it.
       ...(decision === "approved" ? { current_owner_id: matter.current_owner_id ?? me!.id } : {}),
+      // Onboarding, with NO stage. See the ⚠️ in the module comment: the stage
+      // is a human's claim to make, not ours.
+      ...(advanceTo ? { current_phase: advanceTo, current_stage: null } : {}),
     })
     .eq("id", matterId)
     // Conditional, so the loser of a race updates nothing rather than
@@ -92,11 +146,22 @@ export async function POST(request: Request) {
     .eq("firm_review_state", "pending");
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
+  // The phase move is named in the entry rather than left implicit. "Last
+  // update" reads the newest activity row (096), so a matter that silently
+  // changed phase would show an acceptance and no reason for where it now sits.
+  const advancedLabel = advanceTo
+    ? pipeline?.phases[0]?.internalName ?? advanceTo
+    : null;
   await logMatterActivity(admin, {
     matterId,
     authorId: me!.id,
     activityType: "status_change",
-    body: decision === "approved" ? "Accepted by ConveyClear" : `Rejected by ConveyClear — ${note}`,
+    body:
+      decision === "approved"
+        ? advancedLabel
+          ? `Accepted by ConveyClear — moved to ${advancedLabel}`
+          : "Accepted by ConveyClear"
+        : `Rejected by ConveyClear — ${note}`,
   });
 
   // The firm hears either way. notifyMatterParties reaches the firm's users and
