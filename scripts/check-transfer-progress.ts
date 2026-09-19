@@ -34,7 +34,7 @@ const resolveFilename = (Module as unknown as { _resolveFilename: (r: string, ..
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { transferProgress, serviceProgress } =
   require("@/lib/transfer-service-progress") as typeof import("@/lib/transfer-service-progress");
-const { isWaitingOnFirm, FIRM_WAIT_STAGE_KEYS } =
+const { isWaitingOnFirm, FIRM_WAIT_STAGE_KEYS, getPipeline } =
   require("@/lib/pipelines") as typeof import("@/lib/pipelines");
 const { ageTone, workdaysSince } =
   require("@/lib/elapsed") as typeof import("@/lib/elapsed");
@@ -49,6 +49,10 @@ const { councilServiceSpec, documentsOfClass } =
 const { docLabel } = require("@/lib/prc-docs") as typeof import("@/lib/prc-docs");
 const { qualifyReference, alreadyQualified, isValidFirmCode, suggestFirmCode } =
   require("@/lib/firm-reference") as typeof import("@/lib/firm-reference");
+const { transferConsentStatus, consentBlockedReason } =
+  require("@/lib/transfer-consent") as typeof import("@/lib/transfer-consent");
+const { consentProgressBlocked } =
+  require("@/lib/transfer-gate") as typeof import("@/lib/transfer-gate");
 
 let fails = 0;
 function eq(what: string, got: unknown, want: unknown) {
@@ -312,6 +316,78 @@ eq("a code is suggested from the firm's name", suggestFirmCode("Bert Smith Inc")
 eq("connectives are skipped", suggestFirmCode("Adams & Adams"), "AA");
 eq("a one-word firm still yields a valid code",
   isValidFirmCode(suggestFirmCode("Batsmith")), true);
+
+// ── 101 — POPIA consent on the transfer ────────────────────────────────────
+console.log("\n-- POPIA consent --");
+
+const SELLER = { id: "p1", role: "seller", name: "M. Dlamini" };
+const BUYER = { id: "p2", role: "buyer", name: "Sterling Props" };
+const ATTORNEY = { id: "p3", role: "conveyancing_attorney", name: "Bert Smith Inc" };
+
+const grant = (partyId: string, at: string, granted = true) => ({
+  transfer_party_id: partyId, party_name: "x", party_role: "seller",
+  granted, created_at: at, attested_by: "u1", evidence_document_id: null,
+});
+
+eq("both parties consented is complete",
+  transferConsentStatus([SELLER, BUYER],
+    [grant("p1", "2026-09-19T08:00:00Z"), grant("p2", "2026-09-19T08:00:00Z")]).complete, true);
+
+eq("one party short is not complete",
+  transferConsentStatus([SELLER, BUYER], [grant("p1", "2026-09-19T08:00:00Z")]).complete, false);
+
+eq("the missing party is named",
+  transferConsentStatus([SELLER, BUYER], [grant("p1", "2026-09-19T08:00:00Z")]).missing,
+  ["Sterling Props"]);
+
+// 🔴 THE EMPTY-LIST TRAP. "every required party is consented" is vacuously TRUE
+// of a transfer with no parties, which would open the gate on the transaction we
+// know least about — the same shape as the three "found nothing, said there was
+// nothing" bugs this month.
+eq("a transfer with no parties is NOT consented",
+  transferConsentStatus([], []).complete, false);
+eq("and says why", transferConsentStatus([], []).noParties, true);
+
+// The attorney is not a data subject of this consent.
+eq("only the seller and buyer are counted",
+  transferConsentStatus([SELLER, BUYER, ATTORNEY], []).parties.length, 2);
+eq("an attorney-only transfer has nothing to consent",
+  transferConsentStatus([ATTORNEY], []).noParties, true);
+
+// ⚠️ APPEND-ONLY. A withdrawal is a NEWER row saying false, so the presence of
+// a granted row is not the answer — the newest row per party is.
+eq("a later withdrawal beats an earlier grant",
+  transferConsentStatus([SELLER],
+    [grant("p1", "2026-09-19T08:00:00Z", true), grant("p1", "2026-09-19T09:00:00Z", false)]).complete,
+  false);
+eq("a later re-grant beats an earlier withdrawal",
+  transferConsentStatus([SELLER],
+    [grant("p1", "2026-09-19T09:00:00Z", true), grant("p1", "2026-09-19T08:00:00Z", false)]).complete,
+  true);
+
+eq("seller is listed before buyer",
+  transferConsentStatus([BUYER, SELLER], []).parties.map((p) => p.role), ["seller", "buyer"]);
+
+eq("a blocked transfer explains itself",
+  (consentBlockedReason(transferConsentStatus([SELLER, BUYER], [grant("p1", "2026-09-19T08:00:00Z")])) ?? "")
+    .includes("Sterling Props"), true);
+eq("a consented transfer blocks nothing",
+  consentBlockedReason(transferConsentStatus([SELLER, BUYER],
+    [grant("p1", "2026-09-19T08:00:00Z"), grant("p2", "2026-09-19T08:00:00Z")])), null);
+
+// The gate: forward moves stop, reverting never does, and a matter with no
+// transfer is not blocked by a consent that cannot exist.
+const EBP = getPipeline("EBP", "COT", null);
+eq("advancing an unconsented matter is blocked",
+  consentProgressBlocked({ pipeline: EBP, consentComplete: false, target: { phaseKey: "operations" } }), true);
+eq("setting any stage is blocked",
+  consentProgressBlocked({ pipeline: EBP, consentComplete: false, target: { stageKey: "documents_received" } }), true);
+eq("reverting to the pre-phase is NOT blocked",
+  consentProgressBlocked({ pipeline: EBP, consentComplete: false, target: { phaseKey: "new_instruction" } }), false);
+eq("a consented matter moves freely",
+  consentProgressBlocked({ pipeline: EBP, consentComplete: true, target: { phaseKey: "operations" } }), false);
+eq("a standalone matter has no transfer consent to fail",
+  consentProgressBlocked({ pipeline: EBP, consentComplete: null, target: { phaseKey: "operations" } }), false);
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails === 0 ? 0 : 1);

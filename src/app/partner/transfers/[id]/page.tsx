@@ -26,6 +26,8 @@ import {
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
 import ExpectedDocuments from "@/components/transfers/ExpectedDocuments";
+import PopiaConsentCard from "@/components/transfers/PopiaConsentCard";
+import { transferConsentStatus, type TransferConsentRow } from "@/lib/transfer-consent";
 import TransferServices, { type ServiceRow } from "@/components/transfers/TransferServices";
 import TransferProgressBar from "@/components/transfers/TransferProgressBar";
 import {
@@ -214,6 +216,20 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
     { linkClients: false }
   );
 
+  // POPIA consent (101). Read as the CALLER: 101's read policy routes through
+  // the firm's grant on the transfer, the same door the parties above came
+  // through, so a firm sees the consent position of transactions it works and
+  // no others.
+  const { data: consentRows } = await supabase
+    .from("transfer_consents")
+    .select("transfer_party_id, party_name, party_role, granted, created_at, attested_by, evidence_document_id")
+    .eq("transfer_id", id);
+
+  const consent = transferConsentStatus(
+    partyList.map((p) => ({ id: p.id, role: p.role, name: p.who })),
+    (consentRows ?? []) as TransferConsentRow[]
+  );
+
   // Pickers are RLS-scoped too: a firm links only to clients it can already see.
   const [{ data: entityOpts }, { data: firmOpts }] = await Promise.all([
     supabase.from("clients").select("id, full_name, business_name, entity_type")
@@ -361,6 +377,20 @@ export default async function PartnerTransferDetail({ params }: { params: Promis
           is edited — so they are restructured together. */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
+          {/* 🔴 ABOVE THE WORK, because it STOPS the work. Every other card here
+              is something the firm does; this is the one that decides whether
+              ConveyClear may act on any of it, so burying it under the parties
+              and the services would repeat the mistake it exists to fix — the
+              consent tick lived inside a collapsed FICA panel and was ignored
+              for weeks. */}
+          <PopiaConsentCard
+            transferId={id}
+            status={consent}
+            reference={transfer.reference}
+            canAttest
+            documents={transferDocs.map((d) => ({ id: d.id, file_name: d.file_name ?? null }))}
+          />
+
           <Card>
             <TransferParties
               transferId={id}

@@ -6,6 +6,7 @@ import { notifyMatterParties } from "@/lib/notify";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { isStaffRole, type UserRole } from "@/types";
 import { getPipeline } from "@/lib/pipelines";
+import { transferConsentForMatter, consentBlockedReason } from "@/lib/transfer-consent";
 
 export const runtime = "nodejs";
 
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
     // current_phase is read so an accepted matter that has ALREADY been moved on
     // by hand is not dragged backwards to onboarding.
     .select(
-      "id, title, firm_review_state, current_owner_id, current_phase, municipality, service_subtype, services(code)"
+      "id, title, firm_review_state, current_owner_id, current_phase, municipality, service_subtype, transfer_id, services(code)"
     )
     .eq("id", matterId)
     .maybeSingle();
@@ -104,6 +105,25 @@ export async function POST(request: Request) {
       { message: "That matter has already been answered." },
       { status: 409 }
     );
+  }
+
+  // 🔴 POPIA CONSENT GATE (101). Taking a matter on is ConveyClear starting to
+  // process these people's personal information, so it is the moment the
+  // consent has to exist. Zewn, 2026-09-19: "prevent ConveyClear from moving
+  // forward."
+  //
+  // Only on APPROVE. A matter can always be REJECTED — refusing work needs no
+  // consent, and blocking the rejection would leave the firm waiting on an
+  // answer we are not allowed to give.
+  if (decision === "approved") {
+    const consent = await transferConsentForMatter(
+      admin,
+      (matter as { transfer_id?: string | null }).transfer_id
+    );
+    const blocked = consent ? consentBlockedReason(consent) : null;
+    if (blocked) {
+      return NextResponse.json({ message: blocked }, { status: 409 });
+    }
   }
 
   // The first real phase of THIS matter's pipeline — resolved rather than

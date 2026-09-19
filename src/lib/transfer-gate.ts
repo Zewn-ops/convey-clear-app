@@ -107,3 +107,37 @@ export function transferProgressBlockedReason(
       : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
   return `This transfer needs a linked ${list} before it can be registered.`;
 }
+
+/**
+ * POPIA consent as a progression gate (101).
+ *
+ * Kept HERE rather than in transfer-consent.ts so every stop-gate on a matter
+ * lives in one file: a reader asking "what can stop this matter moving" should
+ * find the whole answer in one place, which is the mistake the consent tick
+ * made by living alone inside a FICA panel.
+ *
+ * The status itself is derived in lib/transfer-consent.ts — this only decides
+ * whether a given MOVE is blocked by it.
+ *
+ * ⚠️ APPLIES TO EVERY SERVICE, not only the transfer-gated ones. `requiresTransfer`
+ * exempts Business Compliance and the rest because they have no property
+ * transaction — but a matter that HAS a transfer processes the personal
+ * information of that transaction's parties whatever service it is, so the
+ * consent gate follows the transfer, not the service code.
+ */
+export function consentProgressBlocked(args: {
+  pipeline: Pipeline | null;
+  /** Null when the matter has no transfer — then there is no transfer consent to check. */
+  consentComplete: boolean | null;
+  target: { phaseKey?: string | null; stageKey?: string | null };
+}): boolean {
+  const { pipeline, consentComplete, target } = args;
+  if (consentComplete === null || consentComplete) return false;
+
+  // Same movement test as matterProgressBlockedReason: any stage is inside a
+  // real phase and therefore progression, and a phase beyond the pre-phase is
+  // progression. Reverting stays open so the gate cannot trap work.
+  const movingToStage = !!target.stageKey;
+  const phaseIndex = pipeline && target.phaseKey ? phaseOrder(pipeline, target.phaseKey) : -1;
+  return movingToStage || phaseIndex > 0;
+}

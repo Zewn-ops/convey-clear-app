@@ -25,6 +25,8 @@ import {
   type TransferDocument,
 } from "@/types";
 import TransferDocuments from "@/components/transfers/TransferDocuments";
+import PopiaConsentCard from "@/components/transfers/PopiaConsentCard";
+import { transferConsentStatus, type TransferConsentRow } from "@/lib/transfer-consent";
 import TransferPropertyCard, { type LinkedProperty, type PropertyOption } from "@/components/transfers/TransferPropertyCard";
 import TransferCloseControl from "@/components/transfers/TransferCloseControl";
 import TransferFeed, { type TransferActivity } from "@/components/transfers/TransferFeed";
@@ -200,6 +202,22 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
   const partyList: TPartyRow[] = mapTransferParties(
     partyRows as RawTransferParty[] | null,
     { linkClients: true }
+  );
+
+  // POPIA consent (101). Staff see every transaction's position — this is the
+  // screen where someone asks "why will this matter not move".
+  //
+  // Read as the caller, not the service role: 101's staff policy already grants
+  // this, and the service role here would hide an RLS mistake rather than show
+  // it. (It is also declared later in this function than this line runs.)
+  const { data: consentRows } = await supabase
+    .from("transfer_consents")
+    .select("transfer_party_id, party_name, party_role, granted, created_at, attested_by, evidence_document_id")
+    .eq("transfer_id", id);
+
+  const consent = transferConsentStatus(
+    partyList.map((p) => ({ id: p.id, role: p.role, name: p.who })),
+    (consentRows ?? []) as TransferConsentRow[]
   );
 
   const [{ data: entityOpts }, { data: firmOpts }, { data: firmPeople }] = await Promise.all([
@@ -438,6 +456,18 @@ export default async function AdminTransferDetailPage({ params }: { params: Prom
           laptop it just makes two narrow ones. */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
+          {/* 🔴 0 · POPIA consent, above everything, because it is what stops
+              the work. Staff may also record it: a firm that emails the signed
+              pack instead of ticking the box still consented, and refusing to
+              record that would stop a transaction over a UI preference. */}
+          <PopiaConsentCard
+            transferId={id}
+            status={consent}
+            reference={transfer.reference}
+            canAttest
+            documents={transferDocs.map((d) => ({ id: d.id, file_name: d.file_name ?? null }))}
+          />
+
           {/* 1 · Parties to the transaction — transfer_parties (050) */}
           <Card>
             <TransferParties

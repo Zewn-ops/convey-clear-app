@@ -6,7 +6,8 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { formatDate, formatDateTime, municipalityLabel } from "@/lib/utils";
-import { matterProgressBlockedReason, requiresTransfer } from "@/lib/transfer-gate";
+import { matterProgressBlockedReason, requiresTransfer, consentProgressBlocked } from "@/lib/transfer-gate";
+import { transferConsentForMatter } from "@/lib/transfer-consent";
 import {
   isStaffRole,
   clientDisplayName,
@@ -198,6 +199,14 @@ export default async function AdminMatterDetailPage({
       return;
     }
 
+    // 🔴 POPIA CONSENT GATE (101). Advancing a matter is processing the
+    // transaction parties' personal information, so an unconsented transfer
+    // stops here. Reverting is untouched — see consentProgressBlocked.
+    const consent = await transferConsentForMatter(supabase, transferId);
+    if (consentProgressBlocked({ pipeline: pl, consentComplete: consent ? consent.complete : null, target: { phaseKey: newPhase } })) {
+      return;
+    }
+
     const label = phaseLabel(pl, newPhase);
     // Note 2026-06-22: first staff progression flips New → Open automatically.
     const statusPatch = row?.status === "new" ? { status: "open" as const } : {};
@@ -246,6 +255,13 @@ export default async function AdminMatterDetailPage({
     // Same stop-gate as advancePhase — every stage lives inside a real phase, so
     // setting any stage on an unlinked COO/PRC matter is progression. Backstop.
     if (matterProgressBlockedReason({ pipeline: pl, serviceCode, transferId, target: { stageKey: newStage } })) {
+      return;
+    }
+
+    // POPIA consent gate (101), same as advancePhase. Every stage sits inside a
+    // real phase, so setting one is progression by definition.
+    const consent = await transferConsentForMatter(supabase, transferId);
+    if (consentProgressBlocked({ pipeline: pl, consentComplete: consent ? consent.complete : null, target: { stageKey: newStage } })) {
       return;
     }
 
